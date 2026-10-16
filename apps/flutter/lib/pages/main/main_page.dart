@@ -11,7 +11,6 @@ import '../../pages/home/return_top_controller.dart';
 import '../../pages/home/home_page.dart';
 import '../../pages/main/main_controller.dart';
 import '../../pages/message/message_page.dart';
-import '../local_follow/local_follow_page.dart';
 import '../../logic/accounts/account_store.dart';
 
 class MainPage extends StatefulWidget {
@@ -83,7 +82,6 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     const pages = [
       HomePage(),
-      FollowFeedPage(),
       MessagePage(),
     ];
 
@@ -91,12 +89,7 @@ class _MainPageState extends State<MainPage> {
       NavigationDestination(
         selectedIcon: Icon(Icons.home),
         icon: Icon(Icons.home_outlined),
-        label: '主页',
-      ),
-      NavigationDestination(
-        selectedIcon: Icon(Icons.feed),
-        icon: Icon(Icons.feed_outlined),
-        label: '关注',
+        label: '首页',
       ),
       NavigationDestination(
         selectedIcon: Icon(Icons.person),
@@ -109,12 +102,7 @@ class _MainPageState extends State<MainPage> {
       NavigationRailDestination(
         selectedIcon: Icon(Icons.home),
         icon: Icon(Icons.home_outlined),
-        label: Text('主页'),
-      ),
-      NavigationRailDestination(
-        selectedIcon: Icon(Icons.feed),
-        icon: Icon(Icons.feed_outlined),
-        label: Text('关注'),
+        label: Text('首页'),
       ),
       NavigationRailDestination(
         selectedIcon: Icon(Icons.person),
@@ -177,8 +165,6 @@ class _MainPageState extends State<MainPage> {
     if (_resetting || !_contrller.hasClients) return;
     if (index == 0 && _selectedIndex == 0) {
       _pageScrollController.setIndex(998);
-    } else if (index == 1 && _selectedIndex == 1) {
-      _pageScrollController.setIndex(TabType.FOLLOW.index);
     }
     _contrller.animateToPage(
       index,

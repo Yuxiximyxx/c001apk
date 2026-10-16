@@ -248,13 +248,18 @@ class _ReplyPageState extends State<ReplyPage>
 
   Widget _buildInputView() {
     return Container(
+      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
         color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

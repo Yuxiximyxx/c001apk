@@ -44,6 +44,7 @@ class Reply2ReplyPage extends StatelessWidget {
               ),
             )),
         child: SafeArea(
+          top: false,
           bottom: false,
           child: Obx(
             () => controller.loadingState.value is Success
