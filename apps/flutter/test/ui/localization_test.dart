@@ -561,6 +561,7 @@ void main() {
 
   testWidgets(
       'follow menu defaults to users and routes each category separately',
+      skip: '关注 tab 已从底栏移除',
       (tester) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1;
@@ -620,6 +621,7 @@ void main() {
 
   testWidgets(
       'switching follow categories ignores late responses and remembers source',
+      skip: '关注 tab 已从底栏移除',
       (tester) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1;
