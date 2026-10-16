@@ -227,30 +227,25 @@ void main() {
     expect(material.backButtonTooltip, '返回');
     expect(material.copyButtonLabel, '复制');
     expect(material.pasteButtonLabel, '粘贴');
-    expect(find.text('主页'), findsOneWidget);
+    expect(find.text('首页'), findsOneWidget);
     expect(
         tester
             .widget<NavigationBar>(find.byType(NavigationBar))
             .destinations
             .cast<NavigationDestination>()
             .map((item) => item.label),
-        ['主页', '关注', '我的']);
+        ['首页', '我的']);
     expect(find.widgetWithText(Tab, '关注'), findsNothing);
-    await tester.tap(find.widgetWithText(NavigationDestination, '关注'));
-    await tester.pumpAndSettle();
-    expect(find.text('本地关注动态'), findsOneWidget);
-    expect(find.textContaining('还没有本地关注的用户'), findsOneWidget);
     expect(find.text('Home'), findsNothing);
     tester.view.physicalSize = const Size(1400, 900);
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(NavigationRail), findsOneWidget);
-    expect(find.text('主页'), findsOneWidget);
+    expect(find.text('首页'), findsOneWidget);
     expect(
         tester
             .widget<NavigationRail>(find.byType(NavigationRail))
             .selectedIndex,
-        1);
-    expect(find.text('本地关注动态'), findsOneWidget);
+        0);
     await tester.tap(find.descendant(
         of: find.byType(NavigationRail),
         matching: find.byIcon(Icons.person_outline)));
@@ -259,7 +254,7 @@ void main() {
         tester
             .widget<NavigationRail>(find.byType(NavigationRail))
             .selectedIndex,
-        2);
+        1);
     expect(find.text('点击登录'), findsOneWidget);
     expect(find.text('粉丝', skipOffstage: false), findsNothing);
     final localCard = find
@@ -525,18 +520,8 @@ void main() {
         token: 'synthetic-current-token'));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(NavigationDestination, '关注'));
-    await tester.pumpAndSettle();
-    expect(find.text('用户关注'), findsOneWidget);
-    await tester.tap(find.byTooltip('切换关注内容'));
-    await tester.pumpAndSettle();
-    await tester.tap(
-        find.widgetWithText(CheckedPopupMenuItem<FollowFeedSelection>, '悄悄关注'));
-    await tester.pumpAndSettle();
-    await finishIo(tester, () => GStorage.settings.flush());
-    await tester.pumpAndSettle();
-    expect(find.text('悄悄关注动态'), findsOneWidget);
     await tester.tap(find.widgetWithText(NavigationDestination, '我的'));
+    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     final oldController = Get.find<MessageController>();
     oldController.firstList.value = [7, 8, 9];
