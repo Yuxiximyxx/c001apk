@@ -5,6 +5,7 @@ import '../../components/cards/message_first_card.dart';
 import '../../components/cards/message_header_card.dart';
 import '../../components/cards/message_second_card.dart';
 import '../../components/cards/message_third_card.dart';
+import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
 import '../../pages/message/message_controller.dart';
 import '../../pages/noitfication/notification_page.dart';
 import '../../utils/extensions.dart';
@@ -61,6 +62,68 @@ class _MessagePageState extends State<MessagePage>
     await _messageController.checkCount();
   }
 
+  /// 5 类消息的未读总数，用于"消息通知"角标
+  int? _totalNotificationBadge() {
+    int total = 0;
+    bool hasAny = false;
+    for (int i = 0; i < 5; i++) {
+      final count = _messageController.thirdList.getOrNull(i);
+      if (count != null) {
+        hasAny = true;
+        total += count;
+      }
+    }
+    if (!hasAny) return null;
+    return total;
+  }
+
+  /// 点"消息通知"弹出 5 类消息列表
+  void _showNotificationSheet() {
+    if (!GlobalData().isLogin) return;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (int i = 0; i < 5; i++) ...[
+                Obx(
+                  () => messageThirdCard(
+                    context,
+                    _backgroundList[i],
+                    _iconList[i],
+                    _titleList[i],
+                    _messageController.thirdList.getOrNull(i),
+                    () {
+                      Get.back();
+                      Get.toNamed('/notification', arguments: {
+                        'type': NotificationType.values[i],
+                        if (i == 4)
+                          'notificationCount':
+                              _messageController.notificationCount.value,
+                        if (i == 4)
+                          'onNotificationsRead': () => _messageController
+                              .notificationCount.value = null,
+                      });
+                      int? count =
+                          _messageController.thirdList.getOrNull(i);
+                      if (count != null && count > 0) {
+                        _messageController.thirdList[i] = null;
+                      }
+                    },
+                  ),
+                ),
+                if (i < 4) const SizedBox(height: 10),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -103,7 +166,7 @@ class _MessagePageState extends State<MessagePage>
                   SliverPadding(
                     padding: const EdgeInsets.all(10),
                     sliver: SliverList.separated(
-                      itemCount: GlobalData().isLogin ? 7 : 6,
+                      itemCount: GlobalData().isLogin ? 3 : 2,
                       itemBuilder: (context, itemIndex) {
                         final index =
                             itemIndex + (GlobalData().isLogin ? 0 : 1);
@@ -116,37 +179,28 @@ class _MessagePageState extends State<MessagePage>
                             ),
                           );
                         } else if (index == 1) {
-                          return messageSeconfCard(
-                              GlobalData().isLogin, context);
-                        } else if (index >= 2 && index <= 6) {
-                          return Obx(
-                            () => messageThirdCard(
-                              context,
-                              _backgroundList[index - 2],
-                              _iconList[index - 2],
-                              _titleList[index - 2],
-                              _messageController.thirdList.getOrNull(index - 2),
-                              () {
-                                if (GlobalData().isLogin) {
-                                  Get.toNamed('/notification', arguments: {
-                                    'type': NotificationType.values[index - 2],
-                                    if (index == 6)
-                                      'notificationCount': _messageController
-                                          .notificationCount.value,
-                                    if (index == 6)
-                                      'onNotificationsRead': () =>
-                                          _messageController
-                                              .notificationCount.value = null,
-                                  });
-                                  int? count = _messageController.thirdList
-                                      .getOrNull(index - 2);
-                                  if (count != null && count > 0) {
-                                    _messageController.thirdList[index - 2] =
-                                        null;
-                                  }
-                                }
-                              },
-                            ),
+                          return Obx(() => messageSeconfCard(
+                                GlobalData().isLogin,
+                                context,
+                                _showNotificationSheet,
+                                _totalNotificationBadge(),
+                              ));
+                        } else if (index == 2) {
+                          // 下半部分改为"我的常去"
+                          return messageThirdCard(
+                            context,
+                            0xFF00bcd4,
+                            Icons.my_location,
+                            '我的常去',
+                            null,
+                            () {
+                              if (GlobalData().isLogin) {
+                                Get.toNamed(
+                                  '/ffflist',
+                                  arguments: {'type': FFFListType.RECENT},
+                                );
+                              }
+                            },
                           );
                         }
                         return const SizedBox();

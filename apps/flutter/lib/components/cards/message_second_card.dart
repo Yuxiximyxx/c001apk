@@ -6,7 +6,9 @@ import '../../components/cards/message_first_card.dart'
 import '../../pages/history/history_page.dart' show HistoryType;
 import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
 
-Widget messageSeconfCard(bool isLogin, BuildContext context) {
+Widget messageSeconfCard(
+    bool isLogin, BuildContext context, Function() onNotificationTap,
+    [int? notificationBadge]) {
   return Material(
     clipBehavior: Clip.hardEdge,
     borderRadius: const BorderRadius.all(Radius.circular(12)),
@@ -20,7 +22,7 @@ Widget messageSeconfCard(bool isLogin, BuildContext context) {
           [
             '本地收藏',
             '浏览历史',
-            '我的常去',
+            '消息通知',
           ],
           [
             () => Get.toNamed(
@@ -31,18 +33,14 @@ Widget messageSeconfCard(bool isLogin, BuildContext context) {
                   '/history',
                   arguments: {'type': HistoryType.History},
                 ),
-            isLogin
-                ? () => Get.toNamed(
-                      '/ffflist',
-                      arguments: {'type': FFFListType.RECENT},
-                    )
-                : () {},
+            isLogin ? onNotificationTap : () {},
           ],
           [
             Icons.archive_outlined,
             Icons.history,
-            Icons.my_location,
+            Icons.notifications_outlined,
           ],
+          [null, null, notificationBadge],
         ),
         messageFirstCardRow(
           context,

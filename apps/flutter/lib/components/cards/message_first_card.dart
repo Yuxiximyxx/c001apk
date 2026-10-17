@@ -47,6 +47,7 @@ Widget messageFirstCardRow(
   List<String> titles,
   List<Function()> onTaps, [
   List<IconData>? icons,
+  List<int?>? badges,
 ]) {
   return IntrinsicHeight(
     child: Row(
@@ -59,6 +60,7 @@ Widget messageFirstCardRow(
             titles[0],
             onTaps[0],
             icons?[0],
+            badges?.getOrNull(0),
           ),
         ),
         const Padding(
@@ -73,6 +75,7 @@ Widget messageFirstCardRow(
             titles[1],
             onTaps[1],
             icons?[1],
+            badges?.getOrNull(1),
           ),
         ),
         const Padding(
@@ -87,6 +90,7 @@ Widget messageFirstCardRow(
             titles[2],
             onTaps[2],
             icons?[2],
+            badges?.getOrNull(2),
           ),
         ),
       ],
@@ -100,6 +104,7 @@ Widget _messageFirstCardItem(
   String title,
   Function() onTap, [
   IconData? icon,
+  int? badge,
 ]) {
   return InkWell(
     onTap: onTap,
@@ -114,9 +119,13 @@ Widget _messageFirstCardItem(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null)
-              Icon(
-                icon,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              Badge(
+                isLabelVisible: badge != null && badge > 0,
+                label: Text(badge.toString()),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             if (icon == null)
               Text(
