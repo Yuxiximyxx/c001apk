@@ -29,6 +29,8 @@ import '../../../utils/oss/aliyunoss_client.dart';
 import '../../../utils/oss/aliyunoss_config.dart';
 import '../../../utils/oss_util.dart';
 import '../../../utils/utils.dart';
+import '../../../utils/storage_util.dart';
+import '../../../constants/constants.dart';
 
 enum PanelType { none, keyboard, emoji }
 
@@ -109,7 +111,15 @@ class _ReplyPageState extends State<ReplyPage>
 
   @override
   Widget build(BuildContext context) {
-    return MediaQuery.removePadding(
+    // GetDialogRoute 不继承 GetMaterialApp builder 里的 AnimatedTheme，
+    // 深色模式下 Theme.of(context) 会拿到浅色主题，导致弹窗背景发白。
+    // 按 main.dart 同样的逻辑算出实际亮度，对不上就手动套一层正确的主题。
+    final effectiveBrightness = switch (GStorage.getThemeMode()) {
+      ThemeMode.light => Brightness.light,
+      ThemeMode.dark => Brightness.dark,
+      ThemeMode.system => MediaQuery.platformBrightnessOf(context),
+    };
+    Widget content = MediaQuery.removePadding(
         removeTop: true,
         context: context,
         child: Scaffold(
@@ -135,6 +145,21 @@ class _ReplyPageState extends State<ReplyPage>
             ],
           ),
         ));
+    if (Theme.of(context).brightness != effectiveBrightness) {
+      final staticColor =
+          GStorage.settings.get(SettingsBoxKey.staticColor, defaultValue: 0);
+      content = Theme(
+        data: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Constants.seedColors[staticColor],
+            brightness: effectiveBrightness,
+          ),
+          useMaterial3: true,
+        ),
+        child: content,
+      );
+    }
+    return content;
   }
 
   Widget _buildPanelContainer() {
@@ -338,7 +363,7 @@ class _ReplyPageState extends State<ReplyPage>
                     selected: snapshot.data!,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 4),
                 StreamBuilder(
                   initialData: true,
                   stream: _keyboardStream.stream,
@@ -354,7 +379,7 @@ class _ReplyPageState extends State<ReplyPage>
                     selected: !snapshot.data!,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 4),
                 ToolbarIconButton(
                   selected: false,
                   icon: const Icon(Icons.image, size: 22),
@@ -419,7 +444,7 @@ class _ReplyPageState extends State<ReplyPage>
                     },
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 9),
+                          horizontal: 8, vertical: 9),
                       visualDensity: const VisualDensity(
                         horizontal: -2,
                         vertical: -2,
@@ -465,7 +490,7 @@ class _ReplyPageState extends State<ReplyPage>
                     onPressed: snapshot.data == true ? _onPublish : null,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
+                        horizontal: 14,
                         vertical: 10,
                       ),
                       visualDensity: const VisualDensity(
