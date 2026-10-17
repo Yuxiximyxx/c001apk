@@ -316,7 +316,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('合成系统信息', findRichText: true), findsNothing);
     expect(adapter.notificationPages, isEmpty);
-    await tester.ensureVisible(find.text('私信与信息'));
+    await tester.ensureVisible(find.text('消息通知'));
+    await tester.tap(find.text('消息通知'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('私信与信息'));
     await tester.pumpAndSettle();
     expect(find.text('酷安小秘书'), findsOneWidget);
@@ -336,6 +338,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('合成联系人'), findsOneWidget);
     Get.back();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('消息通知'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('私信与信息'));
     await tester.pumpAndSettle();
