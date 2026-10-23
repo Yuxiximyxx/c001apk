@@ -341,10 +341,10 @@ packages:
     dependency: transitive
     description:
       name: dio_web_adapter
-      sha256: "3a1b2cd7be71086f38504956e3ebcd2837288d231ff454bafa78021244102bfc"
+      sha256: "33259a9276d6cea88774a0000cfae0d861003497755969c92faa223108620dc8"
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.2"
+    version: "2.0.0"
   dynamic_color:
     dependency: "direct main"
     description:
@@ -599,10 +599,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_smart_dialog
-      sha256: "2f50b6b120da18ceb59df42ee057e2f608a1776267203359b832e469c45a406b"
+      sha256: "72762b20c25f8e12d490332004c9cca327f39dfc1fcba66124c6b7c108b68850"
       url: "https://pub.dev"
     source: hosted
-    version: "5.3.0"
+    version: "4.9.8+10"
   flutter_test:
     dependency: "direct dev"
     description: flutter

@@ -359,6 +359,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('联系人乙'), findsNothing);
     await tester.pump(const Duration(seconds: 6));
+    await tester
+        .runAsync(() => SmartDialog.dismiss(status: SmartStatus.allToast));
+    await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox.shrink());
   });

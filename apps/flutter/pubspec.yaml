@@ -51,7 +51,7 @@ dependencies:
   file_picker: ^13.1.0
   flutter_inappwebview: 6.1.5
   flutter_cache_manager: ^3.4.1
-  flutter_smart_dialog: ^5.3.0
+  flutter_smart_dialog: ^4.9.7+9 # pinned: v5 toast behavior hangs widget tests (10-min timeout); revisit later
   flutter_widget_from_html_core: ^0.17.4
   get: ^4.6.6
   hive: ^2.2.3

@@ -318,7 +318,7 @@ void main() {
           options: Options(headers: {'Cookie': 'synthetic-cookie'}));
       final request = adapter.requests.single;
       expect(request.headers['X-App-Token'], startsWith('v3'));
-      expect(request.headers, isNot(contains('Cookie')));
+      expect(request.headers.keys.map((k) => k.toLowerCase()), isNot(contains('cookie')));
       expect(request.responseType, ResponseType.plain);
     } finally {
       GlobalData().isLogin = false;
@@ -335,7 +335,7 @@ void main() {
     await Request().post('https://www.coolapk.com/feed/123');
     for (final request in adapter.requests) {
       expect(request.headers, isNot(contains('X-App-Token')));
-      expect(request.headers, isNot(contains('Cookie')));
+      expect(request.headers.keys.map((k) => k.toLowerCase()), isNot(contains('cookie')));
     }
   });
   test('a guest session survives reopening storage in a fresh isolate',
