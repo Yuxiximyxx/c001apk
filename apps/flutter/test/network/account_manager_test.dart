@@ -69,10 +69,12 @@ void main() {
     expect(GStorage.token, 'synthetic-one');
     expect(GStorage.level, 8);
     GlobalData().SESSID = 'synthetic-session';
+    await GStorage.settings.put('apiSessionV1', {'value': 'synthetic-session'});
     await store.useGuest();
     expect(GStorage.token, '');
     expect(GStorage.uid, '');
     expect(GlobalData().SESSID, '');
+    expect(GStorage.settings.get('apiSessionV1'), isNull);
     await store.initialize();
     expect(GlobalData().isLogin, isFalse);
     expect(store.accounts.length, 2);

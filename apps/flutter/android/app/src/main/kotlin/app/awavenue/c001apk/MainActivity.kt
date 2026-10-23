@@ -2,6 +2,7 @@ package app.awavenue.c001apk
 
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
@@ -13,6 +14,7 @@ import android.net.Uri
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.P
 import android.os.Environment
+import android.os.Build
 import android.webkit.MimeTypeMap;
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -32,7 +34,30 @@ class MainActivity : FlutterFragmentActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             CHANNEL
         ).setMethodCallHandler { call, result ->
-            if (call.method == "getInstalledApps") {
+            if (call.method == "getProtocolDeviceProfile") {
+                result.success(mapOf(
+                    "manufacturer" to Build.MANUFACTURER,
+                    "brand" to Build.BRAND,
+                    "model" to Build.MODEL,
+                    "buildNumber" to Build.DISPLAY,
+                    "sdkInt" to SDK_INT.toString(),
+                    "androidVersion" to Build.VERSION.RELEASE
+                ))
+            } else if (call.method == "openOfficialIdSettings") {
+                try {
+                    packageManager.getApplicationInfo("com.coolapk.market", 0)
+                    // This app also handles coolmarket links. Explicitly target
+                    // the official client so the guide never opens ourselves.
+                    startActivity(Intent(Intent.ACTION_VIEW,
+                        Uri.parse("coolmarket://www.coolapk.com/native/testSettings"))
+                        .setPackage("com.coolapk.market"))
+                    result.success(true)
+                } catch (e: PackageManager.NameNotFoundException) {
+                    result.error("official_client_not_installed", null, null)
+                } catch (e: Exception) {
+                    result.success(false)
+                }
+            } else if (call.method == "getInstalledApps") {
                 Thread {
                     result.success(getInstalledApps())
                 }.start()

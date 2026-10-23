@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../utils/global_data.dart';
 import '../../utils/storage_util.dart';
+import '../network/api_session_store.dart';
 
 /// Session credentials stay in the existing local settings store. Passwords
 /// are never retained, and credentials must not be displayed or logged.
@@ -208,13 +209,16 @@ class AccountStore {
       'activeUid': active?.uid,
     });
     final global = GlobalData();
-    if (notify) global.sessionGeneration++;
+    if (notify) {
+      global.sessionGeneration++;
+    }
     global.isLogin = active != null;
     global.uid = active?.uid ?? '';
     global.username = active?.username ?? '';
     global.token = active?._token ?? '';
     if (notify || active == null) global.SESSID = '';
     if (notify) global.loginSession = '';
+    if (notify) await ApiSessionStore.clear();
     await GStorage.settings.putAll({
       SettingsBoxKey.isLogin: active != null,
       SettingsBoxKey.uid: global.uid,

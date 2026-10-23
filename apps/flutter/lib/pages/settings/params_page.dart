@@ -114,7 +114,8 @@ class _ParamsPageState extends State<ParamsPage> {
             ),
           ),
           ListTile(
-            title: const Text('重新生成参数'),
+            title: const Text('重置协议参数'),
+            subtitle: const Text('使用一致的设备与系统配置，保留设备标识；不再随机拼接机型'),
             onTap: () async {
               await GStorage.regenerateParams();
               manufacturerKey.currentState?.updateValue();

@@ -13,9 +13,9 @@ if (keystorePropertiesFile.exists()) {
 
 def _filePath = System.getenv("KEYSTORE") ?: keystoreProperties["storeFile"]
 def _storeFile = _filePath != null ? file(_filePath) : null
-def _storePassword = System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("REVIA_KS_PASS") ?: keystoreProperties["storePassword"]
+def _storePassword = System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("REVIA_KS_PASS")
 def _keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties["keyAlias"]
-def _keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("REVIA_KS_PASS") ?: keystoreProperties["keyPassword"]
+def _keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("REVIA_KS_PASS")
 def _hasReleaseSigning = _storeFile != null && _storeFile.isFile() && _storePassword && _keyAlias && _keyPassword
 
 android {
@@ -53,23 +53,16 @@ android {
         }
     }
 
-    buildTypes {
-        debug {
-            signingConfig signingConfigs.debug
-        }
-        release {
-            if (_hasReleaseSigning) {
-                signingConfig signingConfigs.release
-            }
-        }
+    buildTypes.configureEach {
+        signingConfig = _hasReleaseSigning ? signingConfigs.release : null
     }
 }
 
-// Never produce an unsigned or debug-signed release when credentials are missing.
-tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+// Every APK must use the project certificate, including debug/test builds.
+tasks.matching { it.name == "preBuild" }.configureEach {
     doFirst {
         if (!_hasReleaseSigning) {
-            throw new GradleException("Release signing is not configured. Set KEYSTORE, KEY_ALIAS and KEYSTORE_PASSWORD/KEY_PASSWORD (or REVIA_KS_PASS); see docs/DEVELOPMENT.md.")
+            throw new GradleException("Project signing is required for every Android build. Set KEYSTORE, KEY_ALIAS and inject REVIA_KS_PASS into the build process; see docs/DEVELOPMENT.md.")
         }
     }
 }

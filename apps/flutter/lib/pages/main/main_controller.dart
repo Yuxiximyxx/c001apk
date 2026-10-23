@@ -42,11 +42,6 @@ class MainController extends GetxController {
       } else {
         debugPrint('statusCode: ${response.statusCode}');
       }
-      for (final cookie in response.headers['Set-Cookie'] ?? <String>[]) {
-        final pair = cookie.split(';').first;
-        if (generation == GlobalData().sessionGeneration &&
-            pair.startsWith('SESSID=')) GlobalData().SESSID = pair;
-      }
     } catch (e) {
       debugPrint('登录检查：${ApiFailure.fromError(e).message}');
     }

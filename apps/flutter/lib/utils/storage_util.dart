@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,8 @@ import '../utils/device_util.dart';
 import '../utils/global_data.dart';
 import '../utils/token_util.dart';
 import 'storage_path.dart';
+import 'device_profile.dart';
+import 'official_device_identity.dart';
 
 class GStorage {
   static late final Box<dynamic> searchHistory;
@@ -183,20 +186,63 @@ class GStorage {
   }
 
   static Future<void> fullSetXAppDevice() async {
-    setXAppDevice(await TokenUtils.encodeDevice(
-        '${szlmId.isEmpty ? DeviceUtil.randHexString(32) : szlmId}; ; ; ${DeviceUtil.randomMacAddress()}; $manufacturer; $brand; $model; $buildNumber; null'));
+    final fields = xAppDevice.isEmpty
+        ? [
+            'ca_${DeviceUtil.randHexString(32)}',
+            ' ',
+            ' ',
+            ' ',
+            ' $manufacturer',
+            ' $brand',
+            ' $model',
+            ' $buildNumber',
+            ' null'
+          ]
+        : _deviceFields();
+    if (szlmId.isNotEmpty) fields[0] = szlmId;
+    fields[4] = ' $manufacturer';
+    fields[5] = ' $brand';
+    fields[6] = ' $model';
+    fields[7] = ' $buildNumber';
+    await settings.put(SettingsBoxKey.xAppDevice,
+        await TokenUtils.encodeDevice(fields.join(';')));
+  }
+
+  static List<String> _deviceFields() {
+    try {
+      final plain = utf8.decode(
+          base64Decode(base64.normalize(xAppDevice.split('').reversed.join())));
+      final fields = plain.split(';');
+      if (fields.length == 9 && fields.first.trim().isNotEmpty) return fields;
+    } catch (_) {
+      // Report a safe message; never include the original device code.
+    }
+    throw const FormatException('现有设备参数无法读取，未修改设备标识');
+  }
+
+  static Future<void> importOfficialDeviceIdentity(String text) async {
+    final id = OfficialDeviceIdentity.parse(text);
+    final fields = _deviceFields();
+    fields[0] = id;
+    final encoded = await TokenUtils.encodeDevice(fields.join(';'));
+    await settings.putAll({
+      SettingsBoxKey.szlmId: id,
+      SettingsBoxKey.xAppDevice: encoded,
+    });
+    await settings.flush();
   }
 
   static Future<void> regenerateParams() async {
+    final profile = await DeviceProfile.current();
     setVersionName(Constants.VERSION_NAME);
     setApiVersion(Constants.API_VERSION);
     setVersionCode(Constants.VERSION_CODE);
-    setManufacturer(DeviceUtil.randomManufacturer());
-    setBrand(DeviceUtil.randomBrand());
-    setModel(DeviceUtil.randomDeviceModel());
-    setBuildNumber(DeviceUtil.randHexString(32));
-    setSdkInt(DeviceUtil.randomSdkInt());
-    setAndroidVersion(DeviceUtil.randomAndroidVersionRelease());
+    setManufacturer(profile.manufacturer);
+    setBrand(profile.brand);
+    setModel(profile.model);
+    setBuildNumber(profile.buildNumber);
+    setSdkInt(profile.sdkInt);
+    setAndroidVersion(profile.androidVersion);
     fullSetUserAgent();
     await fullSetXAppDevice();
   }

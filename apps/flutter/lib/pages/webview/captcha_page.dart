@@ -10,6 +10,7 @@ import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
 import '../../utils/web_runtime.dart';
 import '../../utils/local_web_page.dart';
+import '../../utils/official_device_identity.dart';
 
 Future<String?> verifyCaptcha(CaptchaChallenge challenge) async {
   if (!Utils.isSupportWebview()) {
@@ -87,6 +88,30 @@ window.addEventListener('flutterInAppWebViewPlatformReady',startCaptcha);
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('人机验证'), actions: [
+          IconButton(
+            tooltip: '重复验证帮助',
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('反复出现人机验证？'),
+                content: const Text('可在“我的 → 设置 → 协议与设备”导入官方设备标识。'
+                    '从官方酷安同一页面点击“复制 OAID”5次后，粘贴完整内容即可识别数盟 ID。'
+                    '这是临时方案，仍可能需要正常验证。'),
+                actions: [
+                  TextButton(
+                    onPressed: () =>
+                        Utils.launchURL(OfficialDeviceIdentity.guideUrl),
+                    child: const Text('仓库图文说明'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('知道了'),
+                  ),
+                ],
+              ),
+            ),
+          ),
           IconButton(
               tooltip: '重新加载',
               icon: const Icon(Icons.refresh),

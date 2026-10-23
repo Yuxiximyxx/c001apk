@@ -44,6 +44,10 @@ Android 16.6.4（2609291）客户端与游客只读响应对照核实。本项�
 该分支及当前账号、设备范围内的内存复用，没有移植或分发官方客户端代码。
 SDK 接入回调另核对 [网易易盾官方示例](https://github.com/yidun/captcha-php-demo/blob/master/index.php)。
 
+2026-10-17，API 响应会话 Cookie 的保存与返回经同一官方客户端的协议行为及
+游客响应核对。本项目独立实现域、路径、有效期、账号设备绑定及并发响应隔离，
+并仅缓存服务端已接受的验证状态以供冷启动复用；未移植官方客户端代码或 SDK。
+
 2026-10-14，Android 启动器图标的系统 Monet 亮暗配色参考
 [bggRGjQaUbCoE/PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus)，
 来源提交 `bd5e04e5de5a523e85a8eeba30da748dcd68925a`，文件

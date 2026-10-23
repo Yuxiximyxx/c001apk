@@ -13,7 +13,6 @@ import '../../components/update_check_tile.dart';
 import '../../logic/app_update/update_preferences.dart';
 import '../../logic/accounts/account_store.dart';
 import '../../components/settings/drop_down_menu_item.dart';
-import '../../components/settings/edittext_item.dart';
 import '../../components/settings/item_title.dart';
 import '../../components/settings/switch_item.dart';
 import '../../constants/constants.dart';
@@ -23,6 +22,7 @@ import '../../utils/storage_util.dart';
 import '../../utils/global_data.dart';
 import '../../logic/local_follow/local_follow_store.dart';
 import '../local_follow/local_follow_page.dart';
+import 'device_identity_page.dart';
 
 enum ImageQuality {
   AUTO,
@@ -275,8 +275,8 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
           ],
         SettingsSection.storage => [
             ValueListenableBuilder(
-              valueListenable: GStorage.settings.listenable(
-                  keys: [UpdatePreferences.enabledKey]),
+              valueListenable: GStorage.settings
+                  .listenable(keys: [UpdatePreferences.enabledKey]),
               builder: (context, _, __) => SwitchListTile(
                 secondary: const Icon(Icons.update),
                 title: const Text('自动检查 c001apk 更新'),
@@ -322,12 +322,11 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
             ),
           ],
         SettingsSection.protocol => [
-            const EdittextItem(
-              icon: Icons.smartphone,
-              title: '设备标识（SZLM ID）',
-              subtitle: '用于客户端请求，修改后可能影响接口访问',
-              boxKey: SettingsBoxKey.szlmId,
-              needUpdateXAppDevice: true,
+            ListTile(
+              leading: const Icon(Icons.smartphone),
+              title: const Text('导入官方设备标识'),
+              subtitle: const Text('减少重复人机验证 · 获取说明与粘贴识别'),
+              onTap: () => Get.to(() => const DeviceIdentityPage()),
             ),
             ListTile(
               leading: const Icon(Icons.developer_mode),

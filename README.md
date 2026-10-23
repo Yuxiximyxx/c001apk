@@ -67,6 +67,8 @@
 
 云端构建包可从 [Actions](https://github.com/TG-Twilight/c001apk/actions/workflows/build.yml) 的 Artifacts 下载，平台、签名与手动构建方式见 [云端构建指南](docs/CI.md)。
 
+反复遇到人机验证时，可参照 [从官方酷安导入设备标识](docs/DEVICE_ID_IMPORT.md)。自动识别入口需要包含此功能的新版本，不会自动加入旧发行包。
+
 ## 开发进度
 
 - [x] 更新公共 API 请求协议、签名与错误处理。
@@ -77,7 +79,7 @@
 - [x] 主导航与分类设置调整，新增 c001apk 自身更新检测。
 - [x] 修复评论完成验证后仍无法加载，更新检测改为每次冷启动检查一次。
 - [ ] 继续完善验证码放行与部分账号操作。
-- [ ] Android 迁移到 Kotlin / Jetpack Compose，采用 Material 3 Expressive。
+- 继续维护现有 Flutter，优先 Android 与 Windows，见 [当前维护方向](docs/PROJECT_DIRECTION.md)。
 - [ ] 完善 Flutter 桌面端随窗口尺寸变化的自适应布局与图片保存。
 
 当前重点维护 **Android 与 Windows**，代码仍为 Flutter。Android 包名为 `app.awavenue.c001apk`；Linux 已通过云端 release 构建，iOS `arm64` 未签名 IPA 已随 [1.2.6-release](https://github.com/TG-Twilight/c001apk/releases/tag/1.2.6-release) 提供，安装前需自行签名。Linux / iOS 运行体验仍待验收。新包与旧包独立安装，登录及本地数据不会自动迁移。

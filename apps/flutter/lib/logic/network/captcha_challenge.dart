@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-/// Protocol configuration only. Verification proofs are short lived and never
-/// persisted or printed. Source: coolapk-desktop 3ef2ad4, neteaseCaptcha.ts (MIT).
+/// Protocol configuration only. Verification proofs must never be printed.
+/// Source: coolapk-desktop 3ef2ad4, neteaseCaptcha.ts (MIT).
 class CaptchaChallenge {
   const CaptchaChallenge(this.captchaId, this.field);
   final String captchaId;

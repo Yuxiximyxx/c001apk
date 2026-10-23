@@ -19,7 +19,7 @@ Linux / iOS 运行体验仍待验收。云端 Ubuntu 离线检查 150 项通过�
 
 - 推送 `main` 或提交 PR，且改动 Flutter 工程或 workflow 时，自动执行离线检查和构建。
 - 在 Actions → Build → Run workflow 手动运行，默认 `android_release=true`，生成正式签名 Android APK。
-- 没有正式签名 Secrets 的 fork 可将 `android_release` 取消勾选，执行 debug 构建。
+- Android debug 与 release 均要求项目签名 Secrets，缺少时失败，不回退开发证书。PR 跳过 Android APK 构建，其他检查／平台构建保留。
 - 勾选 `ios` 可额外构建 iOS 真机 arm64 未签名 IPA，附件名称含 `unsigned`；安装前需要自行签名，尚未做 iPhone 实机验收。
 
 静态分析遇 error/warning 时失败；既有 info 级命名等提示继续显示，暂不阻断。
@@ -30,7 +30,7 @@ Linux / iOS 运行体验仍待验收。云端 Ubuntu 离线检查 150 项通过�
 | 离线分析/测试 | `ubuntu-22.04` | 检查日志 |
 | Windows release | `windows-2022` | x86_64 ZIP，包含 EXE、DLL 和完整 `data/` |
 | Linux release | `ubuntu-22.04` | x86_64 tar.gz，包含完整 bundle |
-| Android debug | `ubuntu-22.04` | 三 ABI 开发证书 APK，保留 7 天 |
+| Android debug | `ubuntu-22.04` | 三 ABI 项目证书 APK，保留 7 天；PR 不构建 |
 | Android release | `ubuntu-22.04` | `arm64-v8a` / `armeabi-v7a` / `x86_64` 正式签名 APK，分别上传 |
 | iOS（可选） | `macos-14` | arm64 未签名 IPA 与 SHA-256 清单，需自行签名 |
 
@@ -65,14 +65,14 @@ Linux / iOS 运行体验仍待验收。云端 Ubuntu 离线检查 150 项通过�
 `EA:38:5A:FC:82:E1:98:24:EE:A8:A8:86:8E:D3:65:DF:03:E9:88:6B:BB:A3:3E:47:E1:E0:4B:43:EC:65:CB:67`。
 以上是公开证书元数据；其他 fork 如使用自己的密钥，须同时调整 alias 和期望指纹。
 
-手动 release 任务先检查 Secrets，再将 JKS 恢复到 runner 临时目录，并用
+Android debug 和 release 任务先检查 Secrets，再将 JKS 恢复到 runner 临时目录，并用
 `keytool -storepass:env` 核对公开证书。密码仅注入需要它的步骤环境，
 不放在命令参数或 `key.properties` 中。构建后逐个 APK 使用 `apksigner verify` 核对指纹，
-同时检查每个包仅含指定 ABI 的 AOT 库。校验失败不会上传安装包。
+正式 release 包另检查仅含指定 ABI 的 AOT 库。校验失败不会上传安装包。
 
 清理步骤使用 `always()`，在成功或失败后移除临时 JKS 和证书。
 不缓存项目/Gradle 目录，不上传整个 workspace，仅上传指定的分发文件；
-JKS、密码和 Base64 不进入 Git 或 artifacts。公共 PR 和自动 push 不读取正式签名 Secrets。
+JKS、密码和 Base64 不进入 Git 或 artifacts。PR 不读取签名 Secrets；受信任的 main push 与手动 Android 构建通过 Secrets 签名。
 GitHub Secrets 的二进制存储方式见 [官方文档](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)。
 
 ## 排查失败

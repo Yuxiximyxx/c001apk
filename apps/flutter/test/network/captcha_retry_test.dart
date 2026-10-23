@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:c001apk_flutter/logic/network/request.dart';
 import 'package:c001apk_flutter/logic/network/interceptor.dart';
 import 'package:c001apk_flutter/logic/network/captcha_challenge.dart';
+import 'package:c001apk_flutter/logic/network/api_session_store.dart';
 import 'package:c001apk_flutter/utils/global_data.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
 import 'package:dio/dio.dart';
@@ -16,6 +18,7 @@ class CaptchaAdapter implements HttpClientAdapter {
   final bodies = <String>[];
   bool alwaysChallenge = false;
   void Function()? beforeResponse;
+  Future<void> Function()? waitForResponse;
   dynamic extra = jsonEncode({
     'captchaId': '0123456789abcdef0123456789abcdef',
     'captchaField': '_custom_token'
@@ -28,6 +31,7 @@ class CaptchaAdapter implements HttpClientAdapter {
         ? ''
         : utf8.decode(await stream.expand((x) => x).toList()));
     beforeResponse?.call();
+    await waitForResponse?.call();
     return ResponseBody.fromString(
         jsonEncode(requests.length == 1 || alwaysChallenge
             ? {
@@ -67,7 +71,8 @@ void main() {
     Request();
     Request.dio.interceptors.clear();
   });
-  setUp(() {
+  setUp(() async {
+    await ApiSessionStore.clearValidation();
     ApiInterceptor.clearCaptchaCookie();
     adapter = CaptchaAdapter();
     Request.dio.httpClientAdapter = adapter;
@@ -75,7 +80,8 @@ void main() {
       ..clear()
       ..add(ApiInterceptor());
   });
-  tearDown(() {
+  tearDown(() async {
+    await ApiSessionStore.clearValidation();
     (Request() as dynamic).captchaVerifier = null;
     ApiInterceptor.clearCaptchaCookie();
     GlobalData().isLogin = false;
@@ -233,6 +239,57 @@ void main() {
     await Request().post('https://api.coolapk.com/v6/feed/like',
         queryParameters: {'id': '123'});
     expect(adapter.requests, hasLength(1));
+  });
+  test('concurrent challenges open only one verifier', () async {
+    adapter.extra = {
+      'captchaId': '0123456789abcdef0123456789abcdef',
+      'captchaField': ''
+    };
+    adapter.alwaysChallenge = true;
+    var prompts = 0;
+    final entered = Completer<void>();
+    final finish = Completer<String?>();
+    Request().captchaVerifier = (c) async {
+      prompts++;
+      if (!entered.isCompleted) entered.complete();
+      return finish.future;
+    };
+    final pending = Future.wait([
+      Request().get('https://api.coolapk.com/v6/feed/replyList'),
+      Request().get('https://api.coolapk.com/v6/feed/replyList'),
+    ]);
+    await entered.future;
+    finish.complete(null);
+    await pending;
+    expect(prompts, 1);
+  });
+  test('a late retry challenge cannot remove a newer account proof', () async {
+    adapter.extra = {
+      'captchaId': '0123456789abcdef0123456789abcdef',
+      'captchaField': ''
+    };
+    final retryStarted = Completer<void>();
+    final finishRetry = Completer<void>();
+    adapter.waitForResponse = () async {
+      if (adapter.requests.length == 2) {
+        retryStarted.complete();
+        await finishRetry.future;
+      }
+    };
+    Request().captchaVerifier = (c) async => c.proof('synthetic-old-proof');
+    final pending = Request().get('https://api.coolapk.com/v6/feed/replyList');
+    final expectation = expectLater(pending, throwsA(isA<DioException>()));
+    await retryStarted.future;
+    GlobalData().sessionGeneration++;
+    GlobalData().token = 'synthetic-new-account';
+    final store = ApiSessionStore();
+    await store.saveValidation(
+        'NEC%3A01234567%3Asynthetic-new-proof', store.capture(),
+        acceptedSession: store.sessionHash);
+    adapter.alwaysChallenge = true;
+    finishRetry.complete();
+    await expectation;
+    expect(store.validation, 'NEC%3A01234567%3Asynthetic-new-proof');
   });
   test('persistent challenge is retried once without a verification loop',
       () async {

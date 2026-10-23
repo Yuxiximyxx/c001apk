@@ -127,11 +127,15 @@ jobs:
           retention-days: 14
 
   android-debug:
-    name: Android debug (no release Secrets)
-    if: github.event_name != 'workflow_dispatch' || !inputs.android_release
+    name: Android debug (project certificate)
+    # Pull requests skip Android signing; never expose signing Secrets to PR code.
+    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || !inputs.android_release)
     needs: checks
     runs-on: ubuntu-22.04
     timeout-minutes: 35
+    env:
+      KEY_ALIAS: '秋风のとおり道'
+      EXPECTED_CERT_SHA256: 'EA385AFC82E19824EEA8A8868ED365DF03E9886BBBA33E47E1E04B43EC65CB67'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -157,7 +161,37 @@ jobs:
       - name: Sync build date
         run: dart tool/update_build_date.dart ${{ needs.checks.outputs.build_date }}
       - run: flutter pub get --enforce-lockfile
-      - run: flutter build apk --debug --split-per-abi --no-pub
+      - name: Restore and verify project keystore
+        env:
+          KEYSTORE: ${{ runner.temp }}/c001apk-signing/release.jks
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          REVIA_KS_PASS: ${{ secrets.REVIA_KS_PASS }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo 'Missing ANDROID_KEYSTORE_BASE64 Secret'; exit 1; }
+          test -n "$REVIA_KS_PASS" || { echo 'Missing REVIA_KS_PASS Secret'; exit 1; }
+          umask 077
+          mkdir -p "$(dirname "$KEYSTORE")"
+          printf 'KEYSTORE=%s\n' "$KEYSTORE" >> "$GITHUB_ENV"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          keytool -exportcert -keystore "$KEYSTORE" -alias "$KEY_ALIAS" -storepass:env REVIA_KS_PASS -file "$RUNNER_TEMP/c001apk-signing/cert.der"
+          actual=$(sha256sum "$RUNNER_TEMP/c001apk-signing/cert.der" | cut -d ' ' -f 1 | tr '[:lower:]' '[:upper:]')
+          test "$actual" = "$EXPECTED_CERT_SHA256" || { echo 'Unexpected release signing certificate'; exit 1; }
+      - name: Build project-signed debug APKs
+        env:
+          REVIA_KS_PASS: ${{ secrets.REVIA_KS_PASS }}
+        run: flutter build apk --debug --split-per-abi --no-pub
+      - name: Verify debug APK certificates
+        run: |
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            report=$("$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs "build/app/outputs/flutter-apk/app-$abi-debug.apk")
+            actual=$(printf '%s\n' "$report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr '[:lower:]' '[:upper:]')
+            test "$actual" = "$EXPECTED_CERT_SHA256" || { echo "Unexpected debug APK certificate: $abi"; exit 1; }
+          done
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/c001apk-signing/release.jks" "$RUNNER_TEMP/c001apk-signing/cert.der"
+          rmdir "$RUNNER_TEMP/c001apk-signing" 2>/dev/null || true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: c001apk-android-debug

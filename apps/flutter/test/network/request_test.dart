@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:c001apk_flutter/logic/network/network_repo.dart';
@@ -13,6 +15,9 @@ import 'package:hive/hive.dart';
 class RecordingAdapter implements HttpClientAdapter {
   final requests = <RequestOptions>[];
   final bodies = <String>[];
+  List<String> responseCookies = [];
+  void Function()? beforeResponse;
+  Future<void> Function()? waitForResponse;
   @override
   Future<ResponseBody> fetch(RequestOptions options,
       Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
@@ -20,13 +25,29 @@ class RecordingAdapter implements HttpClientAdapter {
     bodies.add(requestStream == null
         ? ''
         : utf8.decode(await requestStream.expand((chunk) => chunk).toList()));
+    final cookies = responseCookies.toList();
+    beforeResponse?.call();
+    await waitForResponse?.call();
     return ResponseBody.fromString('{"data":[]}', 200, headers: {
-      Headers.contentTypeHeader: ['application/json']
+      Headers.contentTypeHeader: ['application/json'],
+      'set-cookie': cookies,
     });
   }
 
   @override
   void close({bool force = false}) {}
+}
+
+Future<String> _restartedCookie(String path) async {
+  Hive.init(path);
+  GStorage.settings = await Hive.openBox('settings');
+  Request();
+  final adapter = RecordingAdapter();
+  Request.dio.httpClientAdapter = adapter;
+  await Request().get('https://api2.coolapk.com/v6/feed/replyList');
+  final cookie = adapter.requests.single.headers['Cookie'] as String;
+  await Hive.close();
+  return cookie;
 }
 
 void main() {
@@ -46,7 +67,12 @@ void main() {
     });
     Request();
   });
-  setUp(() {
+  setUp(() async {
+    GlobalData().isLogin = false;
+    GlobalData().uid = '';
+    GlobalData().token = '';
+    GlobalData().SESSID = '';
+    await GStorage.settings.delete('apiSessionV1');
     adapter = RecordingAdapter();
     Request.dio.httpClientAdapter = adapter;
   });
@@ -67,6 +93,161 @@ void main() {
     expect(account.headers, isNot(contains('X-App-Token')));
     expect(account.headers['Accept'], contains('text/html'));
     expect(api.headers['X-App-Token'], startsWith('v3'));
+  });
+  test('guest API response session is returned on the next API request',
+      () async {
+    GlobalData().SESSID = '';
+    adapter.responseCookies = [
+      'SESSID=synthetic-guest-session; Path=/; Domain=.coolapk.com; Secure; HttpOnly',
+      'token=; Max-Age=0; Path=/; Domain=.coolapk.com',
+    ];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'],
+        contains('SESSID=synthetic-guest-session'));
+  });
+  test('logged in API requests retain the server session alongside the account',
+      () async {
+    GlobalData().isLogin = true;
+    GlobalData().uid = '123';
+    GlobalData().token = 'synthetic-account-token';
+    adapter.responseCookies = ['SESSID=synthetic-member-session; Path=/'];
+    await Request().get('https://api.coolapk.com/v6/account/checkLogin');
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    final cookie = adapter.requests.last.headers['Cookie'] as String;
+    expect(cookie, contains('uid=123'));
+    expect(cookie, contains('token=synthetic-account-token'));
+    expect(cookie, contains('SESSID=synthetic-member-session'));
+  });
+  test(
+      'API session never enters public, account web, HTTP or external requests',
+      () async {
+    adapter.responseCookies = ['SESSID=synthetic-api-session; Path=/'];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    adapter.responseCookies = [];
+    for (final url in [
+      'https://www.coolapk.com/feed/123',
+      'https://account.coolapk.com/auth/login',
+      'http://api.coolapk.com/v6/feed/detail',
+      'https://example.invalid/image',
+    ]) {
+      await Request().get(url);
+      expect((adapter.requests.last.headers['Cookie'] ?? '').toString(),
+          isNot(contains('synthetic-api-session')));
+    }
+  });
+  test('a response from a previous account cannot establish the new session',
+      () async {
+    adapter.responseCookies = ['SESSID=synthetic-old-session; Path=/'];
+    adapter.beforeResponse = () {
+      GlobalData().sessionGeneration++;
+    };
+    await expectLater(Request().get('https://api.coolapk.com/v6/main/indexV8'),
+        throwsA(isA<DioException>()));
+    adapter.beforeResponse = null;
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect((adapter.requests.last.headers['Cookie'] ?? '').toString(),
+        isNot(contains('synthetic-old-session')));
+  });
+  test('expired and server-deleted sessions are not returned', () async {
+    adapter.responseCookies = ['SESSID=synthetic-session; Path=/'];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    adapter.responseCookies = ['SESSID=; Max-Age=0; Path=/'];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'], isNot(contains('SESSID=')));
+    adapter.responseCookies = [
+      'SESSID=synthetic-expired; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/'
+    ];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'], isNot(contains('SESSID=')));
+  });
+  test('an untrusted response cannot seed an API session', () async {
+    adapter.responseCookies = [
+      'SESSID=synthetic-injection; Domain=.coolapk.com; Path=/'
+    ];
+    await Request().get('https://example.invalid/image');
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'],
+        isNot(contains('synthetic-injection')));
+  });
+  test('a late bootstrap response cannot overwrite an established session',
+      () async {
+    final started = Completer<void>();
+    final release = Completer<void>();
+    adapter.responseCookies = ['SESSID=synthetic-late-session; Path=/'];
+    adapter.waitForResponse = () async {
+      started.complete();
+      await release.future;
+    };
+    final late = Request().get('https://api.coolapk.com/v6/main/indexV8');
+    await started.future;
+    adapter.waitForResponse = null;
+    adapter.responseCookies = ['SESSID=synthetic-current-session; Path=/'];
+    await Request().get('https://api.coolapk.com/v6/account/checkLogin');
+    release.complete();
+    await late;
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'],
+        contains('SESSID=synthetic-current-session'));
+  });
+  test('a session is not restored for a different device or account', () async {
+    adapter.responseCookies = ['SESSID=synthetic-bound-session; Path=/'];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    adapter.responseCookies = [];
+    final original = GStorage.xAppDevice;
+    await GStorage.settings.put(SettingsBoxKey.xAppDevice, 'changed-device');
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'], isNot(contains('SESSID=')));
+    await GStorage.settings.put(SettingsBoxKey.xAppDevice, original);
+    GlobalData().isLogin = true;
+    GlobalData().uid = '123';
+    GlobalData().token = 'synthetic-account';
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'], isNot(contains('SESSID=')));
+  });
+  test('host-only cookies and default paths keep their original scope',
+      () async {
+    adapter.responseCookies = ['SESSID=synthetic-scoped'];
+    await Request().get('https://api.coolapk.com/v6/account/checkLogin');
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'], isNot(contains('SESSID=')));
+    await Request().get('https://api2.coolapk.com/v6/account/checkLogin');
+    expect(adapter.requests.last.headers['Cookie'], isNot(contains('SESSID=')));
+    await Request().get('https://api.coolapk.com/v6/account/checkLogin');
+    expect(
+        adapter.requests.last.headers['Cookie'], contains('synthetic-scoped'));
+  });
+  test('deleting a new session prevents an old bootstrap response reviving it',
+      () async {
+    final started = Completer<void>();
+    final release = Completer<void>();
+    adapter.responseCookies = ['SESSID=synthetic-old; Path=/'];
+    adapter.waitForResponse = () async {
+      started.complete();
+      await release.future;
+    };
+    final old = Request().get('https://api.coolapk.com/v6/main/indexV8');
+    await started.future;
+    adapter.waitForResponse = null;
+    adapter.responseCookies = ['SESSID=synthetic-new; Path=/'];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    adapter.responseCookies = ['SESSID=; Max-Age=0; Path=/'];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    release.complete();
+    await old;
+    adapter.responseCookies = [];
+    await Request().get('https://api.coolapk.com/v6/feed/replyList');
+    expect(adapter.requests.last.headers['Cookie'], isNot(contains('SESSID=')));
   });
   test('password login sends URL encoded fields with matching content type',
       () async {
@@ -156,5 +337,17 @@ void main() {
       expect(request.headers, isNot(contains('X-App-Token')));
       expect(request.headers, isNot(contains('Cookie')));
     }
+  });
+  test('a guest session survives reopening storage in a fresh isolate',
+      () async {
+    adapter.responseCookies = [
+      'SESSID=synthetic-restart-session; Path=/; Domain=.coolapk.com',
+    ];
+    await Request().get('https://api.coolapk.com/v6/main/indexV8');
+    await GStorage.settings.flush();
+    await GStorage.settings.close();
+    final path = directory.path;
+    final cookie = await Isolate.run(() => _restartedCookie(path));
+    expect(cookie, contains('SESSID=synthetic-restart-session'));
   });
 }

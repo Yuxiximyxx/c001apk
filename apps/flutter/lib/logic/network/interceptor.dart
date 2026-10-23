@@ -6,10 +6,14 @@ import '../../utils/global_data.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/token_util.dart';
 import 'api_failure.dart';
+import 'api_session_store.dart';
 
 class ApiInterceptor extends Interceptor {
+  final _sessions = ApiSessionStore();
   static String? _captchaCookie;
   static (int, bool, String, String, String)? _captchaSession;
+  static DateTime? _captchaExpires;
+  static String? _captchaServerSession;
 
   static (int, bool, String, String, String) get _session => (
         GlobalData().sessionGeneration,
@@ -19,22 +23,38 @@ class ApiInterceptor extends Interceptor {
         GStorage.xAppDevice,
       );
 
-  // Read verification is a process-local Cookie, shared by the two API hosts.
-  // It must never survive an account/device change or enter persistent storage.
+  // A proof is cached durably only after the server accepts its retry.
   static void setCaptchaCookie(String proof) {
     _captchaCookie = Uri.encodeQueryComponent(proof);
     _captchaSession = _session;
+    _captchaExpires = DateTime.now().add(const Duration(hours: 24));
+    _captchaServerSession = ApiSessionStore().sessionHash;
   }
 
   static void clearCaptchaCookie() {
     _captchaCookie = null;
     _captchaSession = null;
+    _captchaExpires = null;
+    _captchaServerSession = null;
+  }
+
+  static Future<void> invalidateCaptchaCookie() async {
+    clearCaptchaCookie();
+    await ApiSessionStore.clearValidation();
   }
 
   static String? get _currentCaptchaCookie {
-    if (_captchaSession != _session) clearCaptchaCookie();
-    return _captchaCookie;
+    if (_captchaSession != _session ||
+        (_captchaExpires != null &&
+            !_captchaExpires!.isAfter(DateTime.now())) ||
+        (_captchaServerSession != null &&
+            _captchaServerSession != ApiSessionStore().sessionHash)) {
+      clearCaptchaCookie();
+    }
+    return _captchaCookie ?? ApiSessionStore().validation;
   }
+
+  static String? get currentCaptchaCookie => _currentCaptchaCookie;
 
   String get apiVersion => GStorage.apiVersion;
   String get versionCode => GStorage.versionCode;
@@ -84,9 +104,7 @@ class ApiInterceptor extends Interceptor {
         } else {
           options.responseType = ResponseType.plain;
         }
-      } else if (uri.host == 'api.coolapk.com' ||
-          uri.host == 'api2.coolapk.com' ||
-          publicFeed) {
+      } else if (ApiSessionStore.allows(uri) || publicFeed) {
         options.headers['User-Agent'] = userAgent;
         options.headers['X-Requested-With'] = Constants.REQUEST_WITH;
         options.headers['X-Sdk-Int'] = sdkInt;
@@ -108,10 +126,13 @@ class ApiInterceptor extends Interceptor {
               .removeWhere((key, _) => key.toLowerCase() == 'cookie');
           options.responseType = ResponseType.plain;
         } else {
+          options.extra['apiSessionContext'] = _sessions.capture();
+          final sessionCookie = _sessions.cookieFor(uri);
           options.headers['Cookie'] = GlobalData().isLogin
-              ? 'uid=${GlobalData().uid}; username=${GlobalData().username}; token=${GlobalData().token}'
-              : GlobalData().SESSID;
+              ? 'uid=${GlobalData().uid}; username=${GlobalData().username}; token=${GlobalData().token}${sessionCookie.isEmpty ? '' : '; $sessionCookie'}'
+              : sessionCookie;
           final validation = _currentCaptchaCookie;
+          options.extra['apiCaptchaCookie'] = validation;
           if (uri.scheme == 'https' && validation != null) {
             final cookie = options.headers['Cookie'] as String;
             options.headers['Cookie'] =
@@ -129,6 +150,26 @@ class ApiInterceptor extends Interceptor {
         stackTrace: stackTrace,
       ));
     }
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) async {
+    final context = response.requestOptions.extra['apiSessionContext'];
+    if (context is ApiSessionContext) {
+      try {
+        final acceptedSession = await _sessions.save(
+            response.requestOptions.uri,
+            response.headers['set-cookie'] ?? const [],
+            context);
+        if (acceptedSession != null) {
+          response.extra['apiAcceptedSession'] = acceptedSession;
+        }
+      } catch (_) {
+        // A local persistence error must not turn an accepted remote write
+        // into a transport failure that invites an accidental duplicate.
+      }
+    }
+    handler.next(response);
   }
 
   @override

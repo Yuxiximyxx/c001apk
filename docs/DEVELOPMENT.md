@@ -87,7 +87,9 @@ flutter build windows --debug
 flutter build apk --debug
 ```
 
-Windows 产物位于 `apps/flutter/build/windows/x64/runner/Debug/`，Android 调试 APK 位于 `apps/flutter/build/app/outputs/flutter-apk/app-debug.apk`。调试构建用于开发验证；正式发布时应配置自己的签名。
+Windows 产物位于 `apps/flutter/build/windows/x64/runner/Debug/`，Android 调试 APK 位于 `apps/flutter/build/app/outputs/flutter-apk/app-debug.apk`。本项目所有 Android APK（包括 debug 和 instrumentation 测试包）均使用“秋风のとおり道”项目证书；缺少签名配置时构建失败，不回退 Android Debug 证书。
+
+本机从 Windows 用户级 `REVIA_KS_PASS` 读取密码，只注入当前构建进程，用后清除；`key.properties` 仅保存本地 keystore 路径和 alias，不保存密码。CI 的 debug 与 release 均通过既有 Secrets 临时恢复 keystore、核验 APK 证书后清理。PR 跳过 Android APK 构建，不向 PR 代码提供签名 Secrets；其他检查及平台构建保留。
 
 ### Release 构建与 Android 签名
 
@@ -119,8 +121,7 @@ Linux 还不支持 x64 到 ARM64 交叉构建，因此当前桌面 CI 使用 x86
 架构支持和 APK 拆分方式参见 [Flutter 平台支持](https://docs.flutter.dev/reference/supported-platforms)
 及 [Android 发布指南](https://docs.flutter.dev/deployment/android#build-an-apk)。
 
-Android release 必须配置正式签名，缺少 keystore、alias 或密码时构建失败。
-debug 继续使用开发证书。以下环境变量在构建时读取：
+Android 所有构建变体（包括 debug、profile、release 和 instrumentation 测试包）均使用项目证书，缺少 keystore、alias 或密码时构建失败。以下环境变量在构建时读取：
 
 | 环境变量 | 用途 |
 | --- | --- |
@@ -138,11 +139,12 @@ Windows 用户级变量需要注入当前进程，例如：
 
 ```powershell
 $env:REVIA_KS_PASS = [Environment]::GetEnvironmentVariable('REVIA_KS_PASS', 'User')
-flutter build apk --release --split-per-abi
+try { flutter build apk --release --split-per-abi }
+finally { Remove-Item Env:REVIA_KS_PASS }
 ```
 
 GitHub Actions 配置见 [云端构建指南](CI.md) 与 [Build workflow](../.github/workflows/build.yml)。
-普通 push/PR 执行离线检查、Windows/Linux x86_64 release 和 Android debug 构建；
+普通 push 执行离线检查、Windows/Linux x86_64 release 和项目签名 Android debug 构建；PR 跳过 Android 构建；
 手动运行可生成正式签名的 Android 三 ABI APK，并选择构建 iOS arm64 未签名 IPA（安装前需自行签名）。
 Android 签名使用 Actions Secrets `ANDROID_KEYSTORE_BASE64` 和 `REVIA_KS_PASS`：
 runner 临时恢复 JKS，并以 `KEYSTORE`、`KEY_ALIAS` 和密码环境变量传给构建。
@@ -169,8 +171,19 @@ dart run build_runner build --delete-conflicting-outputs
 登录后受限详情可读取公开正文，界面会说明账号点赞状态尚未取得；Android/iOS 提供手动人机验证入口，Windows 通过 WebView2 提供网页登录与人机验证页面。完成验证不保证服务端解除其他风控。
 
 服务端下发空 `captchaField` 时，验证结果使用 `validate` Cookie；非空的合法字段继续按原请求参数传递。
-Cookie 只在当前进程的同一账号、设备会话内复用，不落盘，不发送到公开分享页或外部主机。
-重新启动应用后服务端仍可能要求验证；验证后的原请求最多重试一次，持续拒绝不会循环弹出验证。
+只有服务端接受验证重试后，才将验证状态保存在现有应用私有设置中；绑定当前账号、设备及 API 会话，最多保留 24 小时。
+API 返回的 `SESSID` 按域、路径和有效期保存，未指定有效期时本地最多保留 7 天；账号切换会清除会话及验证状态。
+这些 Cookie 仅用于两个官方 HTTPS API 主机，不发送到公开分享页、网页登录或外部主机，也不写入日志。
+冷启动会尝试复用仍有效的状态，失效或服务端重新挑战时需再次验证；首次安装仍可能遇到服务端验证，不能保证永久免验证。
+验证后的原请求最多重试一次；并发或晚到的旧挑战不会反复打开验证界面，也不会清除新账号的状态。
+
+官方设备标识的手动获取与导入见 [图文说明](DEVICE_ID_IMPORT.md)。导入器只接受包含唯一
+`ShuzlmID` 行的文本，不把普通 OAID、AndroidID 或 UUID 当作数盟 ID；解析错误不回显原始内容。
+保存时仅更新 Hive 的 `szlmId` 和 `xAppDevice` 首字段，其余八个设备字段及账号、本地数据保持不变。
+协议字段保存不再轮换安装 ID/MAC。新建或手动重置时，Android 经原生通道仅读取厂商、品牌、
+型号、构建号、系统版本与 SDK 等级；桌面使用固定的 Android 兼容配置，不随机拼接机型和系统。
+既有参数不做自动迁移，安装随机 ID 和已导入标识均保留。该手动方案不等于 SDK 独立接入或长期免验证；
+真实 ID 与完整剪贴板内容不得进入测试夹具、诊断日志和公开截图。
 
 需要主动检查游客只读接口时，可单独执行：
 
