@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
 import '../../components/cards/message_first_card.dart'
@@ -9,10 +10,8 @@ import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
 Widget messageSeconfCard(
     bool isLogin, BuildContext context, Function() onNotificationTap,
     [int? notificationBadge]) {
-  return Material(
-    clipBehavior: Clip.hardEdge,
-    borderRadius: const BorderRadius.all(Radius.circular(12)),
-    color: Theme.of(context).colorScheme.onInverseSurface,
+  return MiuixCard(
+    cornerRadius: 16,
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [

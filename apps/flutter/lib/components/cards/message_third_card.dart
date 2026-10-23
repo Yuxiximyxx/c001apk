@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 
 Widget messageThirdCard(
   BuildContext context,
@@ -8,13 +9,10 @@ Widget messageThirdCard(
   int? badge,
   Function() onTap,
 ) {
-  return Material(
-    clipBehavior: Clip.hardEdge,
-    borderRadius: const BorderRadius.all(Radius.circular(12)),
-    color: Theme.of(context).colorScheme.onInverseSurface,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
+  return MiuixCard(
+    cornerRadius: 16,
+    onPressed: onTap,
+    child: Padding(
         padding: const EdgeInsets.all(10),
         child: Stack(
           alignment: Alignment.center,
@@ -51,7 +49,6 @@ Widget messageThirdCard(
             if (badge != null && badge > 0) Badge.count(count: badge)
           ],
         ),
-      ),
     ),
   );
 }

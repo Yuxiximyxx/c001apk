@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart' hide Response;
 
 import '../../components/cards/message_first_card.dart';
@@ -128,7 +129,11 @@ class _MessagePageState extends State<MessagePage>
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('我的'), actions: [
+      backgroundColor: MiuixTheme.of(context).colors.background,
+      appBar: AppBar(
+          backgroundColor: MiuixTheme.of(context).colors.background,
+          surfaceTintColor: Colors.transparent,
+          title: const Text('我的'), actions: [
         IconButton(
             onPressed: () => Get.toNamed('/accounts'),
             icon: const Icon(Icons.switch_account_outlined),

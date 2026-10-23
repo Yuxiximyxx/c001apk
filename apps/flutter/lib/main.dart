@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -200,13 +201,16 @@ class C001APKAPP extends StatelessWidget {
         // changes also reach existing routes and dialogs.
         return AnimatedTheme(
           data: brightness == Brightness.dark ? darkTheme : lightTheme,
-          child: FlutterSmartDialog(
+          child: MiuixTheme(
+            data: MiuixThemeData.of(brightness),
+            child: FlutterSmartDialog(
             toastBuilder: (String msg) => CustomToast(msg: msg),
             child: MediaQuery(
               data: MediaQuery.of(context).copyWith(
                   textScaler: AppTextScaler(
                       MediaQuery.textScalerOf(context), fontScale)),
               child: child!,
+            ),
             ),
           ),
         );

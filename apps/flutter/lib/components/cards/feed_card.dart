@@ -1,5 +1,6 @@
 import 'package:c001apk_flutter/components/network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
 import '../../components/cards/icon_mini_scroll_card.dart' show miniCardItem;
@@ -39,20 +40,7 @@ class FeedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color:
-          isFeedContent ? null : Theme.of(context).colorScheme.onInverseSurface,
-      borderRadius:
-          isFeedContent ? null : const BorderRadius.all(Radius.circular(12)),
-      child: InkWell(
-        highlightColor: isFeedContent ? Colors.transparent : null,
-        splashColor: isFeedContent ? Colors.transparent : null,
-        splashFactory: isFeedContent ? NoSplashFactory() : null,
-        onTap: isFeedContent ? null : _onViewFeed,
-        onLongPress: () =>
-            Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
-        borderRadius: isFeedContent ? null : BorderRadius.circular(12),
-        child: Padding(
+    final content = Padding(
           padding: EdgeInsets.only(bottom: isFeedContent ? 12 : 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,8 +72,25 @@ class FeedCard extends StatelessWidget {
                 _rows(context),
             ],
           ),
+        );
+    if (isFeedContent) {
+      return Material(
+        child: InkWell(
+          highlightColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          splashFactory: NoSplashFactory(),
+          onLongPress: () =>
+              Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
+          child: content,
         ),
-      ),
+      );
+    }
+    return MiuixCard(
+      cornerRadius: 16,
+      onPressed: _onViewFeed,
+      onLongPress: () =>
+          Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
+      child: content,
     );
   }
 

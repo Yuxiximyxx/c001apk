@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
 import '../../pages/home/app/app_list_page.dart';
@@ -97,17 +98,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: MiuixTheme.of(context).colors.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: TabBar(
-          controller: _tabController,
-          tabs: _tabTypes.map((type) => Tab(text: type.label)).toList(),
-          isScrollable: true,
-          onTap: (index) {
-            if (!_tabController.indexIsChanging) {
-              scrollToTop(index);
-            }
-          },
+        backgroundColor: MiuixTheme.of(context).colors.background,
+        surfaceTintColor: Colors.transparent,
+        title: AnimatedBuilder(
+          animation: _tabController,
+          builder: (_, __) => MiuixTabRow(
+            tabs: _tabTypes.map((type) => type.label).toList(),
+            selectedTabIndex: _tabController.index,
+            onTabSelected: (index) {
+              final sameTab = index == _tabController.index &&
+                  !_tabController.indexIsChanging;
+              _tabController.animateTo(index);
+              if (sameTab) {
+                scrollToTop(index);
+              }
+            },
+          ),
         ),
         actions: [
           IconButton(

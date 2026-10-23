@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
@@ -85,19 +86,6 @@ class _MainPageState extends State<MainPage> {
       MessagePage(),
     ];
 
-    const barDestinations = <NavigationDestination>[
-      NavigationDestination(
-        selectedIcon: Icon(Icons.home),
-        icon: Icon(Icons.home_outlined),
-        label: '首页',
-      ),
-      NavigationDestination(
-        selectedIcon: Icon(Icons.person),
-        icon: Icon(Icons.person_outline),
-        label: '我的',
-      ),
-    ];
-
     const railDestinations = <NavigationRailDestination>[
       NavigationRailDestination(
         selectedIcon: Icon(Icons.home),
@@ -146,12 +134,27 @@ class _MainPageState extends State<MainPage> {
                       ? StreamBuilder(
                           initialData: _selectedIndex,
                           stream: _indexSctream.stream,
-                          builder: (_, snapshot) => NavigationBar(
-                            destinations: barDestinations,
-                            selectedIndex: snapshot.data!,
-                            onDestinationSelected: onDestinationSelected,
-                            labelBehavior: NavigationDestinationLabelBehavior
-                                .onlyShowSelected,
+                          builder: (_, snapshot) => MiuixNavigationBar(
+                            mode:
+                                MiuixNavigationBarDisplayMode.iconAndText,
+                            children: [
+                              MiuixNavigationBarItem(
+                                selected: snapshot.data == 0,
+                                onPressed: () => onDestinationSelected(0),
+                                icon: Icon(snapshot.data == 0
+                                    ? Icons.home
+                                    : Icons.home_outlined),
+                                label: '首页',
+                              ),
+                              MiuixNavigationBarItem(
+                                selected: snapshot.data == 1,
+                                onPressed: () => onDestinationSelected(1),
+                                icon: Icon(snapshot.data == 1
+                                    ? Icons.person
+                                    : Icons.person_outline),
+                                label: '我的',
+                              ),
+                            ],
                           ),
                         )
                       : null,

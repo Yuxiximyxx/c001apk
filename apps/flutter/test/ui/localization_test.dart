@@ -19,6 +19,7 @@ import 'package:dio/dio.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -254,7 +255,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const C001APKAPP());
     await tester.pump(const Duration(milliseconds: 500));
-    final context = tester.element(find.byType(NavigationBar));
+    final context = tester.element(find.byType(MiuixNavigationBar));
     expect(Localizations.localeOf(context), const Locale('zh', 'CN'));
     final material = MaterialLocalizations.of(context);
     expect(material.backButtonTooltip, '返回');
@@ -263,9 +264,9 @@ void main() {
     expect(find.text('首页'), findsOneWidget);
     expect(
         tester
-            .widget<NavigationBar>(find.byType(NavigationBar))
-            .destinations
-            .cast<NavigationDestination>()
+            .widget<MiuixNavigationBar>(find.byType(MiuixNavigationBar))
+            .children
+            .cast<MiuixNavigationBarItem>()
             .map((item) => item.label),
         ['首页', '我的']);
     expect(find.widgetWithText(Tab, '关注'), findsNothing);
@@ -345,7 +346,7 @@ void main() {
         uid: '321', username: 'synthetic', token: 'synthetic-token'));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(NavigationDestination, '我的'));
+    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
     await tester.pumpAndSettle();
     expect(find.textContaining('合成系统信息', findRichText: true), findsNothing);
     expect(adapter.notificationPages, isEmpty);
@@ -395,7 +396,7 @@ void main() {
         }));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.widgetWithText(NavigationDestination, '我的'));
+    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('设置'));
     await tester.pumpAndSettle();
@@ -558,7 +559,7 @@ void main() {
         token: 'synthetic-current-token'));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(NavigationDestination, '我的'));
+    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
     await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     final oldController = Get.find<MessageController>();
