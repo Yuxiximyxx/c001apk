@@ -472,6 +472,7 @@ void main() {
     expect(find.byTooltip('账号信息暂不可用'), findsNothing);
     expect(find.text('可正常阅读的合成正文', findRichText: true), findsOneWidget);
     await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpWidget(const SizedBox.shrink());
     GlobalData().isLogin = false;
   });

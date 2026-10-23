@@ -137,6 +137,7 @@ void main() {
       expect(adapter.captchaRequests, 1);
       expect(find.byType(TextField), findsNWidgets(3));
       await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
