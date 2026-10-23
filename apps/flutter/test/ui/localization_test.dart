@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:c001apk_flutter/logic/network/request.dart';
 import 'package:c001apk_flutter/logic/accounts/account_store.dart';
@@ -15,13 +16,45 @@ import 'package:c001apk_flutter/utils/global_data.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
 import 'package:c001apk_flutter/utils/utils.dart';
 import 'package:dio/dio.dart';
-import 'package:dynamic_color/samples.dart';
-import 'package:dynamic_color/test_utils.dart';
+import 'package:dynamic_color/dynamic_color.dart';
+import 'package:material_color_utilities/material_color_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+
+/// Local replacement for dynamic_color's removed test_utils.dart (<=1.7.x).
+class DynamicColorTestingUtils {
+  @visibleForTesting
+  static void setMockDynamicColors({
+    CorePalette? corePalette,
+    Color? accentColor,
+  }) {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(DynamicColorPlugin.channel, (
+      MethodCall methodCall,
+    ) async {
+      if (methodCall.method == DynamicColorPlugin.methodName) {
+        return corePalette != null
+            ? Int64List.fromList(corePalette.asList())
+            : null;
+      } else if (methodCall.method ==
+          DynamicColorPlugin.accentColorMethodName) {
+        return accentColor?.value;
+      } else {
+        return null;
+      }
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        DynamicColorPlugin.channel,
+        (MethodCall methodCall) => null,
+      );
+    });
+  }
+}
 
 class EmptyGuestAdapter implements HttpClientAdapter {
   bool showInbox = false;
@@ -270,7 +303,7 @@ void main() {
   testWidgets('system dynamic palette reaches the actual app theme',
       (tester) async {
     DynamicColorTestingUtils.setMockDynamicColors(
-        corePalette: SampleCorePalettes.green);
+        corePalette: CorePalette.of(0xFF575D54));
     await tester.runAsync(() => GStorage.settings.putAll({
           SettingsBoxKey.useMaterial: true,
           SettingsBoxKey.selectedTheme: 1,

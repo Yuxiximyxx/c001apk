@@ -37,6 +37,7 @@ class ApiFailure implements Exception {
       switch (error.type) {
         case DioExceptionType.badResponse:
           return http(error.response?.statusCode);
+        case DioExceptionType.transformTimeout:
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.receiveTimeout:
         case DioExceptionType.sendTimeout:

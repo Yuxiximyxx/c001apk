@@ -94,9 +94,9 @@ class DownloadUtils {
         final String picName = urlList[index].split('/').last;
         final SaveResult result = await SaverGallery.saveImage(
           Uint8List.fromList(response.data),
-          name: picName,
-          androidRelativePath: "Pictures/c001apk",
-          androidExistNotSave: true,
+          fileName: picName,
+          albumPath: "Pictures/c001apk",
+          skipIfExists: true,
         );
         if (result.errorMessage != null) {
           SmartDialog.dismiss();

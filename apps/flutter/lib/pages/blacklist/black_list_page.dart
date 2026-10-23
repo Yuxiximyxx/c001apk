@@ -163,10 +163,9 @@ class _BlackListPageState extends State<BlackListPage> {
             IconButton(
               onPressed: () async {
                 try {
-                  FilePickerResult? result =
-                      await FilePicker.platform.pickFiles();
-                  if (result != null) {
-                    File file = File(result.files.single.path ?? '');
+                  final pickedFiles = await FilePicker.pickFiles();
+                  if (pickedFiles.isNotEmpty) {
+                    File file = File(pickedFiles.single.path ?? '');
                     String dataString = await file.readAsString();
                     List<String> dataList =
                         (jsonDecode(dataString) as List<dynamic>)
