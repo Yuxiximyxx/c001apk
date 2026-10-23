@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+import '../../../utils/miuix_palette.dart';
 import 'package:get/get.dart';
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
@@ -33,7 +35,7 @@ class Reply2ReplyPage extends StatelessWidget {
       },
       builder: (controller) => CupertinoPageScaffold(
         navigationBar: CupertinoNavigationBar(
-            backgroundColor: Theme.of(context).colorScheme.surface,
+            backgroundColor: miuixPageBackground(context),
             middle: Text(
               '共 $replynum 回复',
               maxLines: 1,

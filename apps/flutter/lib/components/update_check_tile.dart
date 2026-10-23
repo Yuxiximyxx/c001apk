@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -127,18 +128,20 @@ class UpdateCheckTile extends StatefulWidget {
 class _UpdateCheckTileState extends State<UpdateCheckTile> {
   bool _checking = false;
   @override
-  Widget build(BuildContext context) => ListTile(
-      leading: const Icon(Icons.system_update_alt),
-      title: Text(_checking ? '正在检查更新…' : '检查更新'),
-      subtitle: const Text('查看 c001apk 的最新正式版本'),
-      trailing: _checking
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2))
+  Widget build(BuildContext context) => MiuixBasicComponent(
+      title: _checking ? '正在检查更新…' : '检查更新',
+      summary: '查看 c001apk 的最新正式版本',
+      startAction: const Icon(Icons.system_update_alt),
+      endActions: _checking
+          ? const [
+              SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+            ]
           : null,
       enabled: !_checking,
-      onTap: () async {
+      onClick: () async {
         setState(() => _checking = true);
         try {
           await AppUpdates.check(context, updateService: widget.service);

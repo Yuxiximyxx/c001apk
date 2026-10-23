@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
 import '../../utils/storage_util.dart';
@@ -45,15 +46,12 @@ class _SwitchItemState extends State<SwitchItem> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(widget.icon),
-      title: Text(widget.title),
-      subtitle: widget.subtitle == null ? null : Text(widget.subtitle!),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-      ),
-      onTap: () => onChanged(!value),
+    return MiuixSwitchPreference(
+      value: value,
+      onChanged: onChanged,
+      title: widget.title,
+      summary: widget.subtitle,
+      startAction: Icon(widget.icon),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../logic/model/feed/datum.dart';
 import '../../utils/global_data.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/storage_util.dart';
 
 class MessageHeaderCard extends StatelessWidget {
@@ -19,7 +20,7 @@ class MessageHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.surface,
+      color: miuixPageBackground(context),
       child: Stack(
         alignment: AlignmentDirectional.center,
         children: [

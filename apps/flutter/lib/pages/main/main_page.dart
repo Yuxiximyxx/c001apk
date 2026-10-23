@@ -5,6 +5,8 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
+
+import '../../utils/miuix_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
@@ -135,6 +137,7 @@ class _MainPageState extends State<MainPage> {
                           initialData: _selectedIndex,
                           stream: _indexSctream.stream,
                           builder: (_, snapshot) => MiuixNavigationBar(
+                            color: miuixPageBackground(context),
                             mode:
                                 MiuixNavigationBarDisplayMode.iconAndText,
                             children: [

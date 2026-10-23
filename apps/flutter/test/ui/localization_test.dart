@@ -407,10 +407,11 @@ void main() {
         widget.boxKey == SettingsBoxKey.staticColor);
     final button =
         find.descendant(of: picker, matching: find.byType(DropdownButton<int>));
-    final tile = find.descendant(of: picker, matching: find.byType(ListTile));
+    final tile =
+        find.descendant(of: picker, matching: find.byType(MiuixBasicComponent));
     expect(find.text('主题颜色'), findsOneWidget);
     expect(tester.widget<DropdownButton<int>>(button).onChanged, isNull);
-    expect(tester.widget<ListTile>(tile).enabled, isFalse);
+    expect(tester.widget<MiuixBasicComponent>(tile).enabled, isFalse);
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(find.text(Constants.themeType[0]), findsNothing);
@@ -420,7 +421,7 @@ void main() {
         () => GStorage.settings.put(SettingsBoxKey.useMaterial, false));
     await tester.pumpAndSettle();
     expect(tester.widget<DropdownButton<int>>(button).onChanged, isNotNull);
-    expect(tester.widget<ListTile>(tile).enabled, isTrue);
+    expect(tester.widget<MiuixBasicComponent>(tile).enabled, isTrue);
     expect(tester.widget<DropdownButton<int>>(button).value, 4);
     await tester.tap(button);
     await tester.pumpAndSettle();

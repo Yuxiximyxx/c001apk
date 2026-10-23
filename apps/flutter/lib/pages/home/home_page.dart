@@ -5,6 +5,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
+
+import '../../utils/miuix_palette.dart';
 import 'package:get/get.dart';
 
 import '../../pages/home/app/app_list_page.dart';
@@ -98,10 +100,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MiuixTheme.of(context).colors.background,
+      backgroundColor: miuixPageBackground(context),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: MiuixTheme.of(context).colors.background,
+        backgroundColor: miuixPageBackground(context),
         surfaceTintColor: Colors.transparent,
         title: AnimatedBuilder(
           animation: _tabController,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
 import '../../utils/storage_util.dart';
@@ -38,12 +39,13 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
+    return MiuixBasicComponent(
       enabled: widget.enabled,
-      leading: Icon(widget.icon),
-      title: Text(widget.title),
-      subtitle: widget.subtitle == null ? null : Text(widget.subtitle!),
-      trailing: DropdownButton<int>(
+      title: widget.title,
+      summary: widget.subtitle,
+      startAction: Icon(widget.icon),
+      endActions: [
+        DropdownButton<int>(
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: widget.enabled
                 ? Theme.of(context).colorScheme.onSurface
@@ -60,8 +62,9 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
                   }
                 }
               },
-        items: widget.items,
-      ),
+          items: widget.items,
+        ),
+      ],
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:chat_bottom_container/chat_bottom_container.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import '../../../logic/network/api_failure.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -156,7 +157,10 @@ class _ReplyPageState extends State<ReplyPage>
           ),
           useMaterial3: true,
         ),
-        child: content,
+        child: MiuixTheme(
+          data: MiuixThemeData.of(effectiveBrightness),
+          child: content,
+        ),
       );
     }
     return content;
@@ -197,7 +201,7 @@ class _ReplyPageState extends State<ReplyPage>
       //       break;
       //   }
       // },
-      panelBgColor: Theme.of(context).colorScheme.surface,
+      panelBgColor: MiuixTheme.of(context).colors.surfaceContainer,
     );
   }
 
@@ -232,7 +236,7 @@ class _ReplyPageState extends State<ReplyPage>
         if (snapshot.hasData && snapshot.data.isSafeNotEmpty) {
           return Container(
             height: 85,
-            color: Theme.of(context).colorScheme.surface,
+            color: MiuixTheme.of(context).colors.surfaceContainer,
             padding: const EdgeInsets.only(bottom: 10),
             child: Scrollbar(
               controller: _scrollController,
@@ -277,7 +281,7 @@ class _ReplyPageState extends State<ReplyPage>
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        color: Theme.of(context).colorScheme.surface,
+        color: MiuixTheme.of(context).colors.surfaceContainer,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),

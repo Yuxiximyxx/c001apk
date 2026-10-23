@@ -4,7 +4,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_miuix/miuix.dart';
+
+import '../../utils/miuix_palette.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -461,7 +462,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MiuixTheme.of(context).colors.background,
+      backgroundColor: miuixPageBackground(context),
       floatingActionButton: Obx(
         () => _feedController.feedState.value is Success && GlobalData().isLogin
             ? SlideTransition(

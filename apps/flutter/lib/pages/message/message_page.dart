@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_miuix/miuix.dart';
+
+import '../../utils/miuix_palette.dart';
 import 'package:get/get.dart' hide Response;
 
 import '../../components/cards/message_first_card.dart';
 import '../../components/cards/message_header_card.dart';
 import '../../components/cards/message_second_card.dart';
 import '../../components/cards/message_third_card.dart';
-import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
+import '../../components/cards/recent_visits_card.dart';
+import 'package:flutter/foundation.dart';
 import '../../pages/message/message_controller.dart';
 import '../../pages/noitfication/notification_page.dart';
 import '../../utils/extensions.dart';
@@ -40,6 +42,7 @@ class _MessagePageState extends State<MessagePage>
   ];
   late final MessageController _messageController =
       Get.put(MessageController());
+  final ValueNotifier<int> _recentRefresh = ValueNotifier<int>(0);
 
   @override
   void dispose() {
@@ -61,6 +64,7 @@ class _MessagePageState extends State<MessagePage>
     await _messageController.getProfile();
     if (!mounted || generation != GlobalData().sessionGeneration) return;
     await _messageController.checkCount();
+    _recentRefresh.value++;
   }
 
   /// 5 类消息的未读总数，用于"消息通知"角标
@@ -129,9 +133,9 @@ class _MessagePageState extends State<MessagePage>
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      backgroundColor: MiuixTheme.of(context).colors.background,
+      backgroundColor: miuixPageBackground(context),
       appBar: AppBar(
-          backgroundColor: MiuixTheme.of(context).colors.background,
+          backgroundColor: miuixPageBackground(context),
           surfaceTintColor: Colors.transparent,
           title: const Text('我的'), actions: [
         IconButton(
@@ -191,22 +195,9 @@ class _MessagePageState extends State<MessagePage>
                                 _totalNotificationBadge(),
                               ));
                         } else if (index == 2) {
-                          // 下半部分改为"我的常去"
-                          return messageThirdCard(
-                            context,
-                            0xFF00bcd4,
-                            Icons.my_location,
-                            '我的常去',
-                            null,
-                            () {
-                              if (GlobalData().isLogin) {
-                                Get.toNamed(
-                                  '/ffflist',
-                                  arguments: {'type': FFFListType.RECENT},
-                                );
-                              }
-                            },
-                          );
+                          // 「我的常去」直接内嵌展示最近访问
+                          return RecentVisitsCard(
+                              refreshSignal: _recentRefresh);
                         }
                         return const SizedBox();
                       },

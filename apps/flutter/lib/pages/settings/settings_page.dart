@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -56,46 +57,54 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   SettingsSection _section = SettingsSection.appearance;
-  Widget _categories(bool wide) => ListView(children: [
-        for (final section in SettingsSection.values)
-          ListTile(
-            leading: Icon(section.icon),
-            title: Text(section.title),
-            subtitle: Text(section.description),
-            selected: wide && section == _section,
-            trailing: wide ? null : const Icon(Icons.chevron_right),
-            onTap: () {
-              if (wide) {
-                setState(() => _section = section);
-              } else {
-                Get.to(() => SettingsDetailPage(section: section));
-              }
-            },
+  Widget _categories(bool wide) => ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          MiuixCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final section in SettingsSection.values)
+                  MiuixArrowPreference(
+                    title: section.title,
+                    summary: section.description,
+                    startAction: Icon(section.icon),
+                    onClick: () {
+                      if (wide) {
+                        setState(() => _section = section);
+                      } else {
+                        Get.to(() => SettingsDetailPage(section: section));
+                      }
+                    },
+                  ),
+                ValueListenableBuilder(
+                  valueListenable: GStorage.settings
+                      .listenable(keys: [AccountStore.storageKey]),
+                  builder: (context, _, __) => MiuixArrowPreference(
+                    title: '账号管理',
+                    summary:
+                        '已保存 ${AccountStore().accounts.length} 个账号 · 切换、添加或移除',
+                    startAction: const Icon(Icons.switch_account_outlined),
+                    onClick: () => Get.toNamed('/accounts'),
+                  ),
+                ),
+                MiuixArrowPreference(
+                  title: '关于',
+                  startAction: const Icon(Icons.info_outline),
+                  onClick: () async {
+                    final info = await PackageInfo.fromPlatform();
+                    if (mounted) {
+                      Get.toNamed('/about', parameters: {
+                        'version': '${info.version}(${info.buildNumber})'
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
-        const Divider(),
-        ValueListenableBuilder(
-          valueListenable:
-              GStorage.settings.listenable(keys: [AccountStore.storageKey]),
-          builder: (context, _, __) => ListTile(
-            leading: const Icon(Icons.switch_account_outlined),
-            title: const Text('账号管理'),
-            subtitle:
-                Text('已保存 ${AccountStore().accounts.length} 个账号 · 切换、添加或移除'),
-            onTap: () => Get.toNamed('/accounts'),
-          ),
-        ),
-        ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('关于'),
-            onTap: () async {
-              final info = await PackageInfo.fromPlatform();
-              if (mounted) {
-                Get.toNamed('/about', parameters: {
-                  'version': '${info.version}(${info.buildNumber})'
-                });
-              }
-            }),
-      ]);
+        ],
+      );
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('设置')),
@@ -186,12 +195,11 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
               ],
               forceAppUpdate: true,
             ),
-            ListTile(
-              title: const Text('字体大小'),
-              subtitle:
-                  Text('调整界面文字大小 · ${GStorage.fontScale.toStringAsFixed(2)}x'),
-              leading: const Icon(Icons.text_fields),
-              onTap: () => showDialog<void>(
+            MiuixArrowPreference(
+              title: '字体大小',
+              summary: '调整界面文字大小 · ${GStorage.fontScale.toStringAsFixed(2)}x',
+              startAction: const Icon(Icons.text_fields),
+              onClick: () => showDialog<void>(
                 context: context,
                 builder: (context) => SliderDialog(
                   fontScale: GStorage.fontScale,
@@ -218,16 +226,16 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                     defaultValue: false,
                   )
                 else
-                  const ListTile(
-                    leading: Icon(Icons.person_add_alt_outlined),
-                    title: Text('本地关注'),
-                    subtitle: Text('游客可在用户主页直接关注，并在底栏“关注”查看内容。名单仅保存在本机'),
+                  const MiuixBasicComponent(
+                    startAction: Icon(Icons.person_add_alt_outlined),
+                    title: '本地关注',
+                    summary: '游客可在用户主页直接关注，并在底栏“关注”查看内容。名单仅保存在本机',
                   ),
-                ListTile(
-                  leading: const Icon(Icons.manage_accounts_outlined),
-                  title: Text('管理$localFollowLabel'),
-                  subtitle: const Text('查看本机关注名单、进入用户主页或取消关注'),
-                  onTap: () => Get.to(() => const LocalFollowListPage()),
+                MiuixArrowPreference(
+                  startAction: const Icon(Icons.manage_accounts_outlined),
+                  title: '管理$localFollowLabel',
+                  summary: '查看本机关注名单、进入用户主页或取消关注',
+                  onClick: () => Get.to(() => const LocalFollowListPage()),
                 ),
               ]),
             ),
@@ -240,20 +248,20 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
             ),
           ],
         SettingsSection.privacy => [
-            ListTile(
-              title: const Text('用户黑名单'),
-              subtitle: const Text('管理屏蔽的用户，隐藏其动态'),
-              leading: const Icon(Icons.block),
-              onTap: () => Get.toNamed(
+            MiuixArrowPreference(
+              title: '用户黑名单',
+              summary: '管理屏蔽的用户，隐藏其动态',
+              startAction: const Icon(Icons.block),
+              onClick: () => Get.toNamed(
                 '/blacklist/',
                 arguments: {'type': BlackListType.user},
               ),
             ),
-            ListTile(
-              title: const Text('话题黑名单'),
-              subtitle: const Text('按关键词过滤相关话题内容'),
-              leading: const Icon(Icons.block),
-              onTap: () => Get.toNamed(
+            MiuixArrowPreference(
+              title: '话题黑名单',
+              summary: '按关键词过滤相关话题内容',
+              startAction: const Icon(Icons.block),
+              onClick: () => Get.toNamed(
                 '/blacklist/',
                 arguments: {'type': BlackListType.topic},
               ),
@@ -277,10 +285,10 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
             ValueListenableBuilder(
               valueListenable: GStorage.settings
                   .listenable(keys: [UpdatePreferences.enabledKey]),
-              builder: (context, _, __) => SwitchListTile(
-                secondary: const Icon(Icons.update),
-                title: const Text('自动检查 c001apk 更新'),
-                subtitle: const Text('每次启动时检查一次最新正式版本'),
+              builder: (context, _, __) => MiuixSwitchPreference(
+                startAction: const Icon(Icons.update),
+                title: '自动检查 c001apk 更新',
+                summary: '每次启动时检查一次最新正式版本',
                 value: UpdatePreferences(GStorage.settings).enabled,
                 onChanged: (value) =>
                     UpdatePreferences(GStorage.settings).setEnabled(value),
@@ -296,13 +304,13 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                 defaultValue: true,
               ),
             Obx(
-              () => ListTile(
-                title: const Text('清理缓存'),
-                subtitle: _settingsController.cacheSize.value.isNotEmpty
-                    ? Text(_settingsController.cacheSize.value)
+              () => MiuixArrowPreference(
+                title: '清理缓存',
+                summary: _settingsController.cacheSize.value.isNotEmpty
+                    ? _settingsController.cacheSize.value
                     : null,
-                leading: const Icon(Icons.cleaning_services_outlined),
-                onTap: () async {
+                startAction: const Icon(Icons.cleaning_services_outlined),
+                onClick: () async {
                   await _settingsController.getCacheSize();
                   if (context.mounted) {
                     showDialog<void>(
@@ -322,17 +330,17 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
             ),
           ],
         SettingsSection.protocol => [
-            ListTile(
-              leading: const Icon(Icons.smartphone),
-              title: const Text('导入官方设备标识'),
-              subtitle: const Text('减少重复人机验证 · 获取说明与粘贴识别'),
-              onTap: () => Get.to(() => const DeviceIdentityPage()),
+            MiuixArrowPreference(
+              startAction: const Icon(Icons.smartphone),
+              title: '导入官方设备标识',
+              summary: '减少重复人机验证 · 获取说明与粘贴识别',
+              onClick: () => Get.to(() => const DeviceIdentityPage()),
             ),
-            ListTile(
-              leading: const Icon(Icons.developer_mode),
-              title: const Text('协议参数'),
-              subtitle: const Text('配置客户端版本、设备与请求参数'),
-              onTap: () => Get.toNamed('/params'),
+            MiuixArrowPreference(
+              startAction: const Icon(Icons.developer_mode),
+              title: '协议参数',
+              summary: '配置客户端版本、设备与请求参数',
+              onClick: () => Get.toNamed('/params'),
             ),
           ],
       };
@@ -343,10 +351,16 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
         child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
             child: ListView(
-                padding: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
                 children: [
                   if (widget.embedded) ItemTitle(title: widget.section.title),
-                  ..._items(context)
+                  MiuixCard(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _items(context),
+                    ),
+                  ),
                 ])));
     return widget.embedded
         ? body

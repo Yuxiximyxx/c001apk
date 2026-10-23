@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_miuix/miuix.dart';
+import 'package:flutter_miuix/miuix.dart' as miuix;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -114,6 +114,17 @@ class C001APKAPP extends StatelessWidget {
     final lightTheme = applyAppTypography(ThemeData(
       colorScheme: lightColorScheme,
       useMaterial3: true,
+      scaffoldBackgroundColor: miuix.lightColorScheme().surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: miuix.lightColorScheme().surface,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: lightColorScheme.onSurface,
+        elevation: 0,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: miuix.lightColorScheme().surfaceContainer,
+        modalBackgroundColor: miuix.lightColorScheme().surfaceContainer,
+      ),
       navigationBarTheme: NavigationBarThemeData(
           surfaceTintColor: (lightDynamic != null && useMaterial)
               ? lightColorScheme.surfaceTint
@@ -141,6 +152,7 @@ class C001APKAPP extends StatelessWidget {
       ),
       dialogTheme: DialogThemeData(
         surfaceTintColor: lightColorScheme.surfaceTint,
+        backgroundColor: miuix.lightColorScheme().surfaceContainer,
       ),
       inputDecorationTheme: InputDecorationTheme(
         fillColor: lightColorScheme.onInverseSurface,
@@ -152,6 +164,17 @@ class C001APKAPP extends StatelessWidget {
     final darkTheme = applyAppTypography(ThemeData(
       colorScheme: darkColorScheme,
       useMaterial3: true,
+      scaffoldBackgroundColor: miuix.darkColorScheme().background,
+      appBarTheme: AppBarTheme(
+        backgroundColor: miuix.darkColorScheme().background,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: darkColorScheme.onSurface,
+        elevation: 0,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: miuix.darkColorScheme().surfaceContainer,
+        modalBackgroundColor: miuix.darkColorScheme().surfaceContainer,
+      ),
       navigationBarTheme: NavigationBarThemeData(
           surfaceTintColor: (lightDynamic != null && useMaterial)
               ? darkColorScheme.surfaceTint
@@ -172,6 +195,7 @@ class C001APKAPP extends StatelessWidget {
       ),
       dialogTheme: DialogThemeData(
         surfaceTintColor: darkColorScheme.surfaceTint,
+        backgroundColor: miuix.darkColorScheme().surfaceContainer,
       ),
       inputDecorationTheme: InputDecorationTheme(
         fillColor: darkColorScheme.onInverseSurface,
@@ -201,8 +225,8 @@ class C001APKAPP extends StatelessWidget {
         // changes also reach existing routes and dialogs.
         return AnimatedTheme(
           data: brightness == Brightness.dark ? darkTheme : lightTheme,
-          child: MiuixTheme(
-            data: MiuixThemeData.of(brightness),
+          child: miuix.MiuixTheme(
+            data: miuix.MiuixThemeData.of(brightness),
             child: FlutterSmartDialog(
             toastBuilder: (String msg) => CustomToast(msg: msg),
             child: MediaQuery(

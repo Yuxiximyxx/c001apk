@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_miuix/miuix.dart';
 
 class ItemTitle extends StatelessWidget {
   const ItemTitle({super.key, required this.title});
@@ -7,11 +8,14 @@ class ItemTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      child: Text(
         title,
         style: TextStyle(
-          color: Theme.of(context).colorScheme.primary,
+          color: MiuixTheme.of(context).colors.primary,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
