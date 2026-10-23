@@ -223,7 +223,27 @@ class C001APKAPP extends StatelessWidget {
         // GetMaterialApp retains its initial themes. Apply the current theme
         // above the navigator so asynchronous system colors and settings
         // changes also reach existing routes and dialogs.
-        return AnimatedTheme(
+        // 给系统一个与页面底色一致的不透明导航栏颜色：HyperOS 会按
+        // 应用的导航栏颜色给输入法区域垫底，透明色会被当作"未提供"
+        // 而垫上系统默认灰底（回复时键盘下方的深灰背景）。
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: brightness == Brightness.dark
+                ? Brightness.light
+                : Brightness.dark,
+            statusBarBrightness: brightness,
+            systemNavigationBarColor: brightness == Brightness.dark
+                ? const Color(0xFF000000)
+                : const Color(0xFFF7F7F7),
+            systemNavigationBarIconBrightness: brightness == Brightness.dark
+                ? Brightness.light
+                : Brightness.dark,
+            systemNavigationBarDividerColor: Colors.transparent,
+            systemNavigationBarContrastEnforced: false,
+            systemStatusBarContrastEnforced: false,
+          ),
+          child: AnimatedTheme(
           data: brightness == Brightness.dark ? darkTheme : lightTheme,
           child: miuix.MiuixTheme(
             data: miuix.MiuixThemeData.of(brightness),
@@ -236,6 +256,7 @@ class C001APKAPP extends StatelessWidget {
               child: child!,
             ),
             ),
+          ),
           ),
         );
       },
