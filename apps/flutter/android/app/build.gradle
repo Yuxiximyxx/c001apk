@@ -20,17 +20,14 @@ def _hasReleaseSigning = _storeFile != null && _storeFile.isFile() && _storePass
 
 android {
     namespace = "app.awavenue.c001apk"
-    compileSdk = 34
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
-    }
 
     defaultConfig {
         applicationId = "app.awavenue.c001apk"
@@ -64,6 +61,12 @@ tasks.matching { it.name == "preBuild" }.configureEach {
         if (!_hasReleaseSigning) {
             throw new GradleException("Project signing is required for every Android build. Set KEYSTORE, KEY_ALIAS and inject REVIA_KS_PASS into the build process; see docs/DEVELOPMENT.md.")
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
