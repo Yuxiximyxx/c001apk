@@ -11,7 +11,7 @@ Widget messageSeconfCard(
     bool isLogin, BuildContext context, Function() onNotificationTap,
     [int? notificationBadge]) {
   return MiuixCard(
-    cornerRadius: 16,
+    cornerRadius: 24,
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [

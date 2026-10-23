@@ -11,7 +11,7 @@ Widget messageFirstCard(
   List<int?>? values,
 ) {
   return MiuixCard(
-    cornerRadius: 16,
+    cornerRadius: 24,
     child: messageFirstCardRow(
       context,
       values,

@@ -61,6 +61,7 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.all(12),
         children: [
           MiuixCard(
+            cornerRadius: 24,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -355,6 +356,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                 children: [
                   if (widget.embedded) ItemTitle(title: widget.section.title),
                   MiuixCard(
+                    cornerRadius: 24,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,

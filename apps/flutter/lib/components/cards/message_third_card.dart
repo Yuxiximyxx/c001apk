@@ -10,7 +10,7 @@ Widget messageThirdCard(
   Function() onTap,
 ) {
   return MiuixCard(
-    cornerRadius: 16,
+    cornerRadius: 24,
     onPressed: onTap,
     child: Padding(
         padding: const EdgeInsets.all(10),

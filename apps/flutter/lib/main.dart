@@ -164,9 +164,9 @@ class C001APKAPP extends StatelessWidget {
     final darkTheme = applyAppTypography(ThemeData(
       colorScheme: darkColorScheme,
       useMaterial3: true,
-      scaffoldBackgroundColor: miuix.darkColorScheme().background,
+      scaffoldBackgroundColor: miuix.darkColorScheme().surface,
       appBarTheme: AppBarTheme(
-        backgroundColor: miuix.darkColorScheme().background,
+        backgroundColor: miuix.darkColorScheme().surface,
         surfaceTintColor: Colors.transparent,
         foregroundColor: darkColorScheme.onSurface,
         elevation: 0,

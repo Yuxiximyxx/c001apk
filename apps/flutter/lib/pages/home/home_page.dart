@@ -105,28 +105,114 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         automaticallyImplyLeading: false,
         backgroundColor: miuixPageBackground(context),
         surfaceTintColor: Colors.transparent,
-        title: AnimatedBuilder(
-          animation: _tabController,
-          builder: (_, __) => MiuixTabRow(
-            tabs: _tabTypes.map((type) => type.label).toList(),
-            selectedTabIndex: _tabController.index,
-            onTabSelected: (index) {
-              final sameTab = index == _tabController.index &&
-                  !_tabController.indexIsChanging;
-              _tabController.animateTo(index);
-              if (sameTab) {
-                scrollToTop(index);
-              }
+        titleSpacing: 16,
+        title: Row(
+          children: [
+            const Text(
+              '酷安',
+              style: TextStyle(
+                fontSize: 23,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => Get.toNamed('/search'),
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? const Color(0xFFECECEE)
+                        : MiuixTheme.of(context).colors.background,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.search,
+                        size: 16,
+                        color: MiuixTheme.of(context)
+                            .colors
+                            .onSurface
+                            .withValues(alpha: 0.45),
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        '搜索帖子、用户',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: MiuixTheme.of(context)
+                              .colors
+                              .onSurface
+                              .withValues(alpha: 0.45),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: AnimatedBuilder(
+            animation: _tabController,
+            builder: (_, __) {
+              final colors = MiuixTheme.of(context).colors;
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < _tabTypes.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () {
+                              final sameTab = i == _tabController.index &&
+                                  !_tabController.indexIsChanging;
+                              _tabController.animateTo(i);
+                              if (sameTab) {
+                                scrollToTop(i);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 15, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: i == _tabController.index
+                                    ? colors.primary
+                                    : colors.background,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                _tabTypes[i].label,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: i == _tabController.index
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                  color: i == _tabController.index
+                                      ? Colors.white
+                                      : colors.onSurface,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
             },
           ),
         ),
-        actions: [
-          IconButton(
-            onPressed: () => Get.toNamed('/search'),
-            icon: const Icon(Icons.search),
-            tooltip: '搜索',
-          )
-        ],
       ),
       body: TabBarView(controller: _tabController, children: _pages),
     );

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
 
-/// 全 App 统一的 MIUIX 页面底色：深色用 background(#242424)，
-/// 浅色用 surface(#F7F7F7)，与白色卡片(surfaceContainer)形成层次。
-/// 底栏、AppBar、页面背景都取这个颜色，避免深浅不一致的色带。
-Color miuixPageBackground(BuildContext context) {
-  final colors = MiuixTheme.of(context).colors;
-  return Theme.of(context).brightness == Brightness.dark
-      ? colors.background
-      : colors.surface;
-}
+/// MIUIX 规范底色映射（flutter_miuix 色板语义）：
+/// - 页面/窗口底色 = surface（浅 #F7F7F7 / 深 #000000 纯黑）
+/// - 卡片/面板底色 = background（浅 #FFFFFF / 深 #242424）
+/// 全 App 的页面、AppBar、底栏都取 surface，卡片取 background，
+/// 保证深浅两色层次与 MIUIX 官方一致、不出现色带。
+Color miuixPageBackground(BuildContext context) =>
+    MiuixTheme.of(context).colors.surface;
 
-/// 卡片/面板底色（与 MiuixCard 默认色一致）。
+/// 卡片/面板底色。
 Color miuixPanelColor(BuildContext context) =>
-    MiuixTheme.of(context).colors.surfaceContainer;
+    MiuixTheme.of(context).colors.background;

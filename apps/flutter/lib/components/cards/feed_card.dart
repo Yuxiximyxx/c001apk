@@ -86,7 +86,7 @@ class FeedCard extends StatelessWidget {
       );
     }
     return MiuixCard(
-      cornerRadius: 16,
+      cornerRadius: 24,
       onPressed: _onViewFeed,
       onLongPress: () =>
           Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),

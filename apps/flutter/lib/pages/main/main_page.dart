@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 import 'dart:io';
 
 import 'package:android_intent_plus/android_intent.dart';
@@ -6,7 +7,6 @@ import 'package:android_intent_plus/flag.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
 
-import '../../utils/miuix_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
@@ -113,6 +113,7 @@ class _MainPageState extends State<MainPage> {
                 bool isPortait = constriants.maxHeight > constriants.maxWidth;
 
                 return Scaffold(
+                  extendBody: true,
                   body: Row(children: [
                     if (!isPortait)
                       StreamBuilder(
@@ -136,8 +137,14 @@ class _MainPageState extends State<MainPage> {
                       ? StreamBuilder(
                           initialData: _selectedIndex,
                           stream: _indexSctream.stream,
-                          builder: (_, snapshot) => MiuixNavigationBar(
-                            color: miuixPageBackground(context),
+                          builder: (_, snapshot) => ClipRect(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                              child: MiuixNavigationBar(
+                            color: MiuixTheme.of(context)
+                                .colors
+                                .surface
+                                .withValues(alpha: 0.86),
                             mode:
                                 MiuixNavigationBarDisplayMode.iconAndText,
                             children: [
@@ -158,6 +165,8 @@ class _MainPageState extends State<MainPage> {
                                 label: '我的',
                               ),
                             ],
+                              ),
+                            ),
                           ),
                         )
                       : null,

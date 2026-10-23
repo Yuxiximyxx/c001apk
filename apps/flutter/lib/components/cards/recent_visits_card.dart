@@ -94,7 +94,7 @@ class _RecentVisitsCardState extends State<RecentVisitsCard> {
     }
     final colors = MiuixTheme.of(context).colors;
     return MiuixCard(
-      cornerRadius: 16,
+      cornerRadius: 24,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
