@@ -178,6 +178,9 @@ class GStorage {
     blackList.close();
     settings.compact();
     settings.close();
+    if (Hive.isBoxOpen('announcements')) {
+      await Hive.box('announcements').close();
+    }
   }
 
   static void fullSetUserAgent() {
@@ -528,6 +531,7 @@ class SettingsBoxKey {
       selectedTheme = 'selectedTheme',
       szlmId = 'szlmId',
       fontScale = 'fontScale',
+      readingMode = 'readingMode',
       followType = 'followType',
       imageQuality = 'imageQuality',
       imageDim = 'imageDim',

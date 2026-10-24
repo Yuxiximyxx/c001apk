@@ -35,7 +35,7 @@ class AppCard extends StatelessWidget {
             Get.toNamed(
                 '/u/${data.userInfo?.uid != null ? data.userInfo!.uid.toString() : data.fUserInfo?.uid != null ? data.fUserInfo!.uid.toString() : ''}');
           } else {
-            Utils.onOpenLink(data.url.orEmpty, data.title);
+            Utils.onOpenLink(data.url.orEmpty, data.title, true, context);
           }
         },
         borderRadius: const BorderRadius.all(Radius.circular(12)),

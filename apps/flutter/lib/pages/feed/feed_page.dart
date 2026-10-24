@@ -1,3 +1,5 @@
+import '../../components/expressive_refresh_indicator.dart';
+import '../../components/expressive_loading_indicator.dart';
 // ignore_for_file: constant_identifier_names
 
 import 'dart:async';
@@ -10,7 +12,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../components/cards/feed_reply_card.dart';
 import '../../components/feed_article_body.dart';
@@ -22,9 +23,12 @@ import '../../logic/state/loading_state.dart';
 import '../../pages/feed/feed_controller.dart';
 import '../../pages/feed/reply/reply_dialog.dart' show ReplyType;
 import '../../pages/feed/reply/reply_page.dart';
+import '../settings/device_identity_page.dart';
 import '../../utils/device_util.dart';
 import '../../utils/extensions.dart';
 import '../../utils/global_data.dart';
+import '../../utils/markdown_content.dart';
+import '../../components/content_export_button.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
 
@@ -33,6 +37,7 @@ enum FeedMenuItem {
   Share,
   Fav,
   Block,
+  Source,
   Report;
 
   String get label => switch (this) {
@@ -40,6 +45,7 @@ enum FeedMenuItem {
         FeedMenuItem.Share => '分享',
         FeedMenuItem.Fav => '收藏',
         FeedMenuItem.Block => '屏蔽',
+        FeedMenuItem.Source => '查看原文',
         FeedMenuItem.Report => '举报',
       };
 }
@@ -47,20 +53,34 @@ enum FeedMenuItem {
 enum ReplySortType { def, dateline, hot, author }
 
 class FeedPage extends StatefulWidget {
-  const FeedPage({super.key});
+  const FeedPage({super.key, this.id, this.onClose});
+
+  final String? id;
+  final VoidCallback? onClose;
 
   @override
   State<FeedPage> createState() => _FeedPageState();
 }
 
 class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
-  final String _id = Get.parameters['id'].orEmpty;
+  late final String _id = widget.id ?? Get.parameters['id'].orEmpty;
   final _refreshKey = GlobalKey<RefreshIndicatorState>();
   AnimationController? _fabAnimationCtr;
   late bool _isFabVisible = true;
   late final _scrollController = ScrollController();
   late final StreamController<bool> _titleStreamC = StreamController<bool>();
   late bool _visibleTitle = false;
+  bool _showSource = false;
+
+  bool get _hasMarkdown {
+    final state = _feedController.feedState.value;
+    if (state is! Success) return false;
+    final data = state.response as Datum;
+    return MarkdownContent.parse(data.message.orEmpty).isMarkdown ||
+        (_feedController.articleList ?? []).any((part) =>
+            part.type == 'text' &&
+            MarkdownContent.parse(part.message.orEmpty).isMarkdown);
+  }
 
   @override
   void initState() {
@@ -137,22 +157,45 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
           ),
         );
       case Error():
-        return GestureDetector(
-          onTap: () {
-            _feedController.setFeedState(LoadingState.loading());
-            _feedController.getFeedData(verify: true);
-          },
-          child: Container(
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(10.0),
-            child: Text(feedState.errMsg),
-          ),
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(feedState.errMsg, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  FilledButton.tonal(
+                    onPressed: () {
+                      _feedController.setFeedState(LoadingState.loading());
+                      _feedController.getFeedData(verify: true);
+                    },
+                    child: const Text('重试'),
+                  ),
+                  if (feedState.canVerify)
+                    TextButton(
+                      onPressed: () async {
+                        final previousDevice = GStorage.xAppDevice;
+                        await Get.to(() => const DeviceIdentityPage());
+                        if (!mounted || previousDevice == GStorage.xAppDevice) {
+                          return;
+                        }
+                        _feedController.setFeedState(LoadingState.loading());
+                        await _feedController.getFeedData();
+                      },
+                      child: const Text('导入官方设备标识'),
+                    ),
+                ]),
+          ]),
         );
       case Success():
         return _feedController.articleList.isNullOrEmpty
             ? FeedCard(
                 data: feedState.response!,
                 isFeedContent: true,
+                forcePlain: _showSource,
                 onLike: (id, like) {
                   if (GlobalData().isLogin) {
                     _feedController.onLike(
@@ -199,6 +242,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                         constraints.maxWidth,
                         _feedController.articleList![index - 1],
                         _feedController.articleImgList!,
+                        forcePlain: _showSource,
                       );
                     });
                   }
@@ -206,7 +250,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                 separatorBuilder: (_, index) => const SizedBox(height: 12),
               );
     }
-    return const CircularProgressIndicator();
+    return const ExpressiveLoadingIndicator();
   }
 
   Future<void> _showAccountDetailStatus() async {
@@ -371,7 +415,40 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
     // }
   }
 
+  Widget _buildDeferredReplyPrompt(LoadingState replyState,
+      {bool hasReplies = false}) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.forum_outlined),
+          const SizedBox(height: 12),
+          Text(hasReplies ? '评论加载已暂停' : '评论尚未加载'),
+          const SizedBox(height: 8),
+          const Text(
+            '未导入数盟 ID，加载评论可能需要验证码验证。点击下方按钮后再加载。',
+            textAlign: TextAlign.center,
+          ),
+          if (replyState is Error) ...[
+            const SizedBox(height: 8),
+            Text(replyState.errMsg, textAlign: TextAlign.center),
+          ],
+          const SizedBox(height: 16),
+          FilledButton.tonalIcon(
+            onPressed: _feedController.loadReplies,
+            icon: const Icon(Icons.download_outlined),
+            label: const Text('加载评论并验证'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFeedReply(LoadingState replyState) {
+    if (_feedController.repliesDeferred.value && replyState is! Success) {
+      return SliverToBoxAdapter(child: _buildDeferredReplyPrompt(replyState));
+    }
     switch (replyState) {
       case Empty():
         return SliverToBoxAdapter(
@@ -384,19 +461,16 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
         );
       case Error():
         return SliverToBoxAdapter(
-          child: GestureDetector(
-            onTap: () {
-              _feedController
-                ..isEnd = false
-                ..setLoadingState(LoadingState.loading())
-                ..onGetData();
-            },
-            child: Container(
-              height: 80,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.all(10.0),
-              child: Text(replyState.errMsg),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(replyState.errMsg, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton.tonal(
+                onPressed: _feedController.loadReplies,
+                child: const Text('重新加载评论'),
+              ),
+            ]),
           ),
         );
       case Success():
@@ -408,20 +482,26 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
             itemCount: dataList.length + 1,
             itemBuilder: (_, index) {
               if (index == dataList.length) {
-                if (!_feedController.isEnd && !_feedController.isLoading) {
+                if (!_feedController.repliesDeferred.value &&
+                    !_feedController.isEnd &&
+                    !_feedController.isLoading) {
                   _feedController.setFooterState(LoadingState.loading());
                   _feedController.onGetData(false);
                 }
                 return Obx(
-                  () => footerWidget(
-                    _feedController.footerState.value,
-                    () {
-                      _feedController
-                        ..isEnd = false
-                        ..setFooterState(LoadingState.loading())
-                        ..onGetData(false);
-                    },
-                  ),
+                  () => _feedController.repliesDeferred.value
+                      ? _buildDeferredReplyPrompt(
+                          _feedController.footerState.value,
+                          hasReplies: true)
+                      : footerWidget(
+                          _feedController.footerState.value,
+                          () {
+                            _feedController
+                              ..isEnd = false
+                              ..setFooterState(LoadingState.loading())
+                              ..onGetData(false);
+                          },
+                        ),
                 );
               } else {
                 return FeedReplyCard(
@@ -454,7 +534,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
         height: 80,
         alignment: Alignment.center,
         padding: const EdgeInsets.all(10.0),
-        child: const CircularProgressIndicator(),
+        child: const ExpressiveLoadingIndicator(),
       ),
     );
   }
@@ -493,6 +573,9 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
         preferredSize: const Size(double.infinity, 56),
         child: Obx(
           () => AppBar(
+            leading: widget.onClose == null
+                ? null
+                : BackButton(onPressed: widget.onClose),
             titleSpacing: 0,
             title: StreamBuilder(
               stream: _titleStreamC.stream,
@@ -544,6 +627,11 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                               )
                             : const Icon(Icons.info_outline),
                       ),
+                    ContentExportButton(
+                      feed: (_feedController.feedState.value as Success)
+                          .response as Datum,
+                      articles: _feedController.articleList ?? const [],
+                    ),
                     PopupMenuButton(
                       onSelected: (FeedMenuItem item) {
                         switch (item) {
@@ -552,7 +640,16 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                                 Utils.getShareUrl(_id, ShareType.feed));
                             break;
                           case FeedMenuItem.Share:
-                            Share.share(Utils.getShareUrl(_id, ShareType.feed));
+                            final data =
+                                (_feedController.feedState.value as Success)
+                                    .response as Datum;
+                            Utils.shareContent(_id, ShareType.feed,
+                                title:
+                                    data.messageTitle?.trim().isNotEmpty == true
+                                        ? data.messageTitle
+                                        : data.title,
+                                message: data.message,
+                                context: context);
                             break;
                           case FeedMenuItem.Fav:
                             if (_feedController.isFav) {
@@ -577,9 +674,14 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                               SmartDialog.showToast('当前平台暂不支持此功能');
                             }
                             break;
+                          case FeedMenuItem.Source:
+                            setState(() => _showSource = !_showSource);
+                            break;
                         }
                       },
                       itemBuilder: (BuildContext context) => FeedMenuItem.values
+                          .where((item) =>
+                              item != FeedMenuItem.Source || _hasMarkdown)
                           .map((item) => PopupMenuItem<FeedMenuItem>(
                                 value: item,
                                 child: item == FeedMenuItem.Fav
@@ -592,7 +694,10 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                                                 ? '取消屏蔽'
                                                 : '屏蔽',
                                           )
-                                        : Text(item.label),
+                                        : item == FeedMenuItem.Source
+                                            ? Text(
+                                                _showSource ? '格式化显示' : '查看原文')
+                                            : Text(item.label),
                               ))
                           .toList(),
                     )
@@ -603,7 +708,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
       ),
       body: Obx(
         () => _feedController.feedState.value is Success
-            ? RefreshIndicator(
+            ? ExpressiveRefreshIndicator(
                 notificationPredicate: (notification) {
                   final double offset = notification.metrics.pixels;
                   if (offset > 50 && !_visibleTitle) {
@@ -615,7 +720,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                   }
                   return notification.depth == 0;
                 },
-                key: _refreshKey,
+                refreshKey: _refreshKey,
                 onRefresh: () async {
                   _feedController.onReset();
                   await _feedController.onGetData();

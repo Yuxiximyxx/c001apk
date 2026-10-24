@@ -6,16 +6,20 @@ import 'dart:typed_data';
 import 'package:c001apk_flutter/logic/network/request.dart';
 import 'package:c001apk_flutter/logic/state/loading_state.dart';
 import 'package:c001apk_flutter/pages/feed/feed_controller.dart';
+import 'package:c001apk_flutter/pages/feed/feed_page.dart';
 import 'package:c001apk_flutter/utils/global_data.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 
 // Only the external transport is replaced; requests, headers, models and the
 // controller all run normally. Content and device data are synthetic.
 class GuestDetailAdapter implements HttpClientAdapter {
   final requests = <RequestOptions>[];
+  dynamic replyBody = {'data': []};
   Map<String, dynamic> apiBody = {
     'code': 403,
     'messageStatus': 'err_request_captcha_v2',
@@ -44,7 +48,7 @@ class GuestDetailAdapter implements HttpClientAdapter {
     final body = isWeb
         ? webBody
         : options.uri.path == '/v6/feed/replyList'
-            ? {'data': []}
+            ? replyBody
             : apiBody;
     return ResponseBody.fromString(
         body is String ? body : jsonEncode(body), 200,
@@ -73,16 +77,19 @@ void main() {
       SettingsBoxKey.apiVersion: '16',
       SettingsBoxKey.sdkInt: '33',
       SettingsBoxKey.userAgent: 'SyntheticTest/1.0',
+      SettingsBoxKey.recordHistory: false,
     });
     Request();
   });
-  setUp(() {
+  setUp(() async {
+    await GStorage.settings.delete(SettingsBoxKey.szlmId);
     GlobalData().isLogin = false;
     GlobalData().SESSID = 'SESSID=synthetic-session';
     adapter = GuestDetailAdapter();
     Request.dio.httpClientAdapter = adapter;
   });
   tearDown(() {
+    Get.reset();
     Request().captchaVerifier = null;
     GlobalData().isLogin = false;
     GlobalData().SESSID = '';
@@ -147,6 +154,161 @@ void main() {
     expect(controller.feedState.value, isA<Success>());
     expect(adapter.requests.where((r) => r.uri.host == 'www.coolapk.com'),
         isEmpty);
+  });
+
+  test('without an imported identity detail and refresh never request replies',
+      () async {
+    adapter.apiBody = {'data': adapter.webBody['data']};
+    var prompts = 0;
+    Request().captchaVerifier = (_) async {
+      prompts++;
+      return null;
+    };
+    final controller = FeedController(id: '123', recordHistory: false);
+    await controller.getFeedData();
+    while (controller.isLoading) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    controller.onReset();
+    await controller.onGetData();
+    await controller.onGetData(false);
+    expect(controller.feedState.value, isA<Success>());
+    expect(adapter.requests.where((r) => r.uri.path.endsWith('/replyList')),
+        isEmpty,
+        reason: '${adapter.requests.map((r) => r.uri)}; '
+            '${controller.loadingState.value}');
+    expect(prompts, 0);
+  });
+
+  test('imported identity keeps automatic comment loading', () async {
+    await GStorage.settings.put(SettingsBoxKey.szlmId, 'synthetic-imported-id');
+    adapter.apiBody = {'data': adapter.webBody['data']};
+    final controller = FeedController(id: '123', recordHistory: false);
+    await controller.getFeedData();
+    while (controller.isLoading) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    expect(controller.loadingState.value, isA<Empty>());
+    expect(adapter.requests.where((r) => r.uri.path.endsWith('/replyList')),
+        hasLength(1));
+  });
+
+  test('explicit comment action verifies once and supports cancellation retry',
+      () async {
+    adapter.apiBody = {'data': adapter.webBody['data']};
+    adapter.replyBody = {
+      'messageStatus': 'err_request_captcha_v2',
+      'messageExtra': {
+        'captchaId': '0123456789abcdef0123456789abcdef',
+        'captchaField': '_token',
+      },
+    };
+    var prompts = 0;
+    final started = Completer<void>();
+    final cancelled = Completer<String?>();
+    Request().captchaVerifier = (_) {
+      prompts++;
+      started.complete();
+      return cancelled.future;
+    };
+    final controller = FeedController(id: '123', recordHistory: false);
+    await controller.getFeedData();
+    final body = controller.feedState.value;
+    final pending = controller.loadReplies();
+    await started.future;
+    await controller.loadReplies();
+    expect(prompts, 1);
+    cancelled.complete(null);
+    await pending;
+    expect(controller.loadingState.value, isA<Error>());
+    expect(controller.feedState.value, same(body));
+    controller.onReset();
+    await controller.onGetData();
+    expect(prompts, 1);
+    Request().captchaVerifier = (challenge) async {
+      prompts++;
+      adapter.replyBody = {'data': []};
+      return challenge.proof('synthetic-proof');
+    };
+    await controller.loadReplies();
+    expect(controller.loadingState.value, isA<Empty>());
+    expect(controller.feedState.value, same(body));
+    expect(prompts, 2);
+  });
+
+  testWidgets('scrolling to comments shows an action without a request',
+      (tester) async {
+    adapter.apiBody = {
+      'data': {
+        ...(adapter.webBody['data'] as Map<String, dynamic>),
+        'feedTypeName': '图文',
+        'message_raw_output': jsonEncode(List.generate(
+            12, (i) => {'type': 'text', 'message': '第 $i 段合成正文。' * 20})),
+      }
+    };
+    await tester.pumpWidget(const GetMaterialApp(home: FeedPage(id: '123')));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    final action = find.widgetWithText(FilledButton, '加载评论并验证');
+    expect(action.hitTestable(), findsNothing);
+    await tester.scrollUntilVisible(action, 400,
+        scrollable: find.byType(Scrollable).last, maxScrolls: 50);
+    await tester.pumpAndSettle();
+    expect(action.hitTestable(), findsOneWidget);
+    expect(adapter.requests.where((r) => r.uri.path.endsWith('/replyList')),
+        isEmpty);
+    await tester.tap(action);
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('暂无内容'), findsOneWidget);
+    expect(adapter.requests.where((r) => r.uri.path.endsWith('/replyList')),
+        hasLength(1));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  test('cancelled next-page verification preserves comments and pauses refresh',
+      () async {
+    adapter.apiBody = {'data': adapter.webBody['data']};
+    adapter.replyBody = {
+      'data': [
+        {'id': 456, 'entityType': 'feed_reply', 'message': '已读评论'},
+      ]
+    };
+    final controller = FeedController(id: '123', recordHistory: false);
+    await controller.getFeedData();
+    await controller.loadReplies();
+    final comments = controller.loadingState.value as Success;
+    expect(comments.response.single.message, '已读评论');
+    adapter.replyBody = {
+      'messageStatus': 'err_request_captcha_v2',
+      'messageExtra': {
+        'captchaId': '0123456789abcdef0123456789abcdef',
+        'captchaField': '_token',
+      },
+    };
+    var prompts = 0;
+    Request().captchaVerifier = (_) async {
+      prompts++;
+      return null;
+    };
+    await controller.onGetData(false);
+    expect(controller.footerState.value, isA<Error>());
+    expect(controller.loadingState.value, same(comments));
+    controller.listType = 'dateline_desc';
+    controller.onReset();
+    await controller.onGetData();
+    expect(prompts, 1);
+    expect(controller.loadingState.value, same(comments));
+    adapter.replyBody = {'data': []};
+    await controller.loadReplies();
+    expect(controller.loadingState.value, isA<Empty>());
+    expect(adapter.requests.last.queryParameters['page'], 1);
+    expect(adapter.requests.last.queryParameters['listType'], 'dateline_desc');
   });
 
   test('normal feed without structured article output remains readable',
@@ -317,4 +479,47 @@ void main() {
     expect((controller.feedState.value as Error).errMsg, contains('响应'));
     expect(adapter.requests, hasLength(2));
   });
+
+  test('official app-only landing page explains device verification', () async {
+    adapter.webBody = '<html><title>动态分享 - 酷安</title>'
+        '<div>您当前查看的是「动态分享」，请用酷安手机APP扫码查看详情</div></html>';
+    final controller = FeedController(id: '123', recordHistory: false);
+    await controller.getFeedData();
+    expect(controller.feedState.value, isA<Error>());
+    final result = controller.feedState.value as Error;
+    expect(result.errMsg, contains('设备需要验证'));
+    expect(result.errMsg, isNot(contains('格式异常')));
+    expect((result as dynamic).canVerify, isTrue);
+    expect(adapter.requests, hasLength(2));
+    expect(GlobalData().isLogin, isFalse);
+  });
+
+  test('unavailable public representation retains the original login reason',
+      () async {
+    adapter.apiBody = {'code': 401, 'messageStatus': 'err_not_login'};
+    adapter.webBody = '<html><title>图文分享 - 酷安</title>'
+        '<div>请用酷安手机APP扫码查看详情</div></html>';
+    final controller = FeedController(id: '123', recordHistory: false);
+    await controller.getFeedData();
+    final result = controller.feedState.value as Error;
+    expect(result.errMsg, contains('登录'));
+    expect((result as dynamic).canVerify, isTrue);
+    expect(adapter.requests, hasLength(2));
+  });
+
+  for (final cancelled in [true, false]) {
+    test(
+        'failed verification keeps identity help without a readable body ($cancelled)',
+        () async {
+      adapter.webBody = '<html>请用酷安手机APP扫码查看详情</html>';
+      final controller = FeedController(id: '123', recordHistory: false);
+      await controller.getFeedData();
+      Request().captchaVerifier = (challenge) async =>
+          cancelled ? null : challenge.proof('synthetic-validation');
+      await controller.getFeedData(verify: true);
+      final result = controller.feedState.value as Error;
+      expect(result.canVerify, isTrue);
+      expect(result.errMsg, isNot(contains('正文仍可阅读')));
+    });
+  }
 }

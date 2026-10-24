@@ -5,10 +5,12 @@ import 'package:get/get.dart';
 
 import '../../components/cards/icon_mini_scroll_card.dart' show miniCardItem;
 import '../../components/html_text.dart';
+import '../../components/markdown_body.dart';
 import '../../components/icon_text.dart';
 import '../../components/imageview.dart';
 import '../../components/like_button.dart';
 import '../../components/no_splash_factory.dart';
+import '../feed_navigation.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../utils/date_util.dart';
 import '../../utils/extensions.dart';
@@ -25,17 +27,19 @@ class FeedCard extends StatelessWidget {
     this.onDelete,
     this.onBlock,
     this.onLike,
+    this.forcePlain = false,
   });
 
   final Datum data;
   final bool isFeedContent;
   final bool isHistory;
+  final bool forcePlain;
   final Function(dynamic id)? onDelete;
   final Function(dynamic uid)? onBlock;
   final Function(dynamic id, dynamic like)? onLike;
 
-  void _onViewFeed() {
-    Get.toNamed('/feed/${data.id}');
+  void _onViewFeed(BuildContext context) {
+    FeedNavigation.open(context, '${data.id}');
   }
 
   @override
@@ -63,7 +67,8 @@ class FeedCard extends StatelessWidget {
                 _forwardSourceFeed(context),
               if (!data.extraUrl.isNullOrEmpty) _extraUrl(context),
               if (!data.replyRows.isNullOrEmpty) _hotReply(context),
-              bottomInfo(context, data, isFeedContent, _onViewFeed, () {
+              bottomInfo(
+                  context, data, isFeedContent, () => _onViewFeed(context), () {
                 if (onLike != null) {
                   onLike!(data.id, data.userAction?.like);
                 }
@@ -85,13 +90,26 @@ class FeedCard extends StatelessWidget {
         ),
       );
     }
-    return MiuixCard(
+    final card = MiuixCard(
       cornerRadius: 24,
-      onPressed: _onViewFeed,
+      onPressed: () => _onViewFeed(context),
       onLongPress: () =>
           Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
       child: content,
     );
+    // Reading-pane selection highlight (upstream FeedNavigation): outline
+    // the card currently open in the reading pane.
+    if (FeedNavigation.selectedOf(context) == '${data.id}') {
+      return Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+              color: Theme.of(context).colorScheme.primary, width: 2),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: card,
+      );
+    }
+    return card;
   }
 
   Widget _image() {
@@ -128,7 +146,8 @@ class FeedCard extends StatelessWidget {
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
           onTap: data.forwardSourceFeed != null
-              ? () => Get.toNamed('/feed/${data.forwardSourceFeed?.id}')
+              ? () =>
+                  FeedNavigation.open(context, '${data.forwardSourceFeed?.id}')
               : null,
           onLongPress: data.forwardSourceFeed != null
               ? () => Get.toNamed('/copy',
@@ -154,11 +173,13 @@ class FeedCard extends StatelessWidget {
                           .forwardSourceFeed!.messageTitle.isNullOrEmpty) ...[
                         htmlText(
                             '<a class="feed-link-uname" href="/u/${data.forwardSourceFeed?.uid}">@${data.forwardSourceFeed?.username}</a>: ${data.forwardSourceFeed?.messageTitle}'),
-                        htmlText(data.forwardSourceFeed?.message ?? ''),
+                        FeedText(data.forwardSourceFeed?.message ?? '',
+                            preview: true),
                       ],
                       if (data.forwardSourceFeed!.messageTitle.isNullOrEmpty)
-                        htmlText(
-                            '<a class="feed-link-uname" href="/u/${data.forwardSourceFeed?.uid}">@${data.forwardSourceFeed?.username}</a>: ${data.forwardSourceFeed?.message}'),
+                        FeedText(
+                            '<a class="feed-link-uname" href="/u/${data.forwardSourceFeed?.uid}">@${data.forwardSourceFeed?.username}</a>:\n${data.forwardSourceFeed?.message}',
+                            preview: true),
                       if (!data.forwardSourceFeed!.picArr.isNullOrEmpty) ...[
                         const SizedBox(height: 10),
                         LayoutBuilder(
@@ -189,7 +210,8 @@ class FeedCard extends StatelessWidget {
             : Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
-          onTap: () => Utils.onOpenLink(data.extraUrl!, data.extraTitle ?? ''),
+          onTap: () => Utils.onOpenLink(
+              data.extraUrl!, data.extraTitle ?? '', true, context),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(10),
@@ -259,7 +281,7 @@ class FeedCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
-          onTap: _onViewFeed,
+          onTap: () => _onViewFeed(context),
           onLongPress: () =>
               Get.toNamed('/copy', parameters: {'text': reply.message.orEmpty}),
           borderRadius: BorderRadius.circular(12),
@@ -334,10 +356,12 @@ class FeedCard extends StatelessWidget {
           top: 5,
           right: isFeedContent ? 16 : 10,
         ),
-        child: htmlText(
+        child: FeedText(
           data.message.orEmpty,
           fontSize: 16,
-          onClick: _onViewFeed,
+          preview: !isFeedContent,
+          forcePlain: forcePlain,
+          picArr: data.picArr,
         ),
       )
     ];

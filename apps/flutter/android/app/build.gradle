@@ -22,19 +22,32 @@ android {
     namespace = "app.awavenue.c001apk"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    if (System.getenv("C001APK_ANDROID_NDK_PATH")) {
+        ndkPath = System.getenv("C001APK_ANDROID_NDK_PATH")
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
 
     defaultConfig {
         applicationId = "app.awavenue.c001apk"
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    packagingOptions {
+        jniLibs {
+            // Keep directly distributed APKs small, both locally and in CI.
+            useLegacyPackaging = true
+        }
     }
 
     signingConfigs {

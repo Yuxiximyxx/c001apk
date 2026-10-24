@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import "package:flutter/foundation.dart";
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,6 +20,7 @@ import '../logic/network/api_failure.dart';
 import '../pages/ffflist/ffflist_page.dart' show FFFListType;
 import '../utils/extensions.dart';
 import '../utils/storage_util.dart';
+import '../components/feed_navigation.dart';
 
 // ignore: constant_identifier_names
 enum ReportType { Feed, Reply, User }
@@ -54,7 +55,50 @@ class Utils {
   }
 
   static String getShareUrl(String id, ShareType type) {
-    return 'https://www.coolapk1s.com/${type.name}/$id';
+    return 'https://www.coolapk1s.com/${type.name}/${Uri.encodeComponent(id)}';
+  }
+
+  static String getShareText(String id, ShareType type,
+      {String? title, String? message}) {
+    String plain(String value) =>
+        parseHtmlString(value).replaceAll(RegExp(r'\s+'), ' ').trim();
+    var name = plain(title ?? '');
+    if (name.isEmpty) name = plain(message ?? '');
+    if (name.isEmpty) {
+      name = switch (type) {
+        ShareType.feed => '动态',
+        ShareType.u => '用户',
+        ShareType.apk => '应用',
+        ShareType.t => '话题',
+        ShareType.product => '数码',
+      };
+    }
+    // A normal feed has no article title; keep its summary on one short line.
+    if (name.runes.length > 100) {
+      name = '${String.fromCharCodes(name.runes.take(100))}…';
+    }
+    return '$name\n${getShareUrl(id, type)}\n'
+        'https://www.coolapk.com/${type.name}/${Uri.encodeComponent(id)}\n'
+        '分享自c001apk';
+  }
+
+  static Future<void> shareContent(String id, ShareType type,
+      {String? title, String? message, required BuildContext context}) async {
+    final text = getShareText(id, type, title: title, message: message);
+    try {
+      if (Platform.isWindows) {
+        await Clipboard.setData(ClipboardData(text: text));
+        SmartDialog.showToast('已复制');
+      } else {
+        final box = context.findRenderObject();
+        await Share.share(text,
+            sharePositionOrigin: box is RenderBox && box.hasSize
+                ? box.localToGlobal(Offset.zero) & box.size
+                : null);
+      }
+    } catch (_) {
+      SmartDialog.showToast(Platform.isWindows ? '复制失败，请重试' : '分享失败，请重试');
+    }
   }
 
   static void report(dynamic id, ReportType reportType) {
@@ -166,30 +210,72 @@ class Utils {
     String url, [
     String? title,
     bool needConvert = false,
+    BuildContext? context,
+  ]) {
+    try {
+      _openLink(url, title, needConvert, context);
+    } on FormatException {
+      SmartDialog.showToast('暂不支持此链接');
+    }
+  }
+
+  static void _openLink(
+    String url, [
+    String? title,
+    bool needConvert = false,
+    BuildContext? context,
   ]) {
     if (url.isEmpty) {
       return;
     }
     String path = url;
     if (needConvert) {
-      if (url.startsWith(Constants.PREFIX_COOLMARKET)) {
-        path = url.replaceFirst(Constants.PREFIX_COOLMARKET, '/');
-      } else {
-        Uri uri = Uri.parse(url);
-        if (uri.host.contains(Constants.CHANNEL)) {
-          path = '${uri.path}?${uri.query}';
-        }
+      final uri = Uri.tryParse(url);
+      if (uri == null) {
+        SmartDialog.showToast('暂不支持此链接');
+        return;
+      }
+      const hosts = {
+        'coolapk.com',
+        'www.coolapk.com',
+        'm.coolapk.com',
+        'coolapk1s.com',
+        'www.coolapk1s.com',
+      };
+      if (uri.scheme == 'coolmarket') {
+        path = hosts.contains(uri.host) || uri.host == 'com.coolapk.market'
+            ? uri.path
+            : '/${uri.host}${uri.path}';
+        if (uri.hasQuery) path += '?${uri.query}';
+      } else if ((uri.scheme == 'http' || uri.scheme == 'https') &&
+          hosts.contains(uri.host)) {
+        path = uri.path;
+        if (uri.hasQuery) path += '?${uri.query}';
       }
     }
-    if (path.startsWith(Constants.PREFIX_FEED)) {
+    if (path.startsWith('/')) {
+      final segments = Uri.parse(path).pathSegments;
+      if (segments.isNotEmpty &&
+          const {'feed', 'event', 'u', 'apk', 'game', 't', 'product'}
+              .contains(segments.first) &&
+          (segments.length < 2 || segments[1].trim().isEmpty)) {
+        SmartDialog.showToast('暂不支持此链接');
+        return;
+      }
+    }
+    if (RegExp(r'^/feed/[0-9]+/?(?:[?#]|$)').hasMatch(path)) {
       // Share queries and fragments are not part of the feed identifier.
-      final id = Uri.parse(path).path.replaceFirst(Constants.PREFIX_FEED, '');
-      Get.toNamed('/feed/$id');
+      final id = Uri.parse(path).pathSegments[1];
+      if (context != null) {
+        FeedNavigation.open(context, id);
+      } else {
+        Get.toNamed('/feed/$id');
+      }
     } else if (RegExp(r'^/event/[0-9]+(?:[?#]|$)').hasMatch(path)) {
       final id = Uri.parse(path).path.substring('/event/'.length);
       Get.toNamed('/event/$id');
     } else if (path.startsWith(Constants.PREFIX_USER)) {
-      String uid = path.replaceFirst(Constants.PREFIX_USER, '');
+      String uid = Uri.parse(path).pathSegments.skip(1).join('/');
       try {
         uid = Uri.encodeComponent(uid);
       } catch (e) {
@@ -197,26 +283,26 @@ class Utils {
       }
       Get.toNamed('/u/$uid');
     } else if (path.startsWith(Constants.PREFIX_APP)) {
-      Get.toNamed('/apk/${path.replaceFirst(Constants.PREFIX_APP, '')}');
+      Get.toNamed(
+          '/apk/${Uri.encodeComponent(Uri.parse(path).pathSegments[1])}');
     } else if (path.startsWith(Constants.PREFIX_GAME)) {
-      Get.toNamed('/apk/${path.replaceFirst(Constants.PREFIX_GAME, '')}');
+      Get.toNamed(
+          '/apk/${Uri.encodeComponent(Uri.parse(path).pathSegments[1])}');
     } else if (path.startsWith(Constants.PREFIX_TOPIC)) {
-      String tag = path
-          .replaceFirst(Constants.PREFIX_TOPIC, '')
-          .replaceFirst(RegExp('\\?type=[A-Za-z0-9]+'), '');
+      String tag = Uri.parse(path).pathSegments.skip(1).join('/');
       try {
         tag = Uri.encodeComponent(tag);
       } catch (e) {
         debugPrint(e.toString());
       }
-      if (path.contains('type=8')) {
+      if (Uri.parse(path).queryParameters['type'] == '8') {
         Get.toNamed('/coolpic', parameters: {'title': tag});
       } else {
         Get.toNamed('/t/$tag');
       }
     } else if (path.startsWith(Constants.PREFIX_PRODUCT)) {
       Get.toNamed(
-          '/product/${path.replaceFirst(Constants.PREFIX_PRODUCT, '')}');
+          '/product/${Uri.encodeComponent(Uri.parse(path).pathSegments[1])}');
     } else if (path.startsWith(Constants.PREFIX_CAROUSEL)) {
       Get.toNamed(
         '/carousel',
@@ -252,7 +338,7 @@ class Utils {
       );
     } else {
       if (!needConvert) {
-        onOpenLink(url, title, true);
+        onOpenLink(url, title, true, context);
       } else {
         if (url.startsWith(Constants.PREFIX_HTTP)) {
           if (isSupportWebview() && !GStorage.openInBrowser) {

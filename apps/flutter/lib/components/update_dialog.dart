@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../logic/app_update/app_release.dart';
+import '../utils/markdown_content.dart';
+import 'markdown_body.dart';
 
 enum UpdateAction { later, skip, download }
 
@@ -37,7 +39,12 @@ class AppUpdateDialog extends StatelessWidget {
               Text(
                   '发布于 ${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}'),
             const SizedBox(height: 12),
-            Text(release.notes),
+            MarkdownBody(
+              content: MarkdownContent.parse(release.notes,
+                  explicit: true, coolapk: false, showEmoji: false),
+              fontSize: 14,
+              baseUrl: release.page,
+            ),
             TextButton(onPressed: onOpenRelease, child: const Text('查看发布页面')),
           ],
         )),

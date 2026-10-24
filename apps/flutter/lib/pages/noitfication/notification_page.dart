@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import '../../components/common_body.dart';
 import '../../components/cards/message_card.dart';
 import '../../pages/noitfication/notification_controller.dart';
+import '../../components/announcement_entry.dart';
+import '../../utils/global_data.dart';
 
 // ignore: constant_identifier_names
 enum NotificationType { AT, COMMENT, LIKE, FOLLOW, MESSAGE, SYSTEM }
@@ -41,18 +43,36 @@ class _NotificationPageState extends State<NotificationPage> {
     ),
     tag: type.name,
   );
+  bool _controllerUsed = false;
 
   @override
   void dispose() {
-    _notificationController.scrollController?.dispose();
-    Get.delete<NotificationController>(
-      tag: type.name,
-    );
+    if (_controllerUsed) {
+      _notificationController.scrollController?.dispose();
+      Get.delete<NotificationController>(tag: type.name);
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!GlobalData().isLogin) {
+      return Scaffold(
+          appBar: AppBar(title: Text(_title)),
+          body: SafeArea(
+              top: false,
+              child: Column(children: [
+                if (type == NotificationType.MESSAGE)
+                  const Padding(
+                      padding: EdgeInsets.all(10), child: AnnouncementEntry()),
+                Expanded(
+                    child: Center(
+                        child: TextButton(
+                            onPressed: () => Get.toNamed('/login'),
+                            child: const Text('登录后查看私信与酷安通知')))),
+              ])));
+    }
+    _controllerUsed = true;
     return Scaffold(
       appBar: AppBar(
         title: Text(_title),
@@ -76,29 +96,34 @@ class _NotificationPageState extends State<NotificationPage> {
                 ))
             : null,
         leading: type == NotificationType.MESSAGE
-            ? Material(
-                color: Theme.of(context).colorScheme.onInverseSurface,
-                borderRadius: BorderRadius.circular(12),
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                  leading: const CircleAvatar(child: Icon(Icons.support_agent)),
-                  title: const Text('酷安小秘书'),
-                  subtitle: const Text('系统通知与信息', maxLines: 1),
-                  trailing: _notificationCount > 0
-                      ? Badge.count(count: _notificationCount)
-                      : null,
-                  onTap: () {
-                    _onNotificationsRead?.call();
-                    Get.toNamed('/notification',
-                        arguments: {
-                          'type': NotificationType.SYSTEM,
-                        },
-                        preventDuplicates: false);
-                    setState(() => _notificationCount = 0);
-                  },
+            ? Column(children: [
+                const AnnouncementEntry(),
+                const SizedBox(height: 8),
+                Material(
+                  color: Theme.of(context).colorScheme.onInverseSurface,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                    leading:
+                        const CircleAvatar(child: Icon(Icons.support_agent)),
+                    title: const Text('酷安小秘书'),
+                    subtitle: const Text('系统通知与信息', maxLines: 1),
+                    trailing: _notificationCount > 0
+                        ? Badge.count(count: _notificationCount)
+                        : null,
+                    onTap: () {
+                      _onNotificationsRead?.call();
+                      Get.toNamed('/notification',
+                          arguments: {
+                            'type': NotificationType.SYSTEM,
+                          },
+                          preventDuplicates: false);
+                      setState(() => _notificationCount = 0);
+                    },
+                  ),
                 ),
-              )
+              ])
             : null,
       ),
     );

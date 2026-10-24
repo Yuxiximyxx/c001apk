@@ -1,3 +1,5 @@
+import '../../components/expressive_refresh_indicator.dart';
+import '../../components/expressive_loading_indicator.dart';
 // ignore_for_file: constant_identifier_names
 
 import 'dart:io';
@@ -8,11 +10,11 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:indent/indent.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../components/cards/user_info_card.dart';
 import '../../components/footer.dart';
 import '../../components/item_card.dart';
+import '../../components/adaptive_card_list.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../logic/state/loading_state.dart';
 import '../../pages/user/user_controller.dart';
@@ -95,7 +97,7 @@ class _UserPageState extends State<UserPage> {
           onLocalFollow: _userController.onLocalFollow,
         );
     }
-    return const CircularProgressIndicator();
+    return const ExpressiveLoadingIndicator();
   }
 
   Widget _buildUserFeed(LoadingState loadingState) {
@@ -134,39 +136,38 @@ class _UserPageState extends State<UserPage> {
         );
       case Success():
         List<Datum> dataList = loadingState.response as List<Datum>;
-        return SliverPadding(
+        return AdaptiveCardList.sliver(
           padding: EdgeInsets.only(
               left: 10,
               top: 10,
               right: 10,
               bottom: 10 + MediaQuery.of(context).padding.bottom),
-          sliver: SliverList.separated(
-            itemCount: dataList.length + 1,
-            itemBuilder: (_, index) {
-              if (index == dataList.length) {
-                if (!_userController.isEnd && !_userController.isLoading) {
-                  _userController.setFooterState(LoadingState.loading());
-                  _userController.onGetData(false);
-                }
-                return Obx(
-                  () => footerWidget(
-                    _userController.footerState.value,
-                    () {
-                      _userController.isEnd = false;
-                      _userController.setFooterState(LoadingState.loading());
-                      _userController.onGetData(false);
-                    },
-                  ),
-                );
-              } else {
-                return itemCard(
-                  dataList[index],
-                  onBlock: _userController.onBlock,
-                );
+          itemCount: dataList.length + 1,
+          isFullWidth: (index) =>
+              index == dataList.length || dataList[index].entityType != 'feed',
+          itemBuilder: (_, index) {
+            if (index == dataList.length) {
+              if (!_userController.isEnd && !_userController.isLoading) {
+                _userController.setFooterState(LoadingState.loading());
+                _userController.onGetData(false);
               }
-            },
-            separatorBuilder: (_, index) => const SizedBox(height: 10),
-          ),
+              return Obx(
+                () => footerWidget(
+                  _userController.footerState.value,
+                  () {
+                    _userController.isEnd = false;
+                    _userController.setFooterState(LoadingState.loading());
+                    _userController.onGetData(false);
+                  },
+                ),
+              );
+            } else {
+              return itemCard(
+                dataList[index],
+                onBlock: _userController.onBlock,
+              );
+            }
+          },
         );
     }
     return SliverToBoxAdapter(
@@ -174,7 +175,7 @@ class _UserPageState extends State<UserPage> {
         height: 80,
         alignment: Alignment.center,
         padding: const EdgeInsets.all(10.0),
-        child: const CircularProgressIndicator(),
+        child: const ExpressiveLoadingIndicator(),
       ),
     );
   }
@@ -185,7 +186,7 @@ class _UserPageState extends State<UserPage> {
       body: Stack(
         children: [
           Obx(
-            () => RefreshIndicator(
+            () => ExpressiveRefreshIndicator(
               notificationPredicate: (notification) {
                 final double offset = notification.metrics.pixels;
                 if (offset >= 0) {
@@ -261,8 +262,9 @@ class _UserPageState extends State<UserPage> {
                               _userController.uid, ShareType.u));
                           break;
                         case UserMenuItem.Share:
-                          Share.share(Utils.getShareUrl(
-                              _userController.uid, ShareType.u));
+                          Utils.shareContent(_userController.uid, ShareType.u,
+                              title: _userController.username,
+                              context: context);
                           break;
                         case UserMenuItem.Block:
                           GStorage.onBlock(

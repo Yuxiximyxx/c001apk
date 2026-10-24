@@ -1,13 +1,8 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
-import 'dart:io';
 
-import 'package:android_intent_plus/android_intent.dart';
-import 'package:android_intent_plus/flag.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
-
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../pages/home/return_top_controller.dart';
@@ -15,6 +10,9 @@ import '../../pages/home/home_page.dart';
 import '../../pages/main/main_controller.dart';
 import '../../pages/message/message_page.dart';
 import '../../logic/accounts/account_store.dart';
+import '../../components/adaptive_reading_pane.dart';
+import '../../components/feed_reading_pane.dart';
+import '../../components/expressive_loading_indicator.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -31,6 +29,7 @@ class _MainPageState extends State<MainPage> {
   late final MainController _mainController = Get.put(MainController());
   var _contrller = PageController();
   bool _resetting = false;
+  final _readingKey = GlobalKey<AdaptiveReadingPaneState>();
 
   @override
   void initState() {
@@ -64,23 +63,6 @@ class _MainPageState extends State<MainPage> {
     super.dispose();
   }
 
-  void onBackPressed() async {
-    if (_selectedIndex != 0) {
-      onDestinationSelected(0);
-    } else {
-      if (Platform.isAndroid) {
-        AndroidIntent intent = const AndroidIntent(
-          action: 'android.intent.action.MAIN',
-          flags: [Flag.FLAG_ACTIVITY_NEW_TASK],
-          category: 'android.intent.category.HOME',
-        );
-        await intent.launch();
-      } else {
-        SystemNavigator.pop();
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     const pages = [
@@ -101,21 +83,23 @@ class _MainPageState extends State<MainPage> {
       ),
     ];
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (_, obj) async {
-        onBackPressed();
-      },
-      child: _resetting
-          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          : LayoutBuilder(
-              builder: (_, constriants) {
-                bool isPortait = constriants.maxHeight > constriants.maxWidth;
+    // All three destinations share the root route. Let Android handle back
+    // to the launcher without changing the selected destination.
+    return _resetting
+        ? const Scaffold(body: Center(child: ExpressiveLoadingIndicator()))
+        : LayoutBuilder(
+            builder: (_, constriants) {
+              final useRail = constriants.maxWidth -
+                      MediaQuery.paddingOf(context).horizontal >=
+                  600;
 
-                return Scaffold(
-                  extendBody: true,
-                  body: Row(children: [
-                    if (!isPortait)
+              return Scaffold(
+                extendBody: true,
+                body: SafeArea(
+                  top: false,
+                  bottom: false,
+                  child: Row(children: [
+                    if (useRail)
                       StreamBuilder(
                         initialData: _selectedIndex,
                         stream: _indexSctream.stream,
@@ -123,69 +107,77 @@ class _MainPageState extends State<MainPage> {
                           destinations: railDestinations,
                           selectedIndex: snapshot.data,
                           onDestinationSelected: onDestinationSelected,
+                          labelType: NavigationRailLabelType.all,
                         ),
                       ),
                     Expanded(
-                      child: PageView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        controller: _contrller,
-                        children: pages,
+                      child: FeedReadingPane(
+                        paneKey: _readingKey,
+                        child: PageView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          controller: _contrller,
+                          children: pages,
+                        ),
                       ),
                     ),
                   ]),
-                  bottomNavigationBar: isPortait
-                      ? StreamBuilder(
-                          initialData: _selectedIndex,
-                          stream: _indexSctream.stream,
-                          builder: (_, snapshot) => ClipRect(
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                              child: MiuixNavigationBar(
-                            color: MiuixTheme.of(context)
-                                .colors
-                                .surface
-                                .withValues(alpha: 0.86),
-                            mode:
-                                MiuixNavigationBarDisplayMode.iconAndText,
-                            children: [
-                              MiuixNavigationBarItem(
-                                selected: snapshot.data == 0,
-                                onPressed: () => onDestinationSelected(0),
-                                icon: Icon(snapshot.data == 0
-                                    ? Icons.home
-                                    : Icons.home_outlined),
-                                label: '首页',
-                              ),
-                              MiuixNavigationBarItem(
-                                selected: snapshot.data == 1,
-                                onPressed: () => onDestinationSelected(1),
-                                icon: Icon(snapshot.data == 1
-                                    ? Icons.person
-                                    : Icons.person_outline),
-                                label: '我的',
-                              ),
-                            ],
-                              ),
+                ),
+                bottomNavigationBar: !useRail
+                    ? StreamBuilder(
+                        initialData: _selectedIndex,
+                        stream: _indexSctream.stream,
+                        builder: (_, snapshot) => ClipRect(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                            child: MiuixNavigationBar(
+                              color: MiuixTheme.of(context)
+                                  .colors
+                                  .surface
+                                  .withValues(alpha: 0.86),
+                              mode: MiuixNavigationBarDisplayMode.iconAndText,
+                              children: [
+                                MiuixNavigationBarItem(
+                                  selected: snapshot.data == 0,
+                                  onPressed: () => onDestinationSelected(0),
+                                  icon: Icon(snapshot.data == 0
+                                      ? Icons.home
+                                      : Icons.home_outlined),
+                                  label: '首页',
+                                ),
+                                MiuixNavigationBarItem(
+                                  selected: snapshot.data == 1,
+                                  onPressed: () => onDestinationSelected(1),
+                                  icon: Icon(snapshot.data == 1
+                                      ? Icons.person
+                                      : Icons.person_outline),
+                                  label: '我的',
+                                ),
+                              ],
                             ),
                           ),
-                        )
-                      : null,
-                );
-              },
-            ),
-    );
+                        ),
+                      )
+                    : null,
+              );
+            },
+          );
   }
 
   void onDestinationSelected(int index) {
     if (_resetting || !_contrller.hasClients) return;
+    _readingKey.currentState?.close();
     if (index == 0 && _selectedIndex == 0) {
       _pageScrollController.setIndex(998);
     }
-    _contrller.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.ease,
-    );
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _contrller.jumpToPage(index);
+    } else {
+      _contrller.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubicEmphasized,
+      );
+    }
     _selectedIndex = index;
     _indexSctream.add(index);
   }

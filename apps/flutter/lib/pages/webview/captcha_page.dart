@@ -1,3 +1,4 @@
+import '../../components/expressive_loading_indicator.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -125,7 +126,7 @@ window.addEventListener('flutterInAppWebViewPlatformReady',startCaptcha);
           future: _ready,
           builder: (_, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: ExpressiveLoadingIndicator());
             }
             if (snapshot.hasError) {
               return Center(

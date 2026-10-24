@@ -21,7 +21,7 @@ class TitleCard extends StatelessWidget {
       child: GestureDetector(
         onTap: () {
           if (url.isNotEmpty) {
-            Utils.onOpenLink(url, title);
+            Utils.onOpenLink(url, title, true, context);
           }
         },
         child: Row(

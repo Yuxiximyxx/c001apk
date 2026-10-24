@@ -1,3 +1,4 @@
+import '../../components/expressive_loading_indicator.dart';
 // ignore_for_file: constant_identifier_names
 
 import 'dart:math';
@@ -6,7 +7,6 @@ import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Response;
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../components/cards/app_info_card.dart';
 import '../../components/sticky_sliver_to_box_adapter.dart';
@@ -117,7 +117,7 @@ class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
               : null,
         );
     }
-    return const CircularProgressIndicator();
+    return const ExpressiveLoadingIndicator();
   }
 
   @override
@@ -214,8 +214,8 @@ class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
                                   controller.id!, ShareType.apk));
                               break;
                             case AppMenuItem.Share:
-                              Share.share(Utils.getShareUrl(
-                                  controller.id!, ShareType.apk));
+                              Utils.shareContent(_packageName, ShareType.apk,
+                                  title: controller.appName, context: context);
                               break;
                             case AppMenuItem.Follow:
                               if (GlobalData().isLogin) {

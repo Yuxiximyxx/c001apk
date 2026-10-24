@@ -9,16 +9,23 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'components/custom_toast.dart';
-import 'components/update_check_tile.dart';
+import 'components/app_keyboard_navigation.dart';
+import 'components/announcement_monitor.dart';
+import 'logic/announcements/app_announcements.dart';
 import 'constants/constants.dart';
 import 'logic/network/request.dart';
 import 'pages/webview/captcha_page.dart';
 import 'router/app_pages.dart';
+import 'router/page_transitions.dart';
 import 'utils/storage_util.dart';
 import 'utils/app_theme.dart';
+import 'utils/desktop_window.dart';
+import 'utils/android_links.dart';
+import 'utils/utils.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,25 +33,34 @@ void main() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
   ]);
 
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     await windowManager.ensureInitialized();
+    // The native runner starts on the primary display. Keep sizing and
+    // positioning there so mixed-DPI monitors do not mix logical coordinates.
+    final display = await screenRetriever.getPrimaryDisplay();
+    final bounds = desktopStartupBounds(
+        (display.visiblePosition ?? Offset.zero) &
+            (display.visibleSize ?? display.size));
     WindowOptions windowOptions = WindowOptions(
-      minimumSize: const Size(400, 700),
-      size: const Size(400, 700),
-      center: true,
+      minimumSize: Size(bounds.width.clamp(0, 400).toDouble(),
+          bounds.height.clamp(0, 540).toDouble()),
+      size: bounds.size,
       skipTaskbar: false,
       titleBarStyle:
           Platform.isMacOS ? TitleBarStyle.hidden : TitleBarStyle.normal,
     );
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
+    await windowManager.waitUntilReadyToShow(windowOptions);
+    await windowManager.setPosition(bounds.topLeft);
+    await windowManager.show();
+    await windowManager.focus();
   }
 
   await GStorage.init();
+  await AppAnnouncements.initialize();
   HttpOverrides.global = CustomHttpOverrides();
 
   if (Platform.isAndroid || Platform.isIOS) {
@@ -61,10 +77,13 @@ void main() async {
   }
 
   Request().captchaVerifier = verifyCaptcha;
-  runApp(const C001APKAPP());
+  final links = Platform.isAndroid
+      ? (AndroidLinks(onOpen: Utils.onOpenLink)..listen())
+      : null;
+  runApp(AnnouncementMonitor(
+      service: AppAnnouncements.service!, child: const C001APKAPP()));
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    final context = Get.context;
-    if (context != null) unawaited(AppUpdates.check(context, automatic: true));
+    if (links != null) unawaited(links.ready());
   });
 }
 
@@ -138,9 +157,9 @@ class C001APKAPP extends StatelessWidget {
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: <TargetPlatform, PageTransitionsBuilder>{
-          TargetPlatform.android: ZoomPageTransitionsBuilder(
-            allowEnterRouteSnapshotting: false,
-          ),
+          TargetPlatform.android: AppPredictiveBackPageTransitionsBuilder(),
+          TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
         },
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -174,6 +193,13 @@ class C001APKAPP extends StatelessWidget {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: miuix.darkColorScheme().surfaceContainer,
         modalBackgroundColor: miuix.darkColorScheme().surfaceContainer,
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: AppPredictiveBackPageTransitionsBuilder(),
+          TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+        },
       ),
       navigationBarTheme: NavigationBarThemeData(
           surfaceTintColor: (lightDynamic != null && useMaterial)
@@ -213,6 +239,8 @@ class C001APKAPP extends StatelessWidget {
       darkTheme: darkTheme,
       themeMode: GStorage.getThemeMode(),
       getPages: AppPages.getPages,
+      customTransition: AppPageTransition(),
+      transitionDuration: const Duration(milliseconds: 450),
       initialRoute: '/',
       builder: (BuildContext context, Widget? child) {
         final brightness = switch (GStorage.getThemeMode()) {
@@ -253,7 +281,20 @@ class C001APKAPP extends StatelessWidget {
               data: MediaQuery.of(context).copyWith(
                   textScaler: AppTextScaler(
                       MediaQuery.textScalerOf(context), fontScale)),
-              child: child!,
+              child: NotificationListener<NavigationNotification>(
+                onNotification: (notification) {
+                  if (Platform.isAndroid) {
+                    unawaited(const MethodChannel('samples.flutter.dev/channel')
+                        .invokeMethod<void>('setPredictiveBackEnabled',
+                            notification.canHandlePop));
+                  }
+                  return false;
+                },
+                child: AppKeyboardNavigation(
+                  navigatorKey: Get.key,
+                  child: child!,
+                ),
+              ),
             ),
             ),
           ),

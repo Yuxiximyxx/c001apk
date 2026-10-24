@@ -1,3 +1,4 @@
+import '../../components/expressive_loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 import '../../logic/model/fav_history/fav_history.dart';
@@ -93,7 +94,7 @@ class _ChatFeedPickerState extends State<ChatFeedPicker> {
                     builder: (context, snapshot) {
                       if (snapshot.connectionState != ConnectionState.done ||
                           !snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(child: ExpressiveLoadingIndicator());
                       }
                       final state = snapshot.data!;
                       if (state is Success) {

@@ -1,7 +1,10 @@
+import 'expressive_refresh_indicator.dart';
+import 'expressive_loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../components/footer.dart';
+import 'adaptive_card_list.dart';
 import '../components/item_card.dart';
 import '../logic/model/feed/datum.dart';
 import '../logic/state/loading_state.dart';
@@ -36,8 +39,8 @@ Widget commonBody(
       uid: uid,
     );
     if (commonController.loadingState.value is Success) {
-      return RefreshIndicator(
-        key: commonController.refreshKey,
+      return ExpressiveRefreshIndicator(
+        refreshKey: commonController.refreshKey,
         onRefresh: () async {
           commonController.onReset();
           await commonController.onGetData();
@@ -89,66 +92,111 @@ Widget buildBody(
     case Success():
       var dataList = (commonController.loadingState.value as Success).response
           as List<Datum>;
-      return ListView.separated(
-        controller: commonController.scrollController,
-        physics: AlwaysScrollableScrollPhysics(
-          parent: isReply2Reply
-              ? const ClampingScrollPhysics()
-              : const BouncingScrollPhysics(),
-        ),
-        padding: EdgeInsets.only(
-            left: isReply2Reply ? 0 : 10,
-            top: isReply2Reply ? 0 : 10,
-            right: isReply2Reply ? 0 : 10,
-            bottom: (isReply2Reply ? 0 : 10) +
-                MediaQuery.of(Get.context!).padding.bottom),
-        itemCount: dataList.length + 1 + (leading == null ? 0 : 1),
-        itemBuilder: (_, index) {
-          if (leading != null) {
-            if (index == 0) return leading;
-            index--;
-          }
-          if (index == dataList.length) {
-            if (!commonController.isEnd && !commonController.isLoading) {
-              commonController.setFooterState(LoadingState.loading());
-              commonController.onGetData(false);
+      if (isReply2Reply) {
+        return ListView.separated(
+          controller: commonController.scrollController,
+          physics: AlwaysScrollableScrollPhysics(
+            parent: isReply2Reply
+                ? const ClampingScrollPhysics()
+                : const BouncingScrollPhysics(),
+          ),
+          padding: EdgeInsets.only(
+              left: isReply2Reply ? 0 : 10,
+              top: isReply2Reply ? 0 : 10,
+              right: isReply2Reply ? 0 : 10,
+              bottom: (isReply2Reply ? 0 : 10) +
+                  MediaQuery.of(Get.context!).padding.bottom),
+          itemCount: dataList.length + 1 + (leading == null ? 0 : 1),
+          itemBuilder: (_, index) {
+            if (leading != null) {
+              if (index == 0) return leading;
+              index--;
             }
-            return Obx(
-                () => footerWidget(commonController.footerState.value, () {
-                      commonController.isEnd = false;
-                      commonController.setFooterState(LoadingState.loading());
-                      commonController.onGetData(false);
-                    }));
-          } else {
-            if (itemBuilder != null) return itemBuilder(dataList[index]);
-            return itemCard(
-              dataList[index],
-              isHomeCard: isHomeCard,
-              isReply2Reply: isReply2Reply,
-              isTopReply: isReply2Reply && index == 0,
-              uid: uid,
-              onBlock: commonController.onBlock,
-              onReply: onReply,
-              onDelete: commonController.postLikeDeleteFollow,
-              onDeleteNoti: (id) => commonController.postLikeDeleteFollow(
-                id,
-                null,
-                isNoti: true,
-              ),
-              onLike: commonController.onLike,
-              onPM: commonController.onPM,
-            );
-          }
+            if (index == dataList.length) {
+              if (!commonController.isEnd && !commonController.isLoading) {
+                commonController.setFooterState(LoadingState.loading());
+                commonController.onGetData(false);
+              }
+              return Obx(
+                  () => footerWidget(commonController.footerState.value, () {
+                        commonController.isEnd = false;
+                        commonController.setFooterState(LoadingState.loading());
+                        commonController.onGetData(false);
+                      }));
+            } else {
+              if (itemBuilder != null) return itemBuilder(dataList[index]);
+              return itemCard(
+                dataList[index],
+                isHomeCard: isHomeCard,
+                isReply2Reply: isReply2Reply,
+                isTopReply: isReply2Reply && index == 0,
+                uid: uid,
+                onBlock: commonController.onBlock,
+                onReply: onReply,
+                onDelete: commonController.postLikeDeleteFollow,
+                onDeleteNoti: (id) => commonController.postLikeDeleteFollow(
+                  id,
+                  null,
+                  isNoti: true,
+                ),
+                onLike: commonController.onLike,
+                onPM: commonController.onPM,
+              );
+            }
+          },
+          separatorBuilder: (_, index) => isReply2Reply
+              ? const Divider(height: 1)
+              : const SizedBox(height: 10),
+        );
+      }
+      return AdaptiveCardList(
+        controller: commonController.scrollController,
+        padding: EdgeInsets.fromLTRB(
+            10, 10, 10, 10 + MediaQuery.of(Get.context!).padding.bottom),
+        leading: leading,
+        itemCount: dataList.length,
+        isFullWidth: (index) => !const {
+          'feed',
+          'apk',
+          'product',
+          'topic',
+          'user',
+          'contacts',
+          'recentHistory',
+          'collection',
+        }.contains(dataList[index].entityType),
+        itemBuilder: (_, index) {
+          if (itemBuilder != null) return itemBuilder(dataList[index]);
+          return itemCard(
+            dataList[index],
+            isHomeCard: isHomeCard,
+            uid: uid,
+            onBlock: commonController.onBlock,
+            onReply: onReply,
+            onDelete: commonController.postLikeDeleteFollow,
+            onDeleteNoti: (id) =>
+                commonController.postLikeDeleteFollow(id, null, isNoti: true),
+            onLike: commonController.onLike,
+            onPM: commonController.onPM,
+          );
         },
-        separatorBuilder: (_, index) => isReply2Reply
-            ? const Divider(height: 1)
-            : const SizedBox(height: 10),
+        footer: Builder(builder: (_) {
+          if (!commonController.isEnd && !commonController.isLoading) {
+            commonController.setFooterState(LoadingState.loading());
+            commonController.onGetData(false);
+          }
+          return Obx(() => footerWidget(commonController.footerState.value, () {
+                commonController.isEnd = false;
+                commonController.setFooterState(LoadingState.loading());
+                commonController.onGetData(false);
+              }));
+        }),
       );
   }
   return Container(
     height: 80,
     alignment: Alignment.center,
     padding: const EdgeInsets.all(10.0),
-    child: const CircularProgressIndicator(),
+    child: const ExpressiveLoadingIndicator(),
   );
 }

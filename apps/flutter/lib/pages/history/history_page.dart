@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/cards/feed_card.dart';
+import '../../components/adaptive_card_list.dart';
 import '../../pages/history/history_controller.dart';
 
 // ignore: constant_identifier_names
@@ -75,7 +76,7 @@ class _HistoryPageState extends State<HistoryPage> {
               preferredSize: Size.zero, child: Divider(height: 1)),
         ),
         body: _controller.dataList.isNotEmpty
-            ? ListView.separated(
+            ? AdaptiveCardList(
                 padding: EdgeInsets.only(
                   left: 10,
                   right: 10,
@@ -90,7 +91,6 @@ class _HistoryPageState extends State<HistoryPage> {
                     _controller.onDeleteFeed(_controller.dataList[index].id);
                   },
                 ),
-                separatorBuilder: (_, index) => const SizedBox(height: 10),
               )
             : const Center(
                 child: Text('暂无内容'),

@@ -43,6 +43,33 @@ class FeedController extends CommonController {
   bool isBlocked = false;
 
   Rx<ReplySortType> replySelection = ReplySortType.def.obs;
+  final repliesDeferred = GStorage.szlmId.trim().isEmpty.obs;
+
+  @override
+  Future<void> onGetData([bool isRefresh = true]) async {
+    // All automatic paths (detail, refresh, sort and pagination) share this
+    // gate. Only the comment section's explicit action opts into verification.
+    if (repliesDeferred.value) return;
+    await super.onGetData(isRefresh);
+    final result = isRefresh ? loadingState.value : footerState.value;
+    if (result is Error && GStorage.szlmId.trim().isEmpty) {
+      repliesDeferred.value = true;
+    }
+  }
+
+  @override
+  void onReset() {
+    if (repliesDeferred.value) return;
+    super.onReset();
+  }
+
+  Future<void> loadReplies() async {
+    if (isLoading) return;
+    repliesDeferred.value = false;
+    onReset();
+    setLoadingState(LoadingState.loading());
+    await onGetData();
+  }
 
   void setFeedState(LoadingState feedState) {
     this.feedState.value = feedState;

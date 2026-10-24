@@ -163,6 +163,16 @@ void main() {
     expect(adapter.requests, hasLength(2));
     await tester.pumpWidget(const SizedBox.shrink());
   });
+  testWidgets('lookalike Coolapk domains remain external websites',
+      (tester) async {
+    await showCard(tester);
+    Utils.onOpenLink('https://notcoolapk.example/feed/123');
+    await tester.pumpAndSettle();
+    expect(opened, ['https://notcoolapk.example/feed/123']);
+    expect(adapter.requests, isEmpty);
+    expect(find.text('新品众测与优质图文'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   testWidgets('missing event is an empty state with no registration action',
       (tester) async {
     adapter.data = null;

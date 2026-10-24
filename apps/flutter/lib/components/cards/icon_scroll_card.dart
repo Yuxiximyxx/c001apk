@@ -37,7 +37,7 @@ class IconScrollCard extends StatelessWidget {
               itemCount: data.entities!.length,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               childBuilder: (index) =>
-                  _scrollCardItem(width, data.entities![index]),
+                  _scrollCardItem(context, width, data.entities![index]),
             )
           ],
         ),
@@ -45,9 +45,10 @@ class IconScrollCard extends StatelessWidget {
     });
   }
 
-  Widget _scrollCardItem(double width, Entity data) {
+  Widget _scrollCardItem(BuildContext context, double width, Entity data) {
     return InkWell(
-      onTap: () => Utils.onOpenLink(data.url.orEmpty, data.title),
+      onTap: () =>
+          Utils.onOpenLink(data.url.orEmpty, data.title, true, context),
       borderRadius: const BorderRadius.all(Radius.circular(12)),
       child: Container(
         margin: const EdgeInsets.all(5),

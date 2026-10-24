@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../logic/model/feed/entity.dart';
 import '../../utils/extensions.dart';
 import '../../utils/utils.dart';
+import '../mouse_drag_scroll.dart';
 
 class IconLinkGridCard extends StatefulWidget {
   const IconLinkGridCard({super.key, required this.dataList});
@@ -41,24 +42,26 @@ class _IconLinkGridCardState extends State<IconLinkGridCard> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ExpandablePageView.builder(
-            controller: _controller,
-            itemCount: _page,
-            pageSnapping: true,
-            onPageChanged: (index) {
-              setState(() => _currentPage = index);
-            },
-            itemBuilder: (context, page) {
-              return Row(
-                children: [
-                  _iconLinkGridCardItem(widget.dataList[page * 5]),
-                  _iconLinkGridCardItem(widget.dataList[page * 5 + 1]),
-                  _iconLinkGridCardItem(widget.dataList[page * 5 + 2]),
-                  _iconLinkGridCardItem(widget.dataList[page * 5 + 3]),
-                  _iconLinkGridCardItem(widget.dataList[page * 5 + 4]),
-                ],
-              );
-            },
+          MouseDragScroll(
+            child: ExpandablePageView.builder(
+              controller: _controller,
+              itemCount: _page,
+              pageSnapping: true,
+              onPageChanged: (index) {
+                setState(() => _currentPage = index);
+              },
+              itemBuilder: (context, page) {
+                return Row(
+                  children: [
+                    _iconLinkGridCardItem(widget.dataList[page * 5]),
+                    _iconLinkGridCardItem(widget.dataList[page * 5 + 1]),
+                    _iconLinkGridCardItem(widget.dataList[page * 5 + 2]),
+                    _iconLinkGridCardItem(widget.dataList[page * 5 + 3]),
+                    _iconLinkGridCardItem(widget.dataList[page * 5 + 4]),
+                  ],
+                );
+              },
+            ),
           ),
           if (_page != 1)
             Padding(
@@ -103,7 +106,7 @@ class _IconLinkGridCardState extends State<IconLinkGridCard> {
     return Expanded(
       flex: 1,
       child: InkWell(
-        onTap: () => Utils.onOpenLink(data.url.orEmpty, data.title),
+        onTap: () => Utils.onOpenLink(data.url.orEmpty, data.title, true, context),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Column(

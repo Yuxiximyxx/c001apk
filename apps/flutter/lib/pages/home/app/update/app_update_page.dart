@@ -1,3 +1,5 @@
+import '../../../../components/expressive_loading_indicator.dart';
+import '../../../../components/expressive_refresh_indicator.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -134,7 +136,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
           separatorBuilder: (_, index) => const SizedBox(height: 10),
         );
     }
-    return const CircularProgressIndicator();
+    return const ExpressiveLoadingIndicator();
   }
 
   @override
@@ -148,7 +150,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
         ),
       ),
       body: _loadingState is Success
-          ? RefreshIndicator(
+          ? ExpressiveRefreshIndicator(
               onRefresh: () async {
                 await _getData();
               },

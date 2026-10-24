@@ -2,9 +2,13 @@
 
 [返回开发指南](DEVELOPMENT.md) · [查看 Actions](https://github.com/TG-Twilight/c001apk/actions/workflows/build.yml)
 
-配置入口为 [Build workflow](../.github/workflows/build.yml)。固定 Flutter 3.24.5 / Dart 3.5.4，
+配置入口为 [Build workflow](../.github/workflows/build.yml)。当前本地配置固定 Flutter 3.47.7 / Dart 3.13.5，
 Android 使用 Temurin JDK 17，所有 Flutter 命令从 `apps/flutter/` 执行。
 依赖安装使用 `--enforce-lockfile`，不在云端自动升级依赖；Action 引用固定到完整提交 SHA。
+
+Android 正式构建保留 Flutter 默认的构建前准备，不使用 `--no-pub`：当前 SDK 会在此阶段按 release 模式重新生成原生插件注册，排除 `flutter_native_splash` 等仅开发期使用的插件。前置依赖安装仍强制锁文件，构建后再次检查 `pubspec.lock` 未变；不要手工修改生成的注册文件或将生成工具改为运行时依赖。
+
+Android 安装 API 37（SDK Manager 包名为 `platforms;android-37.0`）、Build Tools 37.0.0、NDK 28.2.13676358，Gradle / AGP / Kotlin 版本及兼容开关见 [开发指南](DEVELOPMENT.md)。2026-10-23 首轮云端构建因旧包名 `platforms;android-37` 不存在而失败，现已按 Google 仓库中的实际包名修正；正式矩阵结果仍以对应 Actions 运行记录为准，下述旧版成功记录不代表新矩阵已通过。
 
 2026-10-16 已实际跑通 [自动构建](https://github.com/TG-Twilight/c001apk/actions/runs/38920141215)
 和 [正式构建](https://github.com/TG-Twilight/c001apk/actions/runs/38920146119)：离线检查、
@@ -44,13 +48,13 @@ Linux / iOS 运行体验仍待验收。云端 Ubuntu 离线检查 150 项通过�
 正式版也已由维护者发布至 [1.2.6-release](https://github.com/TG-Twilight/c001apk/releases/tag/1.2.6-release)，
 包含同次成功构建的六份分发包与统一校验清单，下载不受 Actions artifacts 保留天数影响。
 
-当前已发布版本为 `1.2.6+20261016`，本次基础构建号保持不变，后续云端构建日期仍按既有规则自动刷新。Flutter 3.24.5 分包会在基础 Android `versionCode`
+以下保留 `1.2.6+20261016` 的历史分包示例，后续云端构建日期仍按既有规则自动刷新。Flutter 分包会在基础 Android `versionCode`
 上叠加 ABI 偏移：`armeabi-v7a` 为 +1000、`arm64-v8a` 为 +2000、`x86_64` 为 +4000。
 因此以 `20261016` 为基础时，APK 的实际编码分别为 `20262016`、`20263016`、`20265016`，
 `versionName` 均为 `1.2.6`；文件名仍使用 pubspec 版本。后续版本编码维护应沿用这一分包规则。
 
-桌面 ARM64 不列入当前目标：Flutter 3.24.5 官方 Windows/Linux SDK 发布包只有 x64，
-旧工具链的原生插件也未完成 ARM64 验证。移动端 arm64 不受这一决定影响。
+桌面 ARM64 不列入当前目标，升级工具链不自动扩大原有 Windows/Linux x86_64 发布矩阵；
+原生插件与 ARM64 运行尚未验证。移动端 arm64 不受这一决定影响。
 
 ## Android 正式签名
 
@@ -69,6 +73,8 @@ Android debug 和 release 任务先检查 Secrets，再将 JKS 恢复到 runner 
 `keytool -storepass:env` 核对公开证书。密码仅注入需要它的步骤环境，
 不放在命令参数或 `key.properties` 中。构建后逐个 APK 使用 `apksigner verify` 核对指纹，
 正式 release 包另检查仅含指定 ABI 的 AOT 库。校验失败不会上传安装包。
+
+APK 证书解析兼容旧版 `Signer #1` 与 Build Tools 37 的 `V2 Signer:` 等前缀，仅提取证书的 64 位 SHA-256 字段；统一大小写并去重后仍须与指定指纹完全相等，空结果或出现其他证书均失败。
 
 清理步骤使用 `always()`，在成功或失败后移除临时 JKS 和证书。
 不缓存项目/Gradle 目录，不上传整个 workspace，仅上传指定的分发文件；

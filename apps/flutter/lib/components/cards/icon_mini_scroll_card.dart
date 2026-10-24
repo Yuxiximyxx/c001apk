@@ -49,7 +49,7 @@ Widget miniCardItem(
             : Theme.of(context).colorScheme.onInverseSurface,
     borderRadius: BorderRadius.circular(radius),
     child: InkWell(
-      onTap: () => Utils.onOpenLink(url, title),
+      onTap: () => Utils.onOpenLink(url, title, true, context),
       borderRadius: BorderRadius.circular(radius),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: paddingH, vertical: 4),

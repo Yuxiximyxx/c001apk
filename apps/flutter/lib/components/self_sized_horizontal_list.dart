@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'mouse_drag_scroll.dart';
 
 /// https://stackoverflow.com/a/76605401
 
@@ -42,12 +43,14 @@ class _SelfSizedHorizontalListState extends State<SelfSizedHorizontalList> {
 
     return SizedBox(
       height: height,
-      child: ListView.separated(
-        padding: widget.padding,
-        scrollDirection: Axis.horizontal,
-        itemCount: widget.itemCount,
-        itemBuilder: (c, i) => widget.childBuilder.call(i),
-        separatorBuilder: (c, i) => SizedBox(width: widget.gapSize),
+      child: MouseDragScroll(
+        child: ListView.separated(
+          padding: widget.padding,
+          scrollDirection: Axis.horizontal,
+          itemCount: widget.itemCount,
+          itemBuilder: (c, i) => widget.childBuilder.call(i),
+          separatorBuilder: (c, i) => SizedBox(width: widget.gapSize),
+        ),
       ),
     );
   }

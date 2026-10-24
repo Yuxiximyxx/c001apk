@@ -1,3 +1,4 @@
+import '../../components/expressive_refresh_indicator.dart';
 import 'package:flutter/material.dart';
 
 import '../../utils/miuix_palette.dart';
@@ -13,6 +14,7 @@ import '../../pages/message/message_controller.dart';
 import '../../pages/noitfication/notification_page.dart';
 import '../../utils/extensions.dart';
 import '../../utils/global_data.dart';
+import '../../logic/announcements/app_announcements.dart';
 
 class MessagePage extends StatefulWidget {
   const MessagePage({super.key});
@@ -67,12 +69,25 @@ class _MessagePageState extends State<MessagePage>
     _recentRefresh.value++;
   }
 
+  /// 公告未读数（上游公告助手），并入"私信与信息"角标
+  int get _announcementUnread => AppAnnouncements.service?.unreadCount ?? 0;
+
+  /// 某类消息的角标：第 5 类（私信与信息）额外叠加公告未读
+  int? _badgeFor(int index) {
+    final count = _messageController.thirdList.getOrNull(index);
+    if (index == 4) {
+      final total = (count ?? 0) + _announcementUnread;
+      return count == null && _announcementUnread == 0 ? null : total;
+    }
+    return count;
+  }
+
   /// 5 类消息的未读总数，用于"消息通知"角标
   int? _totalNotificationBadge() {
     int total = 0;
     bool hasAny = false;
     for (int i = 0; i < 5; i++) {
-      final count = _messageController.thirdList.getOrNull(i);
+      final count = _badgeFor(i);
       if (count != null) {
         hasAny = true;
         total += count;
@@ -100,7 +115,7 @@ class _MessagePageState extends State<MessagePage>
                     _backgroundList[i],
                     _iconList[i],
                     _titleList[i],
-                    _messageController.thirdList.getOrNull(i),
+                    _badgeFor(i),
                     () {
                       Get.back();
                       Get.toNamed('/notification', arguments: {
@@ -147,69 +162,78 @@ class _MessagePageState extends State<MessagePage>
             icon: const Icon(Icons.settings_outlined),
             tooltip: '设置'),
       ]),
-      body: Column(
-        children: [
-          const SizedBox(height: 10),
-          Obx(
-            () => MessageHeaderCard(
-              userInfo: _messageController.userInfo.value,
-              onLogin: () => Get.toNamed('/login'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Divider(height: 1),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                if (GlobalData().isLogin) {
-                  await _onRefresh();
-                } else {
-                  return Future.value();
-                }
-              },
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
+      body: SafeArea(
+        top: false,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Obx(
+                  () => MessageHeaderCard(
+                    userInfo: _messageController.userInfo.value,
+                    onLogin: () => Get.toNamed('/login'),
+                  ),
                 ),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.all(10),
-                    sliver: SliverList.separated(
-                      itemCount: GlobalData().isLogin ? 3 : 2,
-                      itemBuilder: (context, itemIndex) {
-                        final index =
-                            itemIndex + (GlobalData().isLogin ? 0 : 1);
-                        if (index == 0) {
-                          return Obx(
-                            () => messageFirstCard(
-                              GlobalData().isLogin,
-                              context,
-                              _messageController.firstList,
-                            ),
-                          );
-                        } else if (index == 1) {
-                          return Obx(() => messageSeconfCard(
-                                GlobalData().isLogin,
-                                context,
-                                _showNotificationSheet,
-                                _totalNotificationBadge(),
-                              ));
-                        } else if (index == 2) {
-                          // 「我的常去」直接内嵌展示最近访问
-                          return RecentVisitsCard(
-                              refreshSignal: _recentRefresh);
-                        }
-                        return const SizedBox();
-                      },
-                      separatorBuilder: (_, index) =>
-                          const SizedBox(height: 10),
+                const SizedBox(height: 10),
+                const Divider(height: 1),
+                Expanded(
+                  child: ExpressiveRefreshIndicator(
+                    onRefresh: () async {
+                      if (GlobalData().isLogin) {
+                        await _onRefresh();
+                      } else {
+                        return Future.value();
+                      }
+                    },
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.all(10),
+                          sliver: SliverList.separated(
+                            itemCount: GlobalData().isLogin ? 3 : 2,
+                            itemBuilder: (context, itemIndex) {
+                              final index =
+                                  itemIndex + (GlobalData().isLogin ? 0 : 1);
+                              if (index == 0) {
+                                return Obx(
+                                  () => messageFirstCard(
+                                    GlobalData().isLogin,
+                                    context,
+                                    _messageController.firstList,
+                                  ),
+                                );
+                              } else if (index == 1) {
+                                return Obx(() => messageSeconfCard(
+                                      GlobalData().isLogin,
+                                      context,
+                                      _showNotificationSheet,
+                                      _totalNotificationBadge(),
+                                    ));
+                              } else if (index == 2) {
+                                // 「我的常去」直接内嵌展示最近访问
+                                return RecentVisitsCard(
+                                    refreshSignal: _recentRefresh);
+                              }
+                              return const SizedBox();
+                            },
+                            separatorBuilder: (_, index) =>
+                                const SizedBox(height: 10),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

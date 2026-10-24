@@ -122,8 +122,8 @@ class ApiInterceptor extends Interceptor {
         if (publicFeed) {
           // Official public feed JSON needs signed client headers, but no
           // account/session cookie. Restrict these headers to numeric feed IDs.
-          options.headers
-              .removeWhere((key, _) => key.toLowerCase() == 'cookie');
+          options.headers = Map.fromEntries(options.headers.entries
+              .where((entry) => entry.key.toLowerCase() != 'cookie'));
           options.responseType = ResponseType.plain;
         } else {
           options.extra['apiSessionContext'] = _sessions.capture();

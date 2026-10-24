@@ -1,3 +1,4 @@
+import '../../components/expressive_loading_indicator.dart';
 // ignore_for_file: constant_identifier_names
 
 import 'dart:async';
@@ -221,7 +222,7 @@ class _WebviewPageState extends State<WebviewPage> {
           future: _cookiesReady,
           builder: (_, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: ExpressiveLoadingIndicator());
             }
             if (snapshot.hasError) {
               return _error(WebRuntime.errorMessage(snapshot.error));

@@ -1,3 +1,4 @@
+import '../../components/expressive_loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:get/get.dart';
@@ -101,7 +102,7 @@ class _EventPageState extends State<EventPage> {
             }
             if (state is Error) return _retry(state.errMsg);
             if (state is Empty) return _retry('未找到活动，可能已下架');
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ExpressiveLoadingIndicator());
           },
         ),
       );

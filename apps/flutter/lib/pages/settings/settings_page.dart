@@ -11,6 +11,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../components/dialog.dart';
 import '../../components/update_check_tile.dart';
+import '../../components/announcement_monitor.dart';
+import '../../components/keyboard_scroll_region.dart';
+import '../../logic/announcements/app_announcements.dart';
 import '../../logic/app_update/update_preferences.dart';
 import '../../logic/accounts/account_store.dart';
 import '../../components/settings/drop_down_menu_item.dart';
@@ -57,7 +60,9 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   SettingsSection _section = SettingsSection.appearance;
-  Widget _categories(bool wide) => ListView(
+  Widget _categories(bool wide) => KeyboardScrollRegion(
+          child: ListView(
+        key: const PageStorageKey('settings-categories'),
         padding: const EdgeInsets.all(12),
         children: [
           MiuixCard(
@@ -105,7 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ],
-      );
+      ));
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('设置')),
@@ -151,6 +156,17 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
 
   List<Widget> _items(BuildContext context) => switch (widget.section) {
         SettingsSection.appearance => [
+            const DropDownMenuItem(
+              icon: Icons.vertical_split_outlined,
+              title: '分栏阅读',
+              subtitle: '左侧查看动态，右侧继续浏览。自动适配大屏；手机开启后横屏生效，窄屏仍用单页',
+              boxKey: SettingsBoxKey.readingMode,
+              items: [
+                DropdownMenuItem(value: 0, child: Text('自动')),
+                DropdownMenuItem(value: 1, child: Text('开启')),
+                DropdownMenuItem(value: 2, child: Text('关闭')),
+              ],
+            ),
             const SwitchItem(
               icon: Icons.palette_outlined,
               title: '动态取色',
@@ -296,6 +312,8 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
               ),
             ),
             const UpdateCheckTile(),
+            if (AppAnnouncements.service != null)
+              AnnouncementAutoCheckTile(service: AppAnnouncements.service!),
             if (Platform.isAndroid)
               const SwitchItem(
                 icon: Icons.system_update,
@@ -347,7 +365,8 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
       };
   @override
   Widget build(BuildContext context) {
-    final body = Align(
+    final body = KeyboardScrollRegion(
+        child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
@@ -363,7 +382,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                       children: _items(context),
                     ),
                   ),
-                ])));
+                ]))));
     return widget.embedded
         ? body
         : Scaffold(

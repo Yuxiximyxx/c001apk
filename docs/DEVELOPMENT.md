@@ -51,9 +51,17 @@ iOS 当前没有可安装正式包，只打开发布页面。
 `test/update/` 使用合成 Release、可控时间、临时 Hive 和浏览器通道验证，
 普通测试不访问 GitHub，也不修改真实用户设置。
 
-当前维护使用 **Flutter 3.24.5 / Dart 3.5.4**。依赖版本以 `apps/flutter/pubspec.lock` 为准，建议先使用相同工具链复现。
+当前维护使用 **Flutter 3.47.7 / Dart 3.13.5**，应用保留 Dart 3.5 语言版本。依赖版本以 `apps/flutter/pubspec.lock` 为准，先使用 `flutter pub get --enforce-lockfile` 复现。
 
-Windows 构建需要 Visual Studio 的 C++ 桌面开发组件及 Windows SDK。现有 Android 工程使用 Gradle 7.6.3、AGP 7.3.0、Kotlin 1.7.10 和 compileSdk 34，本地构建使用标准 JDK 17；请准备相应 Android SDK。这些要求适用于当前 Flutter 工程。
+从旧 Flutter SDK 首次切换时，先运行新 SDK 的 `flutter clean`，再恢复锁定依赖并构建。Windows 的旧 C++ wrapper 对象可能因 SDK 文件时间戳较早而被增量构建复用；链接新引擎后仍可能编译成功，但运行／关闭时发生 ABI 不匹配。切换 SDK 后必须核对资源并实际验证进程退出，不能只重用旧 `build/windows` 与 `windows/flutter/ephemeral`。
+
+Windows 构建需要 Visual Studio 的 C++ 桌面开发组件及 Windows SDK。Android 工程使用 Gradle 9.6.1、AGP 9.3.3、Kotlin 2.4.21、compileSdk / targetSdk 37、minSdk 24，使用标准 JDK 17、Android Build Tools 37.0.0 和 NDK r28c（28.2.13676358）。Android 最低系统版本为 Android 7.0。
+
+AGP 9 暂保留 `android.builtInKotlin=false` 和 `android.newDsl=false`，兼容现有 Flutter 插件；尚未迁移内置 Kotlin / 新 DSL。旧插件库的 compileSdk 在 `androidComponents.finalizeDsl` 中提高到至少 37，不改其 targetSdk / minSdk。WebView Android 子包使用 `third_party/flutter_inappwebview_android` 内带许可的 1.1.3 源码补丁，只替换 AGP 9 不再接受的默认 ProGuard 文件名，来源见包内 `C001APK_PATCH.md`。
+
+正常安装 NDK 时由 Flutter 选择上述版本。需要使用已核验的独立 NDK 目录时，仅在构建进程设置 `C001APK_ANDROID_NDK_PATH`。Windows 工程与 Pub 缓存分处不同盘符时，Kotlin 增量缓存可能报 `this and base files have different roots`；可在当前构建进程的 `GRADLE_OPTS` 追加 `-Dorg.gradle.project.kotlin.incremental=false`，无需修改共享 Pub 缓存或用户级环境变量。
+
+使用代理时，运行 `flutter test` 的当前进程须让 `localhost,127.0.0.1,::1` 绕过代理（`NO_PROXY`）；否则测试进程的本机 WebSocket 可能返回 HTTP 503，导致测试套件加载失败。临时调整后恢复进程原值，不修改用户级代理配置。
 
 Windows 网页登录和人机验证使用 WebView2。构建前需将 `nuget.exe` 所在目录加入当前进程的 PATH；运行机器需安装 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)。WebView2 数据保存在应用支持目录的 `webview2/` 中，与 Hive 账号和设置分开。使用方式为登录页右上角“网页登录”，在酷安官方网页完成验证及登录后自动返回并保存账号；取消保留原账号。参考 [插件 Windows 配置](https://inappwebview.dev/docs/webview/in-app-webview/)。
 
@@ -104,6 +112,8 @@ Windows 完整运行目录为 `build/windows/x64/runner/Release/`，分发时一
 EXE、DLL 和 `data/`；Android 分别生成 `build/app/outputs/flutter-apk/` 下的
 `app-arm64-v8a-release.apk`、`app-armeabi-v7a-release.apk`、`app-x86_64-release.apk`。
 
+Android 工程统一设置 `packagingOptions.jniLibs.useLegacyPackaging = true`，本地和 GitHub CI 默认压缩 APK 内的原生 `.so` 库，缩小直接下载的安装包；CI 正式包核验同时检查原生库采用 ZIP Deflate 压缩。安装时 Android 会解压原生库，因此 APK 变小不代表安装后占用同幅度下降。此配置不改变三 ABI 分包、签名或 ELF 对齐要求。
+
 后续发布和 CI 产物按平台、架构分别命名及分发：
 
 | 平台 | 目标架构 | 本项目验证状态 |
@@ -115,9 +125,8 @@ EXE、DLL 和 `data/`；Android 分别生成 `build/app/outputs/flutter-apk/` �
 
 桌面 `x86_32` 和 ARM64 不列入本轮发布矩阵。
 桌面 `x86_64` 通常也称 x64/amd64，`aarch64` 通常也称 ARM64；Android 使用其 ABI 命名。
-当前固定 Flutter 3.24.5 的官方 Windows/Linux SDK 发布包仅有 x64，
-Linux 还不支持 x64 到 ARM64 交叉构建，因此当前桌面 CI 使用 x86_64 runner。
-工具链未来变化时重新核对这些限制，不据引擎支持声称本项目所有架构都能构建。
+本项目继续只维护 Windows/Linux x86_64 发布矩阵；升级 Flutter 不自动扩大架构范围。
+桌面 ARM64 的插件兼容性与实际运行尚未验证。
 架构支持和 APK 拆分方式参见 [Flutter 平台支持](https://docs.flutter.dev/reference/supported-platforms)
 及 [Android 发布指南](https://docs.flutter.dev/deployment/android#build-an-apk)。
 
@@ -196,6 +205,21 @@ Remove-Item Env:COOLAPK_LIVE_PROBE
 游客动态、文章详情检查使用 `COOLAPK_GUEST_DETAIL_PROBE=1` 和 `test/live/guest_detail_test.dart`。在线检查的脱敏结构结果写入 Flutter 工程下忽略的 `.local/reports/`；验证码或业务拒绝会如实导致检查失败。
 
 若代理配置影响本机测试连接，可在当前 PowerShell 会话设置 `$env:NO_PROXY = 'localhost,127.0.0.1,::1'` 后重试。
+
+## 分享与 Android 链接
+
+动态、文章、用户、应用、话题和数码页的文本分享统一包含四行：标题、Coolapk1s 链接、
+Coolapk 链接、`分享自c001apk`。无标题动态使用正文摘要或“动态”。Windows 点击“分享”
+直接复制完整内容并提示“已复制”；其他平台使用系统分享。菜单中的“复制”仍复制单条链接。
+
+Android 支持 `coolmarket://`，以及 `coolapk.com`、`www.coolapk.com`、`m.coolapk.com`、
+`coolapk1s.com`、`www.coolapk1s.com` 的 HTTP/HTTPS 链接。可在系统“应用信息 → 默认打开 →
+要在此应用中打开的链接”中选择相应域名；不同系统的名称可能略有差异。第三方域名的自动验证
+需要网站提供关联声明，应用不能自行保证通过，参见 [Android App Links 说明](https://developer.android.com/training/app-links/verify-android-applinks)。
+
+外部链接通过原生队列在主页首帧后交给应用链接解析器，冷启动和运行中使用同一流程。
+Android 的 Flutter 默认深链处理保持关闭，避免完整外部 URI 被直接当作 GetX 页面路由；
+参见 [Flutter 深链配置](https://docs.flutter.dev/cookbook/navigation/set-up-app-links)。
 
 ## 账号管理与设置
 

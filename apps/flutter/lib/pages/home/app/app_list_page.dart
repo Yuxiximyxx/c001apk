@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 
+import '../../../components/expressive_loading_indicator.dart';
+import '../../../components/expressive_refresh_indicator.dart';
 import '../../../pages/home/app/app_list_controller.dart';
 import '../../../pages/home/return_top_controller.dart';
 import '../../../utils/extensions.dart';
@@ -90,8 +92,8 @@ class _AppListPageState extends State<AppListPage>
   Widget build(BuildContext context) {
     super.build(context);
     return _appListController.obx(
-      (data) => RefreshIndicator(
-        key: _refreshKey,
+      (data) => ExpressiveRefreshIndicator(
+        refreshKey: _refreshKey,
         onRefresh: () async {
           await _appListController.onReload(true);
         },
@@ -138,6 +140,7 @@ class _AppListPageState extends State<AppListPage>
           ),
         ),
       ),
+      onLoading: const Center(child: ExpressiveLoadingIndicator()),
       onEmpty: GestureDetector(
         onTap: _appListController.onReload,
         child: Container(

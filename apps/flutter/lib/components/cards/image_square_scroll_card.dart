@@ -19,6 +19,7 @@ class ImageSquareScrollCard extends StatelessWidget {
         padding: null,
         itemCount: dataList.length,
         childBuilder: (index) => _imageSquareScrollCardItem(
+          context,
           width,
           dataList[index],
         ),
@@ -26,12 +27,14 @@ class ImageSquareScrollCard extends StatelessWidget {
     });
   }
 
-  Widget _imageSquareScrollCardItem(double width, Entity data) {
+  Widget _imageSquareScrollCardItem(
+      BuildContext context, double width, Entity data) {
     return SizedBox(
       width: width,
       height: width,
       child: GestureDetector(
-        onTap: () => Utils.onOpenLink(data.url.toString(), data.title),
+        onTap: () =>
+            Utils.onOpenLink(data.url.toString(), data.title, true, context),
         child: Stack(
           children: [
             clipNetworkImage(

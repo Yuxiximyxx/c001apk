@@ -2,6 +2,27 @@
 
 本项目保留原有 [LICENSE](../LICENSE) 与上游署名。
 
+2026-10-23，基础 Markdown 显示新增直接依赖
+[`markdown` 7.3.1](https://pub.dev/packages/markdown/versions/7.3.1)，
+由 Dart project authors 以 BSD-3-Clause 许可发布，源码见
+[Dart tools / markdown](https://github.com/dart-lang/tools/tree/main/pkgs/markdown)。
+通过锁定的 pub 包解析常用 Markdown，再由现有 Flutter HTML 组件呈现；
+未复制或修改解析器源码。许可证随 Flutter 依赖收录于应用“开源许可”。
+
+2026-10-22，多列信息流新增直接依赖
+[`flutter_staggered_grid_view` 0.7.0](https://pub.dev/packages/flutter_staggered_grid_view/versions/0.7.0)，
+使用其 `SliverMasonryGrid` 实现按卡片实际高度接续的懒加载瀑布流。
+该库由 Romain Rastel 以 MIT 许可发布，源码见
+[上游仓库](https://github.com/letsar/flutter_staggered_grid_view)。
+本项目通过锁定的 pub 包引用，未复制或修改该库源码；许可证随 Flutter
+依赖许可证一并收录于应用“开源许可”页面。
+
+同日新增 [`sliver_tools` 0.2.12](https://pub.dev/packages/sliver_tools/versions/0.2.12)，
+使用其 `MultiSliver` 正确传递分段滚动修正，兼容当前 Flutter 工具链。
+该库由 Pieter van Loon 以 MIT 许可发布，源码见
+[上游仓库](https://github.com/Kavantix/sliver_tools)。同样通过 pub 包引用，
+未复制或修改源码，其许可证随应用依赖许可证收录。
+
 2026-10-16，新增的 `assets/emojis/niuniu_emotion_*.png` 为酷安官方
 Android 16.6.4（2609291）安装包中的 32 张牛牛表情，用于兼容官方表情名称。
 名称以官方 `niuniu_emotion_array` 核对；素材版权归酷安及相应权利人所有，
@@ -62,6 +83,15 @@ SDK 接入回调另核对 [网易易盾官方示例](https://github.com/yidun/ca
 `lib/utils/theme_utils.dart` 与账号管理相关实现。
 Flutter 页面和酷安多账号会话逻辑在本项目独立实现，沿用既有依赖及存储结构；
 参考项目的 GPL-3.0 许可证见上述链接。
+
+2026-10-22，Android WebView 的 AGP 9 兼容补丁保留完整
+`flutter_inappwebview_android` 1.1.3 源码，位置为
+`apps/flutter/third_party/flutter_inappwebview_android`，适用 Apache-2.0。
+来源为上游 `v6.1.5`（提交 `f67ae1f34868c7660c16a2473f53a7a7bfb6f784`），
+精确发布归档、SHA-256、修改说明和完整许可见
+[补丁说明](../apps/flutter/third_party/flutter_inappwebview_android/C001APK_PATCH.md)及
+[Apache-2.0 原文](../apps/flutter/third_party/flutter_inappwebview_android/LICENSE)。
+补丁只替换两处默认 ProGuard 文件名并添加修改日期声明；不改全局 Pub 缓存。
 
 2026-10-15，c001apk 自身更新弹窗的更新说明、关闭提醒与分平台下载入口
 参考同一项目提交 `d529e0a2d90a2a3a04ef9847e6c14187852ea6ee` 的

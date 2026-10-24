@@ -56,6 +56,27 @@ void main() {
     expect(await NetworkRepo.handleDataResponse(response({'status': -1})),
         isA<Error>());
   });
+  test('unlisted app response has a specific local message only on apk detail',
+      () async {
+    final r = response({'status': -2, 'messageStatus': -2, 'message': '应用不存在'});
+    r.requestOptions.path = '/v6/apk/detail';
+    final state = await NetworkRepo.handleDataResponse(r);
+    expect(state, isA<Error>().having((e) => e.errMsg, 'message', '该应用未在酷安上架'));
+    r.requestOptions.path = '/v6/feed/detail';
+    expect(await NetworkRepo.handleDataResponse(r),
+        isA<Error>().having((e) => e.errMsg, 'message', '服务器未能完成请求，请稍后重试'));
+  });
+  test('app detail keeps other failures distinguishable', () async {
+    for (final entry in [
+      ({'status': -10, 'message': '网络环境异常'}, '网络环境'),
+      ({'status': 500, 'message': '内部错误'}, '服务器未能完成请求'),
+      ({'messageStatus': 'err_request_captcha_v2'}, '验证码'),
+    ]) {
+      final r = response(entry.$1)..requestOptions.path = '/v6/apk/detail';
+      expect(await NetworkRepo.handleDataResponse(r),
+          isA<Error>().having((e) => e.errMsg, 'message', contains(entry.$2)));
+    }
+  });
   test('network risk rejection remains distinguishable from business failure',
       () {
     expect(

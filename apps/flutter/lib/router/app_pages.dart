@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'page_transitions.dart';
+import '../components/feed_reading_pane.dart';
+
 import '../pages/app/app_page.dart';
 import '../pages/accounts/accounts_page.dart';
 import '../pages/settings/settings_page.dart';
@@ -34,8 +37,23 @@ class AppPages {
   }) {
     return GetPage(
       name: name,
-      page: page,
+      page: () => const {
+        '/searchResult',
+        '/u/:uid',
+        '/t/:tag',
+        '/product/:id',
+        '/history',
+        '/ffflist',
+        '/coolpic',
+        '/dyh',
+        '/carousel',
+        '/apk/:packageName',
+      }.contains(name)
+          ? FeedReadingPane(child: page())
+          : page(),
       transition: Transition.native,
+      customTransition: AppPageTransition(),
+      transitionDuration: const Duration(milliseconds: 450),
     );
   }
 

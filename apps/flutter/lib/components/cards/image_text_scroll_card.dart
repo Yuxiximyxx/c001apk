@@ -46,7 +46,8 @@ class ImageTextScrollCard extends StatelessWidget {
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
           borderRadius: const BorderRadius.all(Radius.circular(12)),
-          onTap: () => Utils.onOpenLink(data.url.orEmpty, data.title),
+          onTap: () =>
+              Utils.onOpenLink(data.url.orEmpty, data.title, true, context),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

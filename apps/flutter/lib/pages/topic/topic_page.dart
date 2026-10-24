@@ -1,9 +1,9 @@
+import '../../components/expressive_loading_indicator.dart';
 // ignore_for_file: constant_identifier_names
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../logic/state/loading_state.dart';
 import '../../pages/home/return_top_controller.dart';
@@ -132,7 +132,7 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
           ),
         );
     }
-    return const CircularProgressIndicator();
+    return const ExpressiveLoadingIndicator();
   }
 
   @override
@@ -242,14 +242,16 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                           ));
                           break;
                         case TopicMenuItem.Share:
-                          Share.share(Utils.getShareUrl(
+                          Utils.shareContent(
                             _topicController.entityType == 'topic'
                                 ? _topicController.title!
                                 : _topicController.id!,
                             _topicController.entityType == 'topic'
                                 ? ShareType.t
                                 : ShareType.product,
-                          ));
+                            title: _topicController.title,
+                            context: context,
+                          );
                           break;
                         case TopicMenuItem.Sort:
                           _showPopupMenu();

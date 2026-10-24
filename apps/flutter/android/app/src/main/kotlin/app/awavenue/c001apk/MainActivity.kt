@@ -15,9 +15,13 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.P
 import android.os.Environment
 import android.os.Build
+import android.os.Bundle
+import android.window.BackEvent
 import android.webkit.MimeTypeMap;
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.BackEventCompat
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -26,15 +30,94 @@ import java.io.ByteArrayOutputStream
 
 class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "samples.flutter.dev/channel"
+    private var linksChannel: MethodChannel? = null
+    private val pendingLinks = mutableListOf<String>()
+
+    private fun enqueueLink(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            intent.dataString?.let { pendingLinks.add(it) }
+            linksChannel?.invokeMethod("linksChanged", null)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        enqueueLink(intent)
+    }
+
+    // Flutter 3.24's FragmentActivity forwards only completed back presses.
+    // Keep the FragmentActivity required by the document picker, and bridge
+    // Android 14+ progress through Flutter's existing back gesture channel.
+    private val predictiveBackCallback = object : OnBackPressedCallback(false) {
+        private var gestureStarted = false
+
+        override fun handleOnBackStarted(backEvent: BackEventCompat) {
+            if (SDK_INT >= 34) {
+                gestureStarted = true
+                flutterEngine?.backGestureChannel?.startBackGesture(
+                    BackEvent(backEvent.touchX, backEvent.touchY,
+                        backEvent.progress, backEvent.swipeEdge))
+            }
+        }
+
+        override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+            if (SDK_INT >= 34) {
+                flutterEngine?.backGestureChannel?.updateBackGestureProgress(
+                    BackEvent(backEvent.touchX, backEvent.touchY,
+                        backEvent.progress, backEvent.swipeEdge))
+            }
+        }
+
+        override fun handleOnBackCancelled() {
+            gestureStarted = false
+            flutterEngine?.backGestureChannel?.cancelBackGesture()
+        }
+
+        override fun handleOnBackPressed() {
+            if (gestureStarted) {
+                gestureStarted = false
+                flutterEngine?.backGestureChannel?.commitBackGesture()
+            } else {
+                flutterEngine?.navigationChannel?.popRoute()
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (SDK_INT >= 34) {
+            onBackPressedDispatcher.addCallback(this, predictiveBackCallback)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Flutter's default deep-link route is disabled in the manifest.
+        // Queue the launch intent until Dart has mounted the root navigator.
+        enqueueLink(intent)
+        linksChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger,
+            "app.awavenue.c001apk/links").also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                if (call.method == "takePendingLinks") {
+                    val links = pendingLinks.toList()
+                    pendingLinks.clear()
+                    result.success(links)
+                } else {
+                    result.notImplemented()
+                }
+            }
+        }
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             CHANNEL
         ).setMethodCallHandler { call, result ->
-            if (call.method == "getProtocolDeviceProfile") {
+            if (call.method == "setPredictiveBackEnabled") {
+                // Root destinations leave back-to-home to Android itself.
+                predictiveBackCallback.isEnabled = SDK_INT >= 34 && call.arguments == true
+                result.success(null)
+            } else if (call.method == "getProtocolDeviceProfile") {
                 result.success(mapOf(
                     "manufacturer" to Build.MANUFACTURER,
                     "brand" to Build.BRAND,

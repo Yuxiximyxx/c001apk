@@ -13,6 +13,18 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+    // Newer AGP enforces AAR compileSdk metadata for library modules as well.
+    // Older Flutter plugins hard-code SDK 31/34 while consuming newer AndroidX.
+    // Fork toolchain note: the app compiles against flutter.compileSdkVersion
+    // (36 on Flutter 3.47.7, AGP 8.13.2), so libraries are raised to 36, not
+    // upstream's 37.
+    plugins.withId("com.android.library") {
+        androidComponents.finalizeDsl { library ->
+            if (library.compileSdk == null || library.compileSdk < 36) {
+                library.compileSdk = 36
+            }
+        }
+    }
 }
 
 tasks.register("clean", Delete) {
