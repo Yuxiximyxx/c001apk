@@ -40,7 +40,9 @@ class _ChatPageState extends State<ChatPage> {
   final _focusNode = FocusNode();
   final _panel = ChatBottomPanelContainerController<PanelType>();
   final _readOnlyStream = StreamController<bool>();
+  final _inputBarKey = GlobalKey();
   PanelType _currentPanelType = PanelType.none;
+  double _inputBarHeight = 104;
   bool _readOnly = false;
   bool _pickingImage = false;
 
@@ -60,8 +62,28 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
+  /// 当前底部覆盖层（键盘占位/表情面板/安全区）的高度，与输入栏一起
+  /// 给消息列表留出底部空白，使最新消息能滚到输入栏上方。
+  double _overlayHeight(BuildContext context) => switch (_currentPanelType) {
+        PanelType.keyboard => MediaQuery.viewInsetsOf(context).bottom,
+        PanelType.emoji => max(
+            240, _panel.keyboardHeight == 0 ? 300 : _panel.keyboardHeight),
+        PanelType.none => _panel.safeAreaBottom,
+      };
+
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    // 依赖 viewInsets，使键盘升降动画的每一帧都重算列表底部留白。
+    MediaQuery.viewInsetsOf(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final height = _inputBarKey.currentContext?.size?.height;
+      if (height != null &&
+          mounted &&
+          (height - _inputBarHeight).abs() > 0.5) {
+        setState(() => _inputBarHeight = height);
+      }
+    });
+    return Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(title: Text(_username), actions: [
           PopupMenuButton<ChatMenuType>(
@@ -87,25 +109,34 @@ class _ChatPageState extends State<ChatPage> {
             ],
           ),
         ]),
-        body: SafeArea(
-            top: false,
-            child: Column(children: [
-              Expanded(
-                  child: Listener(
-                      onPointerDown: (_) => hidePanel(), child: _buildList())),
-              _buildInputView(),
-              _buildPanelContainer(),
-            ])),
+        // 消息列表铺满全高、延伸到键盘后方；输入栏与面板浮在底部随
+        // 键盘上移，键盘覆盖区不再被纯色带填充，透出的是消息内容。
+        body: Stack(children: [
+          Positioned.fill(
+              child: Listener(
+                  onPointerDown: (_) => hidePanel(),
+                  child: _buildList(_inputBarHeight + _overlayHeight(context)))),
+          Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                _buildInputView(),
+                _buildPanelContainer(),
+              ])),
+        ]),
       );
+  }
 
-  Widget _buildList() => Obx(() {
+  Widget _buildList(double bottomPadding) => Obx(() {
         final rows = _chatController.messages;
         if (rows.isEmpty) return Center(child: buildBody(_chatController));
         final historyError = _chatController.loadingState.value is Error;
         return ListView.builder(
           controller: _chatController.scrollController,
           reverse: true,
-          padding: EdgeInsets.zero,
+          // reverse 列表中 bottom 内边距位于视觉底部（最新消息一侧）。
+          padding: EdgeInsets.only(bottom: bottomPadding),
           itemCount: rows.length + (historyError ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == rows.length) {
@@ -249,6 +280,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildInputView() => Container(
+        key: _inputBarKey,
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
         color: Theme.of(context).colorScheme.onInverseSurface,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -336,10 +368,26 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Widget _buildPanelContainer() => ChatBottomPanelContainer<PanelType>(
+  Widget _buildPanelContainer() {
+    final panelBg = Theme.of(context).colorScheme.onInverseSurface;
+    return ChatBottomPanelContainer<PanelType>(
         controller: _panel,
         inputFocusNode: _focusNode,
-        panelBgColor: Theme.of(context).colorScheme.onInverseSurface,
+        // 默认容器会把 panelBgColor 涂满整个面板区，包括键盘态的等高
+        // 占位区——透明输入法会透出一整条纯色带。改走自定义容器：
+        // 键盘态不涂色，让消息列表透出来；其余状态保持原底色。
+        customPanelContainer: (panelType, data) => AnimatedSize(
+              alignment: Alignment.topCenter,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.linear,
+              child: Container(
+                color: panelType == ChatBottomPanelType.keyboard
+                    ? Colors.transparent
+                    : panelBg,
+                child:
+                    _panel.buildInPanel(panelType) ?? const SizedBox.shrink(),
+              ),
+            ),
         otherPanelWidget: (type) => type == PanelType.emoji
             ? SizedBox(
                 height: max(240,
@@ -348,13 +396,17 @@ class _ChatPageState extends State<ChatPage> {
               )
             : const SizedBox.shrink(),
         onPanelTypeChange: (type, data) {
-          _currentPanelType = type == ChatBottomPanelType.keyboard
+          final next = type == ChatBottomPanelType.keyboard
               ? PanelType.keyboard
               : type == ChatBottomPanelType.other
                   ? data ?? PanelType.none
                   : PanelType.none;
+          if (next == _currentPanelType) return;
+          _currentPanelType = next;
+          if (mounted) setState(() {});
         },
       );
+  }
 
   void updatePanelType(PanelType type) {
     final keyboard = type == PanelType.keyboard;

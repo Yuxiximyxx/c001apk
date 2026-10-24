@@ -174,6 +174,14 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
               boxKey: SettingsBoxKey.useMaterial,
               defaultValue: true,
             ),
+            const SwitchItem(
+              icon: Icons.font_download_outlined,
+              title: '使用系统字体',
+              subtitle: '使用设备系统默认字体显示界面文字',
+              boxKey: SettingsBoxKey.useSystemFont,
+              defaultValue: true,
+              forceAppUpdate: true,
+            ),
             ValueListenableBuilder(
               valueListenable: GStorage.settings
                   .listenable(keys: [SettingsBoxKey.useMaterial]),

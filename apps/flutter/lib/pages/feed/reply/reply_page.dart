@@ -26,6 +26,7 @@ import '../../../pages/feed/reply/emoji_panel.dart';
 import '../../../pages/feed/reply/reply_dialog.dart' show ReplyType;
 import '../../../pages/feed/reply/toolbar_icon_button.dart';
 import '../../../utils/extensions.dart';
+import '../../../utils/app_theme.dart';
 import '../../../utils/oss/aliyunoss_client.dart';
 import '../../../utils/oss/aliyunoss_config.dart';
 import '../../../utils/oss_util.dart';
@@ -155,10 +156,11 @@ class _ReplyPageState extends State<ReplyPage>
             seedColor: Constants.seedColors[staticColor],
             brightness: effectiveBrightness,
           ),
+          fontFamily: appFontFamily,
           useMaterial3: true,
         ),
         child: MiuixTheme(
-          data: MiuixThemeData.of(effectiveBrightness),
+          data: appMiuixThemeData(effectiveBrightness),
           child: content,
         ),
       );
@@ -201,7 +203,20 @@ class _ReplyPageState extends State<ReplyPage>
       //       break;
       //   }
       // },
-      panelBgColor: MiuixTheme.of(context).colors.surfaceContainer,
+      // 默认容器会把 panelBgColor 涂满整个面板区，包括键盘态的等高
+      // 占位区——透明输入法会透出一整条纯色带。改走自定义容器：
+      // 键盘态不涂色，让下层帖子详情页透出来；其余状态保持原底色。
+      customPanelContainer: (panelType, data) => AnimatedSize(
+        alignment: Alignment.topCenter,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.linear,
+        child: Container(
+          color: panelType == ChatBottomPanelType.keyboard
+              ? Colors.transparent
+              : MiuixTheme.of(context).colors.surfaceContainer,
+          child: _controller.buildInPanel(panelType) ?? const SizedBox.shrink(),
+        ),
+      ),
     );
   }
 

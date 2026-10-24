@@ -542,6 +542,9 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // 回复弹窗的键盘弹起时不收缩详情页正文，否则键盘后方露出的是
+      // 收缩后的页面纯背景；保持全高可让详情内容透过透明输入法可见。
+      resizeToAvoidBottomInset: false,
       backgroundColor: miuixPageBackground(context),
       floatingActionButton: Obx(
         () => _feedController.feedState.value is Success && GlobalData().isLogin

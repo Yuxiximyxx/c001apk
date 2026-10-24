@@ -99,6 +99,7 @@ class C001APKAPP extends StatelessWidget {
           SettingsBoxKey.staticColor,
           SettingsBoxKey.selectedTheme,
           SettingsBoxKey.fontScale,
+          SettingsBoxKey.useSystemFont,
         ]),
         builder: (context, settings, _) =>
             _buildApp(context, lightDynamic, darkDynamic),
@@ -114,6 +115,7 @@ class C001APKAPP extends StatelessWidget {
         GStorage.settings.get(SettingsBoxKey.staticColor, defaultValue: 0);
     double fontScale =
         GStorage.settings.get(SettingsBoxKey.fontScale, defaultValue: 1.0);
+    final fontFamily = appFontFamily;
     ColorScheme? lightColorScheme;
     ColorScheme? darkColorScheme;
     if (lightDynamic != null && darkDynamic != null && useMaterial) {
@@ -132,6 +134,7 @@ class C001APKAPP extends StatelessWidget {
 
     final lightTheme = applyAppTypography(ThemeData(
       colorScheme: lightColorScheme,
+      fontFamily: fontFamily,
       useMaterial3: true,
       scaffoldBackgroundColor: miuix.lightColorScheme().surface,
       appBarTheme: AppBarTheme(
@@ -152,7 +155,8 @@ class C001APKAPP extends StatelessWidget {
         actionTextColor: lightColorScheme.primary,
         backgroundColor: lightColorScheme.secondaryContainer,
         closeIconColor: lightColorScheme.secondary,
-        contentTextStyle: TextStyle(color: lightColorScheme.secondary),
+        contentTextStyle: TextStyle(
+            color: lightColorScheme.secondary, fontFamily: fontFamily),
         elevation: 20,
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
@@ -182,6 +186,7 @@ class C001APKAPP extends StatelessWidget {
     ));
     final darkTheme = applyAppTypography(ThemeData(
       colorScheme: darkColorScheme,
+      fontFamily: fontFamily,
       useMaterial3: true,
       scaffoldBackgroundColor: miuix.darkColorScheme().surface,
       appBarTheme: AppBarTheme(
@@ -209,7 +214,8 @@ class C001APKAPP extends StatelessWidget {
         actionTextColor: darkColorScheme.primary,
         backgroundColor: darkColorScheme.secondaryContainer,
         closeIconColor: darkColorScheme.secondary,
-        contentTextStyle: TextStyle(color: darkColorScheme.secondary),
+        contentTextStyle: TextStyle(
+            color: darkColorScheme.secondary, fontFamily: fontFamily),
         elevation: 20,
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -274,7 +280,7 @@ class C001APKAPP extends StatelessWidget {
           child: AnimatedTheme(
           data: brightness == Brightness.dark ? darkTheme : lightTheme,
           child: miuix.MiuixTheme(
-            data: miuix.MiuixThemeData.of(brightness),
+            data: appMiuixThemeData(brightness),
             child: FlutterSmartDialog(
             toastBuilder: (String msg) => CustomToast(msg: msg),
             child: MediaQuery(
