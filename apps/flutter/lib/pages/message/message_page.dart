@@ -97,9 +97,8 @@ class _MessagePageState extends State<MessagePage>
     return total;
   }
 
-  /// 点"消息通知"弹出 5 类消息列表
+  /// 点"消息通知"弹出 5 类消息列表；游客仅可进入"私信与信息"（公告收件箱）
   void _showNotificationSheet() {
-    if (!GlobalData().isLogin) return;
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -118,6 +117,7 @@ class _MessagePageState extends State<MessagePage>
                     _badgeFor(i),
                     () {
                       Get.back();
+                      if (!GlobalData().isLogin && i != 4) return;
                       Get.toNamed('/notification', arguments: {
                         'type': NotificationType.values[i],
                         if (i == 4)

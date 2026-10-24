@@ -48,19 +48,18 @@ void main() {
     addTearDown(view.resetDevicePixelRatio);
   });
 
-  testWidgets('my page places messages beside shortcuts only when they fit',
+  testWidgets('my page stacks shortcuts above recent visits at any width',
       (tester) async {
+    // Fork design: the five message entries live behind the 消息通知 sheet;
+    // the page itself is a single column (shortcuts, then the inline
+    // recent-visits card) at every width — no beside-shortcuts layout.
     await resize(tester, 1200);
     await tester.pumpWidget(app(const MessagePage()));
     await tester.pumpAndSettle();
-    final shortcut = find.text('本地收藏');
-    final message = find.text('@我的动态');
-    expect(tester.getTopLeft(message).dx,
-        greaterThan(tester.getTopLeft(shortcut).dx + 200));
-    expect(tester.getTopLeft(message).dy,
-        lessThan(tester.getBottomLeft(shortcut).dy + 30));
+    expect(tester.getTopLeft(find.text('我的常去')).dy,
+        greaterThan(tester.getBottomLeft(find.text('我的回复')).dy));
     await resize(tester, 400);
-    expect(tester.getTopLeft(message).dy,
+    expect(tester.getTopLeft(find.text('我的常去')).dy,
         greaterThan(tester.getBottomLeft(find.text('我的回复')).dy));
     expect(tester.takeException(), isNull);
   });
@@ -76,9 +75,13 @@ void main() {
     await resize(tester, 1200, height: 300);
     expect(
         tester.state<ScrollableState>(find.byType(Scrollable).first), scroll);
-    expect(scroll.position.pixels, closeTo(70, 1));
+    // The fork's single-column layout never restructures on resize; the
+    // offset only clamps when wider cards shrink the scroll extent, and
+    // then stays where it clamped to.
+    final clamped = scroll.position.pixels;
+    expect(clamped, lessThanOrEqualTo(70));
     await resize(tester, 400, height: 300);
-    expect(scroll.position.pixels, closeTo(70, 1));
+    expect(scroll.position.pixels, closeTo(clamped, 1));
     expect(tester.takeException(), isNull);
   });
 
@@ -88,8 +91,13 @@ void main() {
     await resize(tester, 1000);
     await tester.pumpWidget(app(const MessagePage(), scale: 1.5));
     await tester.pumpAndSettle();
-    expect(tester.getTopLeft(find.text('@我的动态')).dy,
+    // Fork design: single column at any text scale — recent visits stay
+    // below the shortcut rows instead of moving beside them.
+    expect(tester.getTopLeft(find.text('我的常去')).dy,
         greaterThan(tester.getBottomLeft(find.text('我的回复')).dy));
+    // Below the fork's fixed 840dp two-pane threshold the settings page
+    // falls back to category navigation even at large text scales.
+    await resize(tester, 700);
     await tester.pumpWidget(app(const SettingsPage(), scale: 1.5));
     await tester.pumpAndSettle();
     expect(find.text('分栏阅读'), findsNothing);

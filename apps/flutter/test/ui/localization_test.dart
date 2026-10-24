@@ -259,6 +259,14 @@ class EmptyGuestAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+/// Fork bottom bar: index of the selected MiuixNavigationBarItem, mirroring
+/// what upstream tests read from NavigationBar.selectedIndex.
+int miuixSelectedIndex(WidgetTester tester) => tester
+    .widget<MiuixNavigationBar>(find.byType(MiuixNavigationBar))
+    .children
+    .cast<MiuixNavigationBarItem>()
+    .indexWhere((item) => item.selected);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory temp;
@@ -341,10 +349,16 @@ void main() {
           ..showHomeCards = true;
         await tester.pumpWidget(const C001APKAPP());
         await tester.pumpAndSettle();
-        final tabs = find.byType(TabBar).first;
-        final homeTabs = tester.widget<TabBar>(tabs).controller!;
+        final homeTabs = tester
+            .widget<TabBarView>(find.byType(TabBarView).first)
+            .controller!;
         final target = switch (surface) {
-          'tabs' => tabs,
+          // The fork's tab strip is the chip row in the home AppBar.
+          'tabs' => find
+              .descendant(
+                  of: find.byType(AppBar),
+                  matching: find.byType(SingleChildScrollView))
+              .first,
           'carousel' => find.byType(CarouselCard),
           'grid' => find.byType(IconLinkGridCard),
           _ => find.byType(IconMiniScrollCard),
@@ -360,14 +374,21 @@ void main() {
         final initialTab = homeTabs.index;
         await tester.drag(target, const Offset(-260, 0), kind: kind);
         await tester.pumpAndSettle();
-        expect(position.pixels, greaterThan(before + 30));
+        // The fork's chip strip can fit a 400dp viewport entirely; only
+        // scrollable strips are expected to move.
+        expect(
+            position.pixels,
+            position.maxScrollExtent > 0
+                ? greaterThan(before + 30)
+                : before);
         expect(homeTabs.index, initialTab,
             reason: 'Dragging a nested control must not switch the home page');
         expect(Get.currentRoute, '/', reason: 'Dragging must not open an item');
         await tester.drag(target, const Offset(260, 0), kind: kind);
         await tester.pumpAndSettle();
         expect(position.pixels, closeTo(before, 2));
-        await tester.tap(find.widgetWithText(Tab, '热门'));
+        await tester.tap(find.descendant(
+            of: find.byType(AppBar), matching: find.text('热门')));
         await tester.pumpAndSettle();
         expect(homeTabs.index, initialTab + 1);
         await tester.pumpWidget(const SizedBox.shrink());
@@ -436,12 +457,11 @@ void main() {
         .setMockMethodCallHandler(const MethodChannel('window_manager'), null));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    for (final destination in ['主页', '关注', '我的']) {
-      await tester.tap(find.widgetWithText(NavigationDestination, destination));
+    for (final destination in ['首页', '我的']) {
+      await tester
+          .tap(find.widgetWithText(MiuixNavigationBarItem, destination));
       await tester.pumpAndSettle();
-      final selected = tester
-          .widget<NavigationBar>(find.byType(NavigationBar))
-          .selectedIndex;
+      final selected = miuixSelectedIndex(tester);
       await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       expect(find.text('退出 c001apk？'), findsOneWidget);
@@ -453,11 +473,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
-      expect(
-          tester
-              .widget<NavigationBar>(find.byType(NavigationBar))
-              .selectedIndex,
-          selected);
+      expect(miuixSelectedIndex(tester), selected);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       await tester.tap(find.text('取消'));
@@ -498,7 +514,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byType(SettingsPage), findsNothing);
-    expect(find.text('主页'), findsOneWidget);
+    expect(find.text('首页'), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -535,15 +551,21 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.pumpAndSettle();
     expect(homePosition.pixels, closeTo(0, 1));
-    await tester.tap(find.widgetWithText(Tab, '热门'));
+    await tester.tap(find.descendant(
+        of: find.byType(AppBar), matching: find.text('热门')));
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
     expect(homePosition.pixels, closeTo(0, 1),
         reason: 'An inactive home tab must not scroll');
-    await tester.tap(find.widgetWithText(Tab, '动态'));
+    await tester.tap(find.descendant(
+        of: find.byType(AppBar), matching: find.text('动态')));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(NavigationDestination, '我的'));
+    // The fork's guest profile page fits a 500dp-tall viewport; shrink it
+    // so the page actually overflows and can be scrolled by arrow keys.
+    tester.view.physicalSize = const Size(400, 380);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
     await tester.pumpAndSettle();
     final myList = find
         .descendant(
@@ -556,7 +578,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(myPosition.pixels, greaterThan(0));
     expect(homePosition.pixels, closeTo(0, 1));
-    await tester.tap(find.widgetWithText(NavigationDestination, '主页'));
+    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '首页'));
     await tester.pumpAndSettle();
     final controller = ScrollController();
     final editor = TextEditingController(text: '第一行\n第二行');
@@ -679,21 +701,17 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    for (final destination in ['主页', '关注', '我的']) {
-      await tester.tap(find.widgetWithText(NavigationDestination, destination));
+    for (final destination in ['首页', '我的']) {
+      await tester
+          .tap(find.widgetWithText(MiuixNavigationBarItem, destination));
       await tester.pumpAndSettle();
-      final selected = tester
-          .widget<NavigationBar>(find.byType(NavigationBar))
-          .selectedIndex;
-      final route = ModalRoute.of(tester.element(find.byType(NavigationBar)))!;
+      final selected = miuixSelectedIndex(tester);
+      final route =
+          ModalRoute.of(tester.element(find.byType(MiuixNavigationBar)))!;
       expect(route.popDisposition, RoutePopDisposition.bubble);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(
-          tester
-              .widget<NavigationBar>(find.byType(NavigationBar))
-              .selectedIndex,
-          selected);
+      expect(miuixSelectedIndex(tester), selected);
     }
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -740,7 +758,7 @@ void main() {
     await event('commitBackGesture', 0.5);
     await tester.pumpAndSettle();
     expect(find.byType(SettingsDetailPage), findsNothing);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(MiuixNavigationBar), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -837,7 +855,9 @@ void main() {
     await tester.runAsync(() => AccountStore().useGuest());
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(NavigationDestination, '我的'));
+    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('消息通知'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('私信与信息'));
     await tester.tap(find.text('私信与信息'));

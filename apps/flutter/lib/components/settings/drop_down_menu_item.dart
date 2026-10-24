@@ -45,7 +45,13 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
       summary: widget.subtitle,
       startAction: Icon(widget.icon),
       endActions: [
-        DropdownButton<int>(
+        // The Miuix end slot is width-capped (~134dp); at a 2x text scale
+        // the widest dropdown item (4 CJK chars + arrow) needs ~137dp and
+        // overflows by a few pixels. Clamp the button's text scaling so it
+        // always fits the slot.
+        MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.75,
+          child: DropdownButton<int>(
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: widget.enabled
                 ? Theme.of(context).colorScheme.onSurface
@@ -62,7 +68,20 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
                   }
                 }
               },
-          items: widget.items,
+          items: widget.items
+              .map((item) => DropdownMenuItem<int>(
+                    value: item.value,
+                    onTap: item.onTap,
+                    child: Text(
+                      item.child is Text
+                          ? (item.child as Text).data ?? ''
+                          : '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          ),
         ),
       ],
     );

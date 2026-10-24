@@ -371,6 +371,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
         child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
             child: ListView(
+                key: PageStorageKey(widget.section),
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
                 children: [
                   if (widget.embedded) ItemTitle(title: widget.section.title),

@@ -32,7 +32,9 @@ Widget messageSeconfCard(
                   '/history',
                   arguments: {'type': HistoryType.History},
                 ),
-            isLogin ? onNotificationTap : () {},
+            // The notification sheet itself gates each entry: guests may
+            // only open 私信与信息 (which hosts the announcement inbox).
+            onNotificationTap,
           ],
           [
             Icons.archive_outlined,

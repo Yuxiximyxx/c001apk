@@ -87,6 +87,10 @@ dependency_overrides:
   # Stable upstream 1.1.3 with the documented AGP 9 ProGuard filename patch.
   flutter_inappwebview_android:
     path: third_party/flutter_inappwebview_android
+  # 4.9.8+10 (the fork's earlier lock resolution) leaves SmartDialog toast
+  # timers pending and fails widget tests; upstream's locked 4.9.8 is the
+  # tested combination within the ^4.9.7+9 constraint.
+  flutter_smart_dialog: 4.9.8
 
 dev_dependencies:
   flutter_test:
