@@ -1,3 +1,5 @@
+> **本仓库是 [TG-Twilight/c001apk](https://github.com/TG-Twilight/c001apk) 的个人 fork。** 应用名「**宽**」，在上游基础上做 MIUIX（HyperOS 风格）定制：底部导航只留「首页 / 我的」、MIUIX 毛玻璃底栏与卡片、悬浮回复卡片、话题页分段排序等。正式签名安装包见 [本仓库 Releases](https://github.com/Yuxiximyxx/c001apk/releases)（当前版本 v1.3.5-miuix6），下方为上游 README 原文。
+
 <div align="center">
 
 <img src="docs/media/banner.svg" alt="c001apk — 让酷安，轻一点。" width="100%">
