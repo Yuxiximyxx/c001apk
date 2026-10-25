@@ -20,6 +20,13 @@ class TopicController extends CommonController {
   RxInt initialIndex = 0.obs;
   Rx<LoadingState> topicState = LoadingState.loading().obs;
 
+  // Header display data (per the official topic page layout).
+  String? logo;
+  dynamic hotNumTxt;
+  dynamic followNum;
+  dynamic commentnumTxt;
+  dynamic feedCommentNumTxt;
+
   bool isBlocked = false;
   bool isFollow = false;
 
@@ -41,6 +48,11 @@ class TopicController extends CommonController {
       title = data.title;
       entityType = data.entityType;
       tabList = data.tabList;
+      logo = data.logo;
+      hotNumTxt = data.hotNumTxt;
+      followNum = data.followNum;
+      commentnumTxt = data.commentnumTxt;
+      feedCommentNumTxt = data.feedCommentNumTxt;
       String selectedTab = data.selectedTab!;
       initialIndex.value =
           tabList!.map((item) => item.pageName).toList().indexOf(selectedTab);

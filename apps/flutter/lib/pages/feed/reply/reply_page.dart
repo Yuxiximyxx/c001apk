@@ -206,14 +206,20 @@ class _ReplyPageState extends State<ReplyPage>
       // 默认容器会把 panelBgColor 涂满整个面板区，包括键盘态的等高
       // 占位区——透明输入法会透出一整条纯色带。改走自定义容器：
       // 键盘态不涂色，让下层帖子详情页透出来；其余状态保持原底色。
+      // 注意 none 态也不能涂色：buildInPanel(none) 返回的是包内建的
+      // 安全区占位（SizedBox 高 = viewPadding.bottom，即手势条高度），
+      // 一旦给它涂 surfaceContainer，卡片下方到屏幕底边就会出现一条
+      // 与变暗下层页面不连贯的纯色带（根部导航栏透明管不到这块，
+      // 因为它不是系统栏，而是本页自己画的 widget）。只有 other
+      // （表情面板）态才需要底色衬托面板内容。
       customPanelContainer: (panelType, data) => AnimatedSize(
         alignment: Alignment.topCenter,
         duration: const Duration(milliseconds: 200),
         curve: Curves.linear,
         child: Container(
-          color: panelType == ChatBottomPanelType.keyboard
-              ? Colors.transparent
-              : MiuixTheme.of(context).colors.surfaceContainer,
+          color: panelType == ChatBottomPanelType.other
+              ? MiuixTheme.of(context).colors.surfaceContainer
+              : Colors.transparent,
           child: _controller.buildInPanel(panelType) ?? const SizedBox.shrink(),
         ),
       ),
