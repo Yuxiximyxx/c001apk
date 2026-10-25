@@ -4,8 +4,8 @@ import 'package:get/get.dart';
 
 import '../../components/cards/message_first_card.dart'
     show messageFirstCardRow;
-import '../../pages/history/history_page.dart' show HistoryType;
-import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
+import '../../pages/history/history_page.dart' show HistoryPage, HistoryType;
+import '../../pages/ffflist/ffflist_page.dart' show FFFListPage, FFFListType;
 
 Widget messageSeconfCard(
     bool isLogin, BuildContext context, Function() onNotificationTap,
@@ -42,6 +42,12 @@ Widget messageSeconfCard(
             Icons.notifications_outlined,
           ],
           [null, null, notificationBadge],
+          [
+            const HistoryPage(type: HistoryType.Favorite),
+            const HistoryPage(type: HistoryType.History),
+            // 消息通知 opens a modal sheet, not a page: no anchored target.
+            null,
+          ],
         ),
         messageFirstCardRow(
           context,
@@ -75,6 +81,12 @@ Widget messageSeconfCard(
             Icons.star_border,
             Icons.favorite_border,
             Icons.messenger_outline,
+          ],
+          null,
+          [
+            isLogin ? const FFFListPage(type: FFFListType.COLLECTION) : null,
+            isLogin ? const FFFListPage(type: FFFListType.LIKE) : null,
+            isLogin ? const FFFListPage(type: FFFListType.REPLY) : null,
           ],
         ),
       ],

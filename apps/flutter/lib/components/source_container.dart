@@ -2,6 +2,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/constants.dart';
+import '../pages/app/app_page.dart';
 import '../pages/feed/feed_page.dart';
 import '../pages/others/imageview_page.dart';
 import '../pages/topic/topic_page.dart';
@@ -145,6 +146,37 @@ class UserContainer extends StatelessWidget {
   }
 }
 
+/// Opens an app page ([AppPage]) from the source element (app chip, app
+/// row, ...). Mirrors the '/apk/:packageName' route; game links resolve to
+/// the same page, exactly like `Utils.onOpenLink`.
+class AppContainer extends StatelessWidget {
+  const AppContainer({
+    super.key,
+    required this.packageName,
+    required this.closedColor,
+    required this.closedBuilder,
+    this.closedShape = const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    ),
+  });
+
+  final String packageName;
+  final Color closedColor;
+  final ShapeBorder closedShape;
+  final AnchoredClosedBuilder closedBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnchoredContainer(
+      closedColor: closedColor,
+      openColor: miuixPageBackground(context),
+      closedShape: closedShape,
+      closedBuilder: closedBuilder,
+      openBuilder: (_, __) => AppPage(packageName: packageName),
+    );
+  }
+}
+
 /// Opens a topic/product page ([TopicPage]) from the source element.
 /// Exactly one of [tag] / [id] is set, mirroring the '/t/:tag' and
 /// '/product/:id' routes.
@@ -245,12 +277,13 @@ class ImageContainer extends StatelessWidget {
 }
 
 /// Resolves a Coolapk link to the page a source-anchored container should
-/// open, or null when the link has no anchored target (external links, app
-/// pages, carousel, ...), in which case callers keep the legacy
+/// open, or null when the link has no anchored target (external links,
+/// carousel, ...), in which case callers keep the legacy
 /// `Utils.onOpenLink` behaviour.
 ///
 /// Mirrors the matching rules of `Utils._openLink` for the in-app targets:
-/// feed detail (only when [includeFeed]), user profile, topic and product.
+/// feed detail (only when [includeFeed]), user profile, topic, product and
+/// app pages ('/apk/' and '/game/' both land on [AppPage]).
 /// Feed targets are excluded when [includeFeed] is false for sources that
 /// live under a reading-pane scope, where feed taps must keep going through
 /// `FeedNavigation` so the pane can claim them.
@@ -295,8 +328,7 @@ Widget? anchoredPageForUrl(
       (segments.length < 2 || segments[1].trim().isEmpty)) {
     return null;
   }
-  if (includeFeed &&
-      RegExp(r'^/feed/[0-9]+/?(?:[?#]|$)').hasMatch(path)) {
+  if (includeFeed && RegExp(r'^/feed/[0-9]+/?(?:[?#]|$)').hasMatch(path)) {
     return FeedPage(id: segments[1]);
   }
   if (path.startsWith(Constants.PREFIX_USER)) {
@@ -312,6 +344,13 @@ Widget? anchoredPageForUrl(
   }
   if (path.startsWith(Constants.PREFIX_PRODUCT)) {
     return TopicPage(id: segments[1]);
+  }
+  if (path.startsWith(Constants.PREFIX_APP) ||
+      path.startsWith(Constants.PREFIX_GAME)) {
+    // pathSegments are percent-decoded; package names are plain ASCII, so
+    // this is the same value the '/apk/:packageName' route parameter
+    // would carry after GetX decodes it.
+    return AppPage(packageName: segments[1]);
   }
   return null;
 }

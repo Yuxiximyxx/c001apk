@@ -6,6 +6,7 @@ import '../../logic/model/check_update/datum.dart';
 import '../../utils/date_util.dart';
 import '../../utils/extensions.dart';
 import '../../utils/utils.dart';
+import '../source_container.dart';
 
 class AppUpdateCard extends StatefulWidget {
   const AppUpdateCard({
@@ -31,145 +32,159 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
-      alignment: Alignment.topCenter,
-      curve: Curves.linearToEaseOut,
-      duration: const Duration(milliseconds: 500),
-      child: Material(
-        color: Theme.of(context).colorScheme.onInverseSurface,
-        borderRadius: const BorderRadius.all(Radius.circular(12)),
-        child: InkWell(
+    Widget card(VoidCallback? onTap) {
+      return AnimatedSize(
+        alignment: Alignment.topCenter,
+        curve: Curves.linearToEaseOut,
+        duration: const Duration(milliseconds: 500),
+        child: Material(
+          color: Theme.of(context).colorScheme.onInverseSurface,
           borderRadius: const BorderRadius.all(Radius.circular(12)),
-          onTap: () => Get.toNamed('/apk/${widget.data.packageName}'),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                clipNetworkImage(
-                  widget.data.logo.orEmpty,
-                  radius: 8,
-                  width: 40,
-                  height: 40,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 1,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      widget.data.title.orEmpty,
-                                      style: const TextStyle(
-                                        fontSize: 16,
+          child: InkWell(
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  clipNetworkImage(
+                    widget.data.logo.orEmpty,
+                    radius: 8,
+                    width: 40,
+                    height: 40,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        widget.data.title.orEmpty,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      widget.data.pkgBitType == 1
-                                          ? '32位'
-                                          : [
-                                              2,
-                                              3
-                                            ].contains(widget.data.pkgBitType)
-                                              ? '64位'
-                                              : '',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline,
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        widget.data.pkgBitType == 1
+                                            ? '32位'
+                                            : [
+                                                2,
+                                                3
+                                              ].contains(widget.data.pkgBitType)
+                                                ? '64位'
+                                                : '',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  '${widget.versionName}(${widget.versionCode}) > ${widget.data.apkversionname}(${widget.data.apkversioncode})',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color:
-                                        Theme.of(context).colorScheme.outline,
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  Text(
+                                    '${widget.versionName}(${widget.versionCode}) > ${widget.data.apkversionname}(${widget.data.apkversioncode})',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color:
+                                          Theme.of(context).colorScheme.outline,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          FilledButton.tonal(
-                            onPressed: () async {
-                              if (!_url.isNullOrEmpty) {
-                                Utils.onDownloadFile(_url!, _name);
-                              } else {
-                                _url = await Utils.onGetDownloadUrl(
-                                  widget.data.title!,
-                                  widget.data.packageName!,
-                                  widget.data.id!,
-                                  widget.data.apkversionname!,
-                                  widget.data.apkversioncode!,
-                                );
-                              }
-                            },
-                            style: FilledButton.styleFrom(
-                              visualDensity: const VisualDensity(
-                                  horizontal: -2, vertical: -2),
+                            FilledButton.tonal(
+                              onPressed: () async {
+                                if (!_url.isNullOrEmpty) {
+                                  Utils.onDownloadFile(_url!, _name);
+                                } else {
+                                  _url = await Utils.onGetDownloadUrl(
+                                    widget.data.title!,
+                                    widget.data.packageName!,
+                                    widget.data.id!,
+                                    widget.data.apkversionname!,
+                                    widget.data.apkversioncode!,
+                                  );
+                                }
+                              },
+                              style: FilledButton.styleFrom(
+                                visualDensity: const VisualDensity(
+                                    horizontal: -2, vertical: -2),
+                              ),
+                              child: const Text('下载'),
+                            )
+                          ],
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              DateUtil.fromToday(widget.data.lastupdate),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
                             ),
-                            child: const Text('下载'),
-                          )
-                        ],
-                      ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            DateUtil.fromToday(widget.data.lastupdate),
+                            const SizedBox(width: 10),
+                            Text(
+                              widget.data.apksize.orEmpty,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                            ),
+                          ],
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(
+                              () => _maxLines = _maxLines == 2 ? 999 : 2),
+                          child: Text(
+                            widget.data.changelog ?? '暂无更新说明',
+                            maxLines: _maxLines,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 14,
                               color: Theme.of(context).colorScheme.outline,
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            widget.data.apksize.orEmpty,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                          ),
-                        ],
-                      ),
-                      GestureDetector(
-                        onTap: () => setState(
-                            () => _maxLines = _maxLines == 2 ? 999 : 2),
-                        child: Text(
-                          widget.data.changelog ?? '暂无更新说明',
-                          maxLines: _maxLines,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.outline,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
+      );
+    }
+
+    // The card grows into the app page and shrinks back into the card;
+    // the inner download button and changelog toggle keep their own taps.
+    final packageName = widget.data.packageName;
+    if (packageName.isNullOrEmpty) {
+      return card(() => Get.toNamed('/apk/$packageName'));
+    }
+    return AppContainer(
+      packageName: packageName!,
+      closedColor: Theme.of(context).colorScheme.onInverseSurface,
+      closedBuilder: (context, open) => card(open),
     );
   }
 }

@@ -16,14 +16,18 @@ enum HistoryType {
 }
 
 class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
+  const HistoryPage({super.key, this.type});
+
+  /// Direct-construction type (source-anchored container navigation).
+  /// Falls back to the GetX route arguments when null.
+  final HistoryType? type;
 
   @override
   State<HistoryPage> createState() => _HistoryPageState();
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  late final HistoryType _type = Get.arguments['type'];
+  late final HistoryType _type = widget.type ?? Get.arguments['type'];
 
   late final _controller = Get.put(
     HistoryController(type: _type),

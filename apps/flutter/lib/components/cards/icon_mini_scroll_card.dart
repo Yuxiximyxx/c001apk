@@ -85,11 +85,9 @@ Widget miniCardItem(
     );
   }
 
-  // Topic / product / user chips grow into their page. Feed chips keep the
-  // legacy link handling so a reading pane can still claim them, and app
-  // chips have no anchored target.
-  final target =
-      anchoredPageForUrl(url, needConvert: true, includeFeed: false);
+  // Topic / product / user / app chips grow into their page. Feed chips
+  // keep the legacy link handling so a reading pane can still claim them.
+  final target = anchoredPageForUrl(url, needConvert: true, includeFeed: false);
   if (target == null) {
     return chip(() => Utils.onOpenLink(url, title, true, context));
   }

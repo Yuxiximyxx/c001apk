@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
-import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
+import '../../components/source_container.dart';
+import '../../pages/ffflist/ffflist_page.dart' show FFFListPage, FFFListType;
 import '../../utils/extensions.dart';
+import '../../utils/miuix_palette.dart';
 
 Widget messageFirstCard(
   bool isLogin,
@@ -36,6 +38,13 @@ Widget messageFirstCard(
                 )
             : () {},
       ],
+      null,
+      null,
+      [
+        isLogin ? const FFFListPage(type: FFFListType.FEED) : null,
+        isLogin ? const FFFListPage(type: FFFListType.FOLLOW) : null,
+        isLogin ? const FFFListPage(type: FFFListType.FAN) : null,
+      ],
     ),
   );
 }
@@ -47,51 +56,54 @@ Widget messageFirstCardRow(
   List<Function()> onTaps, [
   List<IconData>? icons,
   List<int?>? badges,
+  List<Widget?>? targets,
 ]) {
+  // A slot with an anchored target grows into its page from the slot's own
+  // rect and shrinks back into it; slots without a target keep their
+  // legacy tap (login-gated entries, the notification-sheet entry).
+  Widget slot(int index) {
+    // Read the (possibly reactive) slot data NOW, while this row is being
+    // built inside the caller's Obx closure: GetX only subscribes an Obx
+    // to observables read during that synchronous pass. The anchored item
+    // is constructed later, inside OpenContainer's closedBuilder, which
+    // would be too late — the Obx would see zero reads, throw its
+    // improper-use error and never rebuild on data changes.
+    final value = values?.getOrNull(index);
+    final icon = icons?.getOrNull(index);
+    final badge = badges?.getOrNull(index);
+    Widget item(VoidCallback onTap) => _messageFirstCardItem(
+          context,
+          value,
+          titles[index],
+          onTap,
+          icon,
+          badge,
+        );
+    final target = targets?.getOrNull(index);
+    if (target == null) return item(onTaps[index]);
+    return AnchoredContainer(
+      closedColor: MiuixTheme.of(context).colors.surfaceContainer,
+      openColor: miuixPageBackground(context),
+      closedShape: const RoundedRectangleBorder(),
+      closedBuilder: (context, open) => item(open),
+      openBuilder: (context, close) => target,
+    );
+  }
+
   return IntrinsicHeight(
     child: Row(
       children: [
-        Expanded(
-          flex: 1,
-          child: _messageFirstCardItem(
-            context,
-            values?.getOrNull(0),
-            titles[0],
-            onTaps[0],
-            icons?[0],
-            badges?.getOrNull(0),
-          ),
-        ),
+        Expanded(flex: 1, child: slot(0)),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 10),
           child: VerticalDivider(width: 1),
         ),
-        Expanded(
-          flex: 1,
-          child: _messageFirstCardItem(
-            context,
-            values?.getOrNull(1),
-            titles[1],
-            onTaps[1],
-            icons?[1],
-            badges?.getOrNull(1),
-          ),
-        ),
+        Expanded(flex: 1, child: slot(1)),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 10),
           child: VerticalDivider(width: 1),
         ),
-        Expanded(
-          flex: 1,
-          child: _messageFirstCardItem(
-            context,
-            values?.getOrNull(2),
-            titles[2],
-            onTaps[2],
-            icons?[2],
-            badges?.getOrNull(2),
-          ),
-        ),
+        Expanded(flex: 1, child: slot(2)),
       ],
     ),
   );

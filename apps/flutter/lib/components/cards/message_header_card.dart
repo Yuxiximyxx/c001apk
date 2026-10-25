@@ -1,8 +1,9 @@
 import 'package:c001apk_flutter/components/network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
+import '../../pages/login/login_page.dart';
 import '../../utils/global_data.dart';
 import '../../utils/miuix_palette.dart';
 import '../../utils/storage_util.dart';
@@ -11,11 +12,9 @@ class MessageHeaderCard extends StatelessWidget {
   const MessageHeaderCard({
     super.key,
     this.userInfo,
-    required this.onLogin,
   });
 
   final Datum? userInfo;
-  final Function() onLogin;
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +24,15 @@ class MessageHeaderCard extends StatelessWidget {
         alignment: AlignmentDirectional.center,
         children: [
           if (!GlobalData().isLogin)
-            FilledButton.tonal(
-              onPressed: onLogin,
-              child: const Text('点击登录'),
+            AnchoredContainer(
+              closedColor: miuixPageBackground(context),
+              openColor: miuixPageBackground(context),
+              closedShape: const StadiumBorder(),
+              closedBuilder: (context, open) => FilledButton.tonal(
+                onPressed: open,
+                child: const Text('点击登录'),
+              ),
+              openBuilder: (context, close) => const LoginPage(),
             ),
           Visibility(
             maintainSize: true,
@@ -37,9 +42,8 @@ class MessageHeaderCard extends StatelessWidget {
             child: Row(
               children: [
                 const SizedBox(width: 20),
-                GestureDetector(
-                  onTap: () =>
-                      Get.toNamed('/u/${userInfo?.uid ?? GlobalData().uid}'),
+                UserAvatarContainer(
+                  uid: (userInfo?.uid ?? GlobalData().uid).toString(),
                   child: clipNetworkImage(
                     userInfo?.userAvatar ?? GStorage.userAvatar,
                     isAvatar: true,

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../../components/expressive_loading_indicator.dart';
 import '../../../components/expressive_refresh_indicator.dart';
+import '../../../components/source_container.dart';
 import '../../../pages/home/app/app_list_controller.dart';
 import '../../../pages/home/return_top_controller.dart';
 import '../../../utils/extensions.dart';
@@ -121,20 +122,26 @@ class _AppListPageState extends State<AppListPage>
               parent: BouncingScrollPhysics(),
             ),
             itemCount: data!.length,
-            itemBuilder: (context, index) => ListTile(
-              onTap: () => Get.toNamed('/apk/${data[index].packageName}'),
-              leading: data[index].icon != null
-                  ? Image.memory(
-                      data[index].icon!,
-                      height: 40,
-                      width: 40,
-                      filterQuality: FilterQuality.low,
-                    )
-                  : null,
-              title: Text(data[index].appName),
-              subtitle: Text(
-                '${data[index].packageName}\n${data[index].versionName}(${data[index].versionCode})',
-                style: TextStyle(color: Theme.of(context).colorScheme.outline),
+            itemBuilder: (context, index) => AppContainer(
+              packageName: data[index].packageName,
+              closedColor: Theme.of(context).scaffoldBackgroundColor,
+              closedShape: const RoundedRectangleBorder(),
+              closedBuilder: (context, open) => ListTile(
+                onTap: open,
+                leading: data[index].icon != null
+                    ? Image.memory(
+                        data[index].icon!,
+                        height: 40,
+                        width: 40,
+                        filterQuality: FilterQuality.low,
+                      )
+                    : null,
+                title: Text(data[index].appName),
+                subtitle: Text(
+                  '${data[index].packageName}\n${data[index].versionName}(${data[index].versionCode})',
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.outline),
+                ),
               ),
             ),
           ),

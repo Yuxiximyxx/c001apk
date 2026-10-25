@@ -38,14 +38,19 @@ enum AppMenuItem {
 enum AppType { reply, dateline, hot }
 
 class AppPage extends StatefulWidget {
-  const AppPage({super.key});
+  const AppPage({super.key, this.packageName});
+
+  /// Direct-construction package name (source-anchored container
+  /// navigation). Falls back to the GetX route parameter when null.
+  final String? packageName;
 
   @override
   State<AppPage> createState() => _AppPageState();
 }
 
 class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
-  final String _packageName = Get.parameters['packageName'].orEmpty;
+  late final String _packageName =
+      widget.packageName ?? Get.parameters['packageName'].orEmpty;
   String? _url;
 
   late ReturnTopController _returnTopController;
@@ -142,8 +147,8 @@ class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
                   onPressed: () {
                     Navigator.of(context).push(
                       GetDialogRoute(
-                        // 变暗层由 ReplyPage 自带（见 reply_page.dart），
-                        // 路线 barrier 改透明，避免双层变暗叠加。
+                        // 无变暗层：ReplyPage 不带变暗层（miuix10
+                        // 摘除），路线 barrier 保持透明。
                         barrierColor: Colors.transparent,
                         pageBuilder:
                             (buildContext, animation, secondaryAnimation) {

@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
-import 'package:get/get.dart';
 
 import '../../components/cards/message_third_card.dart';
 import '../../components/network_image.dart';
@@ -9,7 +8,7 @@ import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../logic/network/network_repo.dart';
 import '../../logic/state/loading_state.dart';
-import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
+import '../../pages/ffflist/ffflist_page.dart' show FFFListPage, FFFListType;
 import '../../utils/extensions.dart';
 import '../../utils/miuix_palette.dart';
 import '../../utils/utils.dart';
@@ -74,24 +73,27 @@ class _RecentVisitsCardState extends State<RecentVisitsCard> {
     }
   }
 
-  void _openAll() {
-    Get.toNamed(
-      '/ffflist',
-      arguments: {'type': FFFListType.RECENT},
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final items = _items;
     if (_loading || items == null || items.isEmpty) {
-      return messageThirdCard(
-        context,
-        0xFF00bcd4,
-        Icons.my_location,
-        '我的常去',
-        null,
-        _openAll,
+      // The single-row fallback grows into the full 我的常去 list as well.
+      return AnchoredContainer(
+        closedColor: MiuixTheme.of(context).colors.surfaceContainer,
+        openColor: miuixPageBackground(context),
+        closedShape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+        ),
+        closedBuilder: (context, open) => messageThirdCard(
+          context,
+          0xFF00bcd4,
+          Icons.my_location,
+          '我的常去',
+          null,
+          open,
+        ),
+        openBuilder: (context, close) =>
+            const FFFListPage(type: FFFListType.RECENT),
       );
     }
     final colors = MiuixTheme.of(context).colors;
@@ -100,28 +102,35 @@ class _RecentVisitsCardState extends State<RecentVisitsCard> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          InkWell(
-            onTap: _openAll,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      '我的常去',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          AnchoredContainer(
+            closedColor: colors.surfaceContainer,
+            openColor: miuixPageBackground(context),
+            closedShape: const RoundedRectangleBorder(),
+            closedBuilder: (context, open) => InkWell(
+              onTap: open,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '我的常去',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  ),
-                  Text(
-                    '查看全部',
-                    style: TextStyle(fontSize: 13, color: colors.primary),
-                  ),
-                  Icon(Icons.keyboard_arrow_right,
-                      size: 18, color: colors.primary),
-                ],
+                    Text(
+                      '查看全部',
+                      style: TextStyle(fontSize: 13, color: colors.primary),
+                    ),
+                    Icon(Icons.keyboard_arrow_right,
+                        size: 18, color: colors.primary),
+                  ],
+                ),
               ),
             ),
+            openBuilder: (context, close) =>
+                const FFFListPage(type: FFFListType.RECENT),
           ),
           Divider(height: 1, color: colors.dividerLine),
           for (final data in items)
@@ -162,8 +171,7 @@ class _RecentVisitsCardState extends State<RecentVisitsCard> {
       );
     }
 
-    final target =
-        anchoredPageForUrl(data.url.orEmpty, needConvert: true);
+    final target = anchoredPageForUrl(data.url.orEmpty, needConvert: true);
     if (target == null) {
       return row(() => Utils.onOpenLink(data.url.orEmpty, data.title));
     }

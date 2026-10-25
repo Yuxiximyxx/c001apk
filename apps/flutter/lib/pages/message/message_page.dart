@@ -124,11 +124,10 @@ class _MessagePageState extends State<MessagePage>
                           'notificationCount':
                               _messageController.notificationCount.value,
                         if (i == 4)
-                          'onNotificationsRead': () => _messageController
-                              .notificationCount.value = null,
+                          'onNotificationsRead': () =>
+                              _messageController.notificationCount.value = null,
                       });
-                      int? count =
-                          _messageController.thirdList.getOrNull(i);
+                      int? count = _messageController.thirdList.getOrNull(i);
                       if (count != null && count > 0) {
                         _messageController.thirdList[i] = null;
                       }
@@ -152,16 +151,17 @@ class _MessagePageState extends State<MessagePage>
       appBar: AppBar(
           backgroundColor: miuixPageBackground(context),
           surfaceTintColor: Colors.transparent,
-          title: const Text('我的'), actions: [
-        IconButton(
-            onPressed: () => Get.toNamed('/accounts'),
-            icon: const Icon(Icons.switch_account_outlined),
-            tooltip: '账号管理'),
-        IconButton(
-            onPressed: () => Get.toNamed('/settings'),
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: '设置'),
-      ]),
+          title: const Text('我的'),
+          actions: [
+            IconButton(
+                onPressed: () => Get.toNamed('/accounts'),
+                icon: const Icon(Icons.switch_account_outlined),
+                tooltip: '账号管理'),
+            IconButton(
+                onPressed: () => Get.toNamed('/settings'),
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: '设置'),
+          ]),
       body: SafeArea(
         top: false,
         child: Align(
@@ -174,7 +174,6 @@ class _MessagePageState extends State<MessagePage>
                 Obx(
                   () => MessageHeaderCard(
                     userInfo: _messageController.userInfo.value,
-                    onLogin: () => Get.toNamed('/login'),
                   ),
                 ),
                 const SizedBox(height: 10),

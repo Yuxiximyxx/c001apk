@@ -52,10 +52,9 @@ class AppCard extends StatelessWidget {
       }
     }
 
-    // Source-anchored targets: user rows, topic/product rows and recent
-    // visits. App rows keep the legacy navigation (no anchored target),
-    // and feed targets stay legacy while a reading pane can claim them so
-    // the pane behaviour is unchanged.
+    // Source-anchored targets: user rows, topic/product rows, app rows
+    // and recent visits. Feed targets stay legacy while a reading pane can
+    // claim them so the pane behaviour is unchanged.
     Widget? target;
     if (appCardType == AppCardType.CONTACTS) {
       final uid = data.userInfo?.uid != null
@@ -65,9 +64,10 @@ class AppCard extends StatelessWidget {
               : '';
       if (uid.isNotEmpty) target = UserPage(uid: uid);
     } else {
-      final paneCapable =
-          context.getInheritedWidgetOfExactType<FeedNavigation>()?.paneCapable ??
-              false;
+      final paneCapable = context
+              .getInheritedWidgetOfExactType<FeedNavigation>()
+              ?.paneCapable ??
+          false;
       target = anchoredPageForUrl(
         data.url.orEmpty,
         needConvert: true,

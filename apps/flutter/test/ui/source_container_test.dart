@@ -2,10 +2,17 @@ import 'dart:io';
 
 import 'package:animations/animations.dart';
 import 'package:c001apk_flutter/components/cards/feed_card.dart';
+import 'package:c001apk_flutter/components/cards/icon_mini_scroll_card.dart';
+import 'package:c001apk_flutter/components/cards/message_first_card.dart';
+import 'package:c001apk_flutter/components/cards/message_second_card.dart';
 import 'package:c001apk_flutter/components/imageview.dart';
 import 'package:c001apk_flutter/components/source_container.dart';
 import 'package:c001apk_flutter/logic/model/feed/datum.dart';
+import 'package:c001apk_flutter/pages/app/app_page.dart';
 import 'package:c001apk_flutter/pages/feed/feed_page.dart';
+import 'package:c001apk_flutter/pages/feed/reply/reply_page.dart';
+import 'package:c001apk_flutter/pages/ffflist/ffflist_page.dart';
+import 'package:c001apk_flutter/pages/history/history_page.dart';
 import 'package:c001apk_flutter/pages/others/imageview_page.dart';
 import 'package:c001apk_flutter/pages/topic/topic_page.dart';
 import 'package:c001apk_flutter/pages/user/user_page.dart';
@@ -76,12 +83,30 @@ void main() {
       expect((page as TopicPage).tag, isNull);
     });
 
+    test('app and game links resolve to AppPage with the package name', () {
+      final page = anchoredPageForUrl('/apk/com.coolapk.market');
+      expect(page, isA<AppPage>());
+      expect((page! as AppPage).packageName, 'com.coolapk.market');
+
+      // Utils.onOpenLink sends game links to the same app page.
+      final game = anchoredPageForUrl('/game/com.example.game');
+      expect(game, isA<AppPage>());
+      expect((game! as AppPage).packageName, 'com.example.game');
+
+      final converted = anchoredPageForUrl(
+          'https://www.coolapk.com/apk/com.ss.android.ugc.aweme',
+          needConvert: true);
+      expect(converted, isA<AppPage>());
+      expect((converted! as AppPage).packageName, 'com.ss.android.ugc.aweme');
+    });
+
     test('non-anchored and malformed links resolve to null', () {
-      expect(anchoredPageForUrl('/apk/com.coolapk.market'), isNull);
       expect(anchoredPageForUrl('/event/12'), isNull);
       expect(anchoredPageForUrl(''), isNull);
       expect(anchoredPageForUrl('/feed/'), isNull);
       expect(anchoredPageForUrl('/u/'), isNull);
+      expect(anchoredPageForUrl('/apk/'), isNull);
+      expect(anchoredPageForUrl('/game/'), isNull);
       expect(
           anchoredPageForUrl('https://example.com/feed/1', needConvert: true),
           isNull);
@@ -168,6 +193,102 @@ void main() {
     final userPage = userAnchored.openBuilder(context, () {});
     expect(userPage, isA<UserPage>());
     expect((userPage as UserPage).uid, '7');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('app chips wire an AppContainer for the app page',
+      (tester) async {
+    await tester.pumpWidget(GetMaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => miniCardItem(
+            context,
+            '',
+            '抖音',
+            'https://www.coolapk.com/apk/com.ss.android.ugc.aweme',
+            false,
+            false,
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final containers = tester
+        .widgetList<AnchoredContainer>(find.byType(AnchoredContainer));
+    expect(containers.length, 1);
+
+    final context = tester.element(find.byType(AnchoredContainer));
+    final opened = containers.first.openBuilder(context, () {});
+    expect(opened, isA<AppPage>());
+    expect((opened as AppPage).packageName, 'com.ss.android.ugc.aweme');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('profile page entries wire anchored containers', (tester) async {
+    await tester.pumpWidget(GetMaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              Builder(
+                  builder: (context) =>
+                      messageFirstCard(true, context, const [3, 4, 5])),
+              Builder(
+                  builder: (context) =>
+                      messageSeconfCard(true, context, () {})),
+            ],
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // First card: 动态/关注/粉丝 (3). Second card: 本地收藏/浏览历史
+    // (2) + 我的收藏/我的赞/我的回复 (3). 消息通知 opens a sheet and
+    // stays unanchored. Total 8.
+    final containers = tester
+        .widgetList<AnchoredContainer>(find.byType(AnchoredContainer))
+        .toList();
+    expect(containers.length, 8);
+
+    final context = tester.element(find.byType(Column).first);
+    Widget openAt(int index) => containers[index].openBuilder(context, () {});
+
+    final firstCardTargets = [openAt(0), openAt(1), openAt(2)];
+    expect(firstCardTargets.every((w) => w is FFFListPage), isTrue);
+    expect(
+      firstCardTargets.map((w) => (w as FFFListPage).type),
+      [FFFListType.FEED, FFFListType.FOLLOW, FFFListType.FAN],
+    );
+
+    expect(openAt(3), isA<HistoryPage>());
+    expect((openAt(3) as HistoryPage).type, HistoryType.Favorite);
+    expect(openAt(4), isA<HistoryPage>());
+    expect((openAt(4) as HistoryPage).type, HistoryType.History);
+
+    final secondRowTargets = [openAt(5), openAt(6), openAt(7)];
+    expect(secondRowTargets.every((w) => w is FFFListPage), isTrue);
+    expect(
+      secondRowTargets.map((w) => (w as FFFListPage).type),
+      [FFFListType.COLLECTION, FFFListType.LIKE, FFFListType.REPLY],
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('ReplyPage carries no full-page dim layer', (tester) async {
+    await tester.pumpWidget(const GetMaterialApp(home: ReplyPage()));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    final dimLayers = tester
+        .widgetList<ColoredBox>(find.byType(ColoredBox))
+        .where((box) => box.color == const Color(0x80000000));
+    expect(dimLayers, isEmpty,
+        reason: 'miuix10 removed the miuix5 dim layer by user request');
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

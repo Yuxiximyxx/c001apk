@@ -530,8 +530,8 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                         onPressed: () {
                           Navigator.of(context).push(
                             GetDialogRoute(
-                              // 变暗层由 ReplyPage 自带（见 reply_page.dart），
-                              // 路线 barrier 改透明，避免双层变暗叠加。
+                              // 无变暗层：ReplyPage 不带变暗层（miuix10
+                              // 摘除），路线 barrier 保持透明。
                               barrierColor: Colors.transparent,
                               pageBuilder: (buildContext, animation,
                                   secondaryAnimation) {
