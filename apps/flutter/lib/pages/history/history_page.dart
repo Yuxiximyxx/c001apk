@@ -27,7 +27,15 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  late final HistoryType _type = widget.type ?? Get.arguments['type'];
+  /// See FFFListPage._routeArguments: a source-anchored container route
+  /// carries no arguments, so [Get.arguments] is null there and must
+  /// never be indexed directly.
+  static Map<dynamic, dynamic>? get _routeArguments {
+    final arguments = Get.arguments;
+    return arguments is Map ? arguments : null;
+  }
+
+  late final HistoryType _type = widget.type ?? _routeArguments?['type'];
 
   late final _controller = Get.put(
     HistoryController(type: _type),

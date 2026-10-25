@@ -39,11 +39,22 @@ class FFFListPage extends StatefulWidget {
 
 class _FFFListPageState extends State<FFFListPage>
     with TickerProviderStateMixin {
+  /// Arguments of the GetX route that pushed this page, or null when the
+  /// page was opened by a source-anchored container. A container route is
+  /// a plain Navigator route and carries no arguments, so [Get.arguments]
+  /// itself is null there and must never be indexed directly (doing so
+  /// throws and blanks the whole page). On the GetX path callers always
+  /// pass a Map, so behaviour there is unchanged.
+  static Map<dynamic, dynamic>? get _routeArguments {
+    final arguments = Get.arguments;
+    return arguments is Map ? arguments : null;
+  }
+
   late final String? _uid =
-      widget.uid ?? Get.arguments['uid'] ?? GlobalData().uid;
-  late final FFFListType _type = widget.type ?? Get.arguments['type'];
-  late final String? _id = widget.id ?? Get.arguments['id'];
-  late final String? _title = widget.title ?? Get.arguments['title'];
+      widget.uid ?? _routeArguments?['uid'] ?? GlobalData().uid;
+  late final FFFListType _type = widget.type ?? _routeArguments?['type'];
+  late final String? _id = widget.id ?? _routeArguments?['id'];
+  late final String? _title = widget.title ?? _routeArguments?['title'];
 
   late final bool _isMe = GlobalData().uid == _uid;
 

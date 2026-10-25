@@ -39,10 +39,15 @@ class _ImageViewPageState extends State<ImageViewPage> {
   @override
   void initState() {
     super.initState();
-    _imgList = widget.imgList ??
-        List<String>.from(Get.arguments['imgList'] ?? const <String>[]);
-    final int initialPage =
-        widget.initialPage ?? Get.arguments['initialPage'] ?? 0;
+    // A source-anchored container route carries no arguments, so
+    // Get.arguments itself is null there and must never be indexed
+    // directly.
+    final routeArguments = Get.arguments;
+    final Map<dynamic, dynamic>? args =
+        routeArguments is Map ? routeArguments : null;
+    _imgList =
+        widget.imgList ?? List<String>.from(args?['imgList'] ?? const []);
+    final int initialPage = widget.initialPage ?? args?['initialPage'] ?? 0;
     _currentPage = initialPage.clamp(0, math.max(0, _imgList.length - 1));
     _pageController = PageController(initialPage: _currentPage);
   }
