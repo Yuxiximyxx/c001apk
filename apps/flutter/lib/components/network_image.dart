@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 Widget networkImage(
   String imageUrl, {
   BoxFit? fit,
+  Alignment alignment = Alignment.center,
   double? width,
   double? height,
   bool isAvatar = false,
@@ -41,6 +42,7 @@ Widget networkImage(
 
   return CachedNetworkImage(
     fit: fit,
+    alignment: alignment,
     width: width,
     height: height,
     imageUrl: imageUrl,

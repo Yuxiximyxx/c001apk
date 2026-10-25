@@ -50,7 +50,12 @@ class _CarouselCardState extends State<CarouselCard> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
         builder: (context, constraints) => SizedBox(
-              height: (constraints.maxWidth / 3).clamp(0.0, 240.0),
+              // 横幅容器固定 3.4:1 宽幅比例。接口的 Entity 没有图片
+              // 尺寸/比例字段，比例只能取代表值：实测一张酷安众测
+              // 横幅素材约 4.48:1（截图 936×2048 里图内容 883×197px），
+              // 旧版按 3:1 容器 + contain 显示，图被压在容器中央、
+              // 上下各留约 19dp 空边，画面显小、整个横幅区松散。
+              height: (constraints.maxWidth / 3.4).clamp(0.0, 240.0),
               child: ClipRRect(
                 borderRadius: const BorderRadius.all(Radius.circular(12)),
                 child: Stack(
@@ -98,7 +103,12 @@ class _CarouselCardState extends State<CarouselCard> {
                             ),
                             child: networkImage(
                               _filterList[page].pic.orEmpty,
-                              fit: BoxFit.contain,
+                              // cover 铺满容器，去掉 contain 的上下
+                              // 空边。素材普遍比 3.4:1 容器更宽，居中
+                              // 裁切会把左侧的角标/标题裁掉，故左对
+                              // 齐：被裁掉的多是素材右侧的留白。
+                              fit: BoxFit.cover,
+                              alignment: Alignment.centerLeft,
                               borderRadius: null,
                             ),
                           );

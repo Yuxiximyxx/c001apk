@@ -60,6 +60,21 @@ class ReplyPage extends StatefulWidget {
 
 class _ReplyPageState extends State<ReplyPage>
     with SingleTickerProviderStateMixin {
+  /// 键盘态回复卡的下移补偿（dp），与「键盘态卡片底边距置 0」配套。
+  ///
+  /// 真机截图实测（1000379938/1000379949，936×2048，以卡片 16dp
+  /// 水平边距 =41px 定标 2.5625 px/dp）：键盘弹起时卡片白区底边
+  /// 在 y=1234，可见键盘框顶边在 y≈1264，缝 ≈30px ≈ 11.7dp。
+  /// 面板占位高度 = viewInsets.bottom（IME 窗口高度），卡片的底
+  /// 边距外缘被顶在窗口顶边上；两张截图里可见键盘框顶与窗口顶
+  /// 边几乎重合（差约 1px），即这条缝基本就是卡片自带的 12dp
+  /// 底边距本身。修法：键盘态把卡片底边距置 0（补回 12dp），
+  /// 再用 changeKeyboardPanelHeight 把占位高度扣掉本常量 3dp，
+  /// 合计下移 15dp，卡片底边最终压住键盘框顶约 3.3dp（在允许
+  /// 的 6dp 内），缝被消除。前两轮（miuix4 改占位涂色、miuix5
+  /// 加整页变暗层）改的是缝里透出什么，本轮改的是卡片位置本身。
+  static const double _keyboardCardDownShift = 3;
+
   late final _focusNode = FocusNode();
   late final _controller = ChatBottomPanelContainerController<PanelType>();
   late final _replyContentController = TextEditingController(
@@ -121,6 +136,9 @@ class _ReplyPageState extends State<ReplyPage>
       ThemeMode.dark => Brightness.dark,
       ThemeMode.system => MediaQuery.platformBrightnessOf(context),
     };
+    // 键盘是否弹起（viewInsets 与面板包的占位高度同源）。键盘态
+    // 需要把卡片底边距置 0 贴住键盘，见 _keyboardCardDownShift。
+    final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
     Widget content = MediaQuery.removePadding(
         removeTop: true,
         context: context,
@@ -159,7 +177,7 @@ class _ReplyPageState extends State<ReplyPage>
                       },
                     ),
                   ),
-                  _buildInputView(),
+                  _buildInputView(keyboardUp: keyboardUp),
                   _buildImagePreview(),
                   _buildPanelContainer(),
                 ],
@@ -192,6 +210,11 @@ class _ReplyPageState extends State<ReplyPage>
     return ChatBottomPanelContainer<PanelType>(
       controller: _controller,
       inputFocusNode: _focusNode,
+      // 键盘态占位高度扣掉 _keyboardCardDownShift，让卡片再下移
+      // 一点、底边压住可见键盘框顶；包内在回调之后还有
+      // safeAreaBottom 兜底，高度不会被扣成负数。此回调只在
+      // 键盘态占位构建时调用，无键盘/表情面板态不受影响。
+      changeKeyboardPanelHeight: (height) => height - _keyboardCardDownShift,
       otherPanelWidget: (type) {
         if (type == null) return const SizedBox.shrink();
         switch (type) {
@@ -316,9 +339,16 @@ class _ReplyPageState extends State<ReplyPage>
     );
   }
 
-  Widget _buildInputView() {
+  Widget _buildInputView({required bool keyboardUp}) {
     return Container(
-      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+      margin: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        // 键盘态底边距置 0：占位把边距外缘顶在 IME 窗口顶边上，
+        // 留着 12dp 就会在卡片与可见键盘之间留一条等高的缝；
+        // 其余状态保持 12dp 悬浮卡样式。见 _keyboardCardDownShift。
+        bottom: keyboardUp ? 0 : 12,
+      ),
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(24)),

@@ -376,7 +376,7 @@ void main() {
         lessThanOrEqualTo(240));
     await resize(tester, 400);
     expect(
-        tester.getSize(find.byType(CarouselCard)).height, closeTo(400 / 3, 1));
+        tester.getSize(find.byType(CarouselCard)).height, closeTo(400 / 3.4, 1));
   });
 
   Widget reader(
