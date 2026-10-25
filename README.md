@@ -95,4 +95,6 @@
 
 感谢 [bggRGjQaUbCoE/c001apk-flutter](https://github.com/bggRGjQaUbCoE/c001apk-flutter) 的开源，以及 [daimiaopeng/coolapk-desktop](https://github.com/daimiaopeng/coolapk-desktop) 的协议调研参考。
 
+感谢 [kongwufang](https://github.com/kongwufang) 通过 [PR #11](https://github.com/TG-Twilight/c001apk/pull/11) 贡献数字联盟设备标识自动获取功能，以及配套的离线测试、实测记录与许可说明。
+
 本项目沿用 [GNU AGPL v3](LICENSE)，第三方来源与 MIT 许可见 [第三方声明](docs/THIRD_PARTY_NOTICES.md)。本项目与酷安官方无隶属关系，酷安名称、商标及服务内容归相应权利人所有。

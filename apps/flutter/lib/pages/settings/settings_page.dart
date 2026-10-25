@@ -359,8 +359,8 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
         SettingsSection.protocol => [
             MiuixArrowPreference(
               startAction: const Icon(Icons.smartphone),
-              title: '导入官方设备标识',
-              summary: '减少重复人机验证 · 获取说明与粘贴识别',
+              title: '设备标识',
+              summary: '自动获取 · 减少重复人机验证（可手动导入）',
               onClick: () => Get.to(() => const DeviceIdentityPage()),
             ),
             MiuixArrowPreference(
