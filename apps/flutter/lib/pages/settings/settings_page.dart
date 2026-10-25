@@ -26,6 +26,7 @@ import '../../utils/storage_util.dart';
 import '../../utils/global_data.dart';
 import '../../logic/local_follow/local_follow_store.dart';
 import '../local_follow/local_follow_page.dart';
+import '../../diagnostics/predictive_back_diagnostics_page.dart';
 import 'device_identity_page.dart';
 
 enum ImageQuality {
@@ -105,6 +106,14 @@ class _SettingsPageState extends State<SettingsPage> {
                       });
                     }
                   },
+                ),
+                // 预测式返回真机诊断（临时条目，定位完成后随 lib/diagnostics/ 删除）。
+                MiuixArrowPreference(
+                  title: '预测式返回诊断',
+                  summary: '临时诊断版入口 · 记录手势事件、门控与路由动画',
+                  startAction: const Icon(Icons.bug_report_outlined),
+                  onClick: () =>
+                      Get.to(() => const PredictiveBackDiagnosticsPage()),
                 ),
               ],
             ),

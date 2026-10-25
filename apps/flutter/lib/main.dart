@@ -15,6 +15,7 @@ import 'package:window_manager/window_manager.dart';
 import 'components/custom_toast.dart';
 import 'components/app_keyboard_navigation.dart';
 import 'components/announcement_monitor.dart';
+import 'diagnostics/predictive_back_diagnostics.dart';
 import 'logic/announcements/app_announcements.dart';
 import 'constants/constants.dart';
 import 'logic/network/request.dart';
@@ -29,6 +30,9 @@ import 'utils/utils.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 预测式返回真机诊断（临时）：注册只观察不认领的绑定观察者。
+  PredictiveBackDiagnostics.install();
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -285,6 +289,8 @@ class C001APKAPP extends StatelessWidget {
       darkTheme: darkTheme,
       themeMode: GStorage.getThemeMode(),
       getPages: AppPages.getPages,
+      // 预测式返回真机诊断（临时）：导航观察者，GetObserver 仍由 GetX 置于首位。
+      navigatorObservers: [PredictiveBackDiagnostics.navigatorObserver],
       customTransition: AppPageTransition(),
       transitionDuration: const Duration(milliseconds: 450),
       initialRoute: '/',
