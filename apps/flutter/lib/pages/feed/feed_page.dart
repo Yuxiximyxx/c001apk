@@ -14,6 +14,7 @@ import 'package:get/get.dart';
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
 import '../../components/cards/feed_reply_card.dart';
+import '../../components/glass_surface.dart';
 import '../../components/feed_article_body.dart';
 import '../../components/footer.dart';
 import '../../components/sliver_pinned_box_adapter.dart';
@@ -560,8 +561,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                   parent: _fabAnimationCtr!,
                   curve: Curves.easeInOut,
                 )),
-                child: FloatingActionButton(
-                  heroTag: null,
+                child: GlassFab(
                   tooltip: '回复',
                   onPressed: () {
                     _onReply(
@@ -571,7 +571,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                       null,
                     );
                   },
-                  child: const Icon(Icons.reply),
+                  icon: Icons.reply,
                 ),
               )
             : const SizedBox(),

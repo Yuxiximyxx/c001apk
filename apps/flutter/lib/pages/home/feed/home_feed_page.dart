@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
 import '../../../components/common_body.dart';
+import '../../../components/glass_surface.dart';
 import '../../../pages/home/feed/home_feed_controller.dart';
 import '../../../pages/home/home_page.dart' show TabType;
 import '../../../pages/home/return_top_controller.dart';
@@ -135,8 +136,7 @@ class _HomeFeedPageState extends State<HomeFeedPage>
                     parent: _fabAnimationCtr!,
                     curve: Curves.easeInOut,
                   )),
-                  child: FloatingActionButton(
-                    heroTag: null,
+                  child: GlassFab(
                     onPressed: () {
                       Navigator.of(context).push(
                         GetDialogRoute(
@@ -171,7 +171,7 @@ class _HomeFeedPageState extends State<HomeFeedPage>
                       // );
                     },
                     tooltip: '发布动态',
-                    child: const Icon(Icons.add),
+                    icon: Icons.add,
                   ),
                 )
               : null,

@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
+import '../../components/glass_surface.dart';
 import '../../utils/download_util.dart';
 import '../../utils/utils.dart';
 
@@ -282,23 +283,25 @@ class _ImageViewPageState extends State<ImageViewPage> {
                     if (Utils.isDesktop && _imgList.length > 1) ...[
                       Positioned(
                         left: 0,
-                        child: IconButton(
+                        child: GlassFab(
+                          size: 40,
+                          circular: true,
                           tooltip: '上一张',
                           onPressed:
                               _currentPage > 0 ? () => _changePage(-1) : null,
-                          icon: const Icon(Icons.arrow_back),
-                          style: _arrowStyle(context),
+                          icon: Icons.arrow_back,
                         ),
                       ),
                       Positioned(
                         right: 0,
-                        child: IconButton(
+                        child: GlassFab(
+                          size: 40,
+                          circular: true,
                           tooltip: '下一张',
                           onPressed: _currentPage < _imgList.length - 1
                               ? () => _changePage(1)
                               : null,
-                          icon: const Icon(Icons.arrow_forward),
-                          style: _arrowStyle(context),
+                          icon: Icons.arrow_forward,
                         ),
                       ),
                     ],
@@ -307,9 +310,4 @@ class _ImageViewPageState extends State<ImageViewPage> {
         ),
       );
 
-  ButtonStyle _arrowStyle(BuildContext context) => IconButton.styleFrom(
-        foregroundColor:
-            Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-        backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
-      );
 }

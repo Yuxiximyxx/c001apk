@@ -9,6 +9,7 @@ import 'package:get/get.dart' hide Response;
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
 import '../../components/cards/app_info_card.dart';
+import '../../components/glass_surface.dart';
 import '../../components/sticky_sliver_to_box_adapter.dart';
 import '../../logic/state/loading_state.dart';
 import '../../pages/app/app_content.dart';
@@ -142,8 +143,7 @@ class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
                   GlobalData().isLogin &&
                   !controller.isBlocked &&
                   controller.commentStatus == 1
-              ? FloatingActionButton(
-                  heroTag: null,
+              ? GlassFab(
                   onPressed: () {
                     Navigator.of(context).push(
                       GetDialogRoute(
@@ -188,7 +188,7 @@ class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
                     // );
                   },
                   tooltip: '发布动态',
-                  child: const Icon(Icons.add),
+                  icon: Icons.add,
                 )
               : const SizedBox(),
         ),

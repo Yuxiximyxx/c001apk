@@ -116,32 +116,50 @@ void main() {
     });
 
     test('specs follow the recipes', () {
+      // miuix14 按 Kyant0/AndroidLiquidGlass（LiquidBottomTabs）重校准：
+      // 饱和在前、模糊打底（8/12/16）、深色走 #121212 深纱不再乳白厚涂。
       final clear = DockGlassMaterial.clear.spec;
-      expect(clear.sigma, 14);
+      expect(clear.sigma, 12);
       expect(clear.saturate, 1.6);
       expect(clear.refraction, isFalse);
+      expect(clear.tintAlphaDark, 0.30);
+      expect(clear.tintAlphaLight, 0.32);
 
       final frosted = DockGlassMaterial.frosted.spec;
-      expect(frosted.sigma, 22);
+      expect(frosted.sigma, 16);
       expect(frosted.saturate, 1.5);
       expect(frosted.refraction, isFalse);
-      // 磨砂的纱最厚、高光最弱
-      expect(frosted.tintAlphaDark,
-          greaterThan(DockGlassMaterial.clear.spec.tintAlphaDark));
+      // 磨砂的纱略厚于液态、高光最弱
+      expect(frosted.tintAlphaDark, 0.45);
+      expect(frosted.tintAlphaLight, 0.52);
       expect(frosted.tintAlphaDark,
           greaterThan(DockGlassMaterial.liquid.spec.tintAlphaDark));
       expect(frosted.highlightAlphaDark,
           lessThan(DockGlassMaterial.clear.spec.highlightAlphaDark));
 
       final liquid = DockGlassMaterial.liquid.spec;
-      expect(liquid.sigma, lessThanOrEqualTo(4));
-      expect(liquid.saturate, inInclusiveRange(1.3, 1.5));
+      expect(liquid.sigma, 8);
+      expect(liquid.saturate, inInclusiveRange(1.4, 1.5));
       expect(liquid.refraction, isTrue);
-      // 液态的纱最薄、边缘描边最亮
-      expect(liquid.tintAlphaDark,
-          lessThan(DockGlassMaterial.clear.spec.tintAlphaDark));
+      // 液态纱 = Kyant 原方：深 #121212 α0.4 / 浅 #FAFAFA α0.4
+      expect(liquid.tintAlphaDark, 0.40);
+      expect(liquid.tintAlphaLight, 0.40);
+      expect(glassTintColor(liquid, true),
+          const Color(0xFF121212).withValues(alpha: 0.40));
+      expect(glassTintColor(liquid, false),
+          const Color(0xFFFAFAFA).withValues(alpha: 0.40));
+      // 深色模式三档一律深纱（121212），不再是乳白色
+      for (final m in DockGlassMaterial.values) {
+        final c = glassTintColor(m.spec, true);
+        expect(c.r, const Color(0xFF121212).r, reason: '$m 深色纱应为 121212');
+        expect(c.g, const Color(0xFF121212).g);
+        expect(c.b, const Color(0xFF121212).b);
+      }
+      // 液态的边缘描边最亮；折射带宽/量 = Kyant lens 的 24/24dp
       expect(liquid.borderAlphaDark,
           greaterThan(DockGlassMaterial.frosted.spec.borderAlphaDark));
+      expect(glassRefractionBandDp, 24);
+      expect(glassRefractionAmountDp, 24);
     });
 
     test('saturation matrix is identity at 1.0', () {

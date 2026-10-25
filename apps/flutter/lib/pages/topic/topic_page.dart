@@ -7,6 +7,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
+import '../../components/glass_surface.dart';
 import '../../components/network_image.dart';
 import '../../logic/state/loading_state.dart';
 import '../../pages/home/return_top_controller.dart';
@@ -525,8 +526,7 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                 backgroundColor: MiuixTheme.of(context).colors.primary,
                 floatingActionButton: GlobalData().isLogin &&
                         !_topicController.isBlocked
-                    ? FloatingActionButton(
-                        heroTag: null,
+                    ? GlassFab(
                         onPressed: () {
                           Navigator.of(context).push(
                             GetDialogRoute(
@@ -564,11 +564,9 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                           );
                         },
                         tooltip: '发布动态',
-                        backgroundColor:
-                            MiuixTheme.of(context).colors.primary,
-                        foregroundColor: Colors.white,
-                        shape: const CircleBorder(),
-                        child: const Icon(Icons.add),
+                        // 原为主题色实心圆钮，现统一改玻璃材质（正圆保持）。
+                        circular: true,
+                        icon: Icons.add,
                       )
                     : null,
                 body: Column(

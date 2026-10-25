@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../../components/expressive_loading_indicator.dart';
 import '../../../components/expressive_refresh_indicator.dart';
+import '../../../components/glass_surface.dart';
 import '../../../components/source_container.dart';
 import '../../../pages/home/app/app_list_controller.dart';
 import '../../../pages/home/return_top_controller.dart';
@@ -108,11 +109,10 @@ class _AppListPageState extends State<AppListPage>
                     parent: _fabAnimationCtr!,
                     curve: Curves.easeInOut,
                   )),
-                  child: FloatingActionButton(
-                    heroTag: null,
+                  child: GlassFab(
                     onPressed: () => Get.toNamed('/appUpdate'),
                     tooltip: '更新',
-                    child: const Icon(Icons.update),
+                    icon: Icons.update,
                   ),
                 )
               : null,

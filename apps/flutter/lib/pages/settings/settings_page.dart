@@ -169,8 +169,8 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
             ),
             const DropDownMenuItem(
               icon: Icons.blur_on_outlined,
-              title: '底栏玻璃材质',
-              subtitle: '切换悬浮底栏的玻璃质感，立即生效',
+              title: '玻璃材质',
+              subtitle: '切换悬浮底栏与悬浮按钮的玻璃质感，立即生效',
               boxKey: SettingsBoxKey.dockGlassMaterial,
               defaultValue: 1,
               items: [
