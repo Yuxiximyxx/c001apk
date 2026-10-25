@@ -40,14 +40,18 @@ enum UserMenuItem {
 }
 
 class UserPage extends StatefulWidget {
-  const UserPage({super.key});
+  const UserPage({super.key, this.uid});
+
+  /// Direct-construction uid (source-anchored container navigation).
+  /// Falls back to the GetX route parameter when null.
+  final String? uid;
 
   @override
   State<UserPage> createState() => _UserPageState();
 }
 
 class _UserPageState extends State<UserPage> {
-  final String _uid = Get.parameters['uid'].orEmpty;
+  late final String _uid = widget.uid ?? Get.parameters['uid'].orEmpty;
 
   late final String _random = DeviceUtil.randHexString(8);
   late final UserController _userController = Get.put(

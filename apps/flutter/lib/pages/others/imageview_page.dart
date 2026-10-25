@@ -13,7 +13,12 @@ import '../../utils/download_util.dart';
 import '../../utils/utils.dart';
 
 class ImageViewPage extends StatefulWidget {
-  const ImageViewPage({super.key});
+  const ImageViewPage({super.key, this.imgList, this.initialPage});
+
+  /// Direct-construction parameters (source-anchored container navigation).
+  /// Fall back to the GetX route arguments when null.
+  final List<String>? imgList;
+  final int? initialPage;
 
   @override
   State<ImageViewPage> createState() => _ImageViewPageState();
@@ -34,8 +39,10 @@ class _ImageViewPageState extends State<ImageViewPage> {
   @override
   void initState() {
     super.initState();
-    _imgList = List<String>.from(Get.arguments['imgList'] ?? const <String>[]);
-    final int initialPage = Get.arguments['initialPage'] ?? 0;
+    _imgList = widget.imgList ??
+        List<String>.from(Get.arguments['imgList'] ?? const <String>[]);
+    final int initialPage =
+        widget.initialPage ?? Get.arguments['initialPage'] ?? 0;
     _currentPage = initialPage.clamp(0, math.max(0, _imgList.length - 1));
     _pageController = PageController(initialPage: _currentPage);
   }

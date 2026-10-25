@@ -5,11 +5,13 @@ import 'package:get/get.dart';
 
 import '../../components/cards/message_third_card.dart';
 import '../../components/network_image.dart';
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../logic/network/network_repo.dart';
 import '../../logic/state/loading_state.dart';
 import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
 import '../../utils/extensions.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/utils.dart';
 
 /// 「我的常去」区块：直接在「我的」页内嵌展示最近访问的前几条；
@@ -123,36 +125,54 @@ class _RecentVisitsCardState extends State<RecentVisitsCard> {
           ),
           Divider(height: 1, color: colors.dividerLine),
           for (final data in items)
-            InkWell(
-              onTap: () => Utils.onOpenLink(data.url.orEmpty, data.title),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Row(
-                  children: [
-                    clipNetworkImage(
-                      data.logo.orEmpty,
-                      isAvatar: data.targetType == 'user',
-                      radius: 8,
-                      width: 40,
-                      height: 40,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        data.targetTypeTitle.isNullOrEmpty
-                            ? data.title.orEmpty
-                            : '${data.targetTypeTitle}: ${data.title}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _recentItem(context, data, colors.surfaceContainer),
         ],
       ),
+    );
+  }
+
+  Widget _recentItem(BuildContext context, Datum data, Color cardColor) {
+    Widget row(VoidCallback? onTap) {
+      return InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              clipNetworkImage(
+                data.logo.orEmpty,
+                isAvatar: data.targetType == 'user',
+                radius: 8,
+                width: 40,
+                height: 40,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  data.targetTypeTitle.isNullOrEmpty
+                      ? data.title.orEmpty
+                      : '${data.targetTypeTitle}: ${data.title}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final target =
+        anchoredPageForUrl(data.url.orEmpty, needConvert: true);
+    if (target == null) {
+      return row(() => Utils.onOpenLink(data.url.orEmpty, data.title));
+    }
+    return AnchoredContainer(
+      closedColor: cardColor,
+      openColor: miuixPageBackground(context),
+      closedShape: const RoundedRectangleBorder(),
+      closedBuilder: (context, open) => row(open),
+      openBuilder: (context, close) => target,
     );
   }
 }

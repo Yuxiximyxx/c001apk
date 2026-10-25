@@ -6,9 +6,11 @@ import 'package:html/parser.dart';
 
 import '../../components/html_text.dart';
 import '../../components/imageview.dart';
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../utils/date_util.dart';
 import '../../utils/extensions.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
 
@@ -27,28 +29,53 @@ class NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFollow = data.type == 'contacts_follow';
-    return Material(
-      color: Theme.of(context).colorScheme.onInverseSurface,
-      borderRadius: const BorderRadius.all(Radius.circular(12)),
-      child: InkWell(
-        onTap: () {
-          if (isFollow) {
-            Utils.onOpenLink(data.url ?? '');
-          } else {
-            dom.Document document = parse(data.note);
-            String? link = document
-                .querySelectorAll('a[href]')
-                .firstOrNull
-                ?.attributes['href'];
-            if (link != null) {
-              Utils.onOpenLink(link);
-            }
-          }
-        },
-        onLongPress: () =>
-            Get.toNamed('/copy', parameters: {'text': data.note ?? ''}),
+    // The row's destination: the follow target url, or the first link in
+    // the note html (usually the feed or user the notification refers to).
+    String? link;
+    if (isFollow) {
+      link = data.url;
+    } else {
+      dom.Document document = parse(data.note);
+      link = document
+          .querySelectorAll('a[href]')
+          .firstOrNull
+          ?.attributes['href'];
+    }
+    final target = link == null ? null : anchoredPageForUrl(link);
+    final color = Theme.of(context).colorScheme.onInverseSurface;
+    Widget body(VoidCallback? onTap) {
+      return Material(
+        color: color,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
-        child: Stack(
+        child: InkWell(
+          onTap: onTap ??
+              () {
+                if (link != null) {
+                  Utils.onOpenLink(link);
+                }
+              },
+          onLongPress: () =>
+              Get.toNamed('/copy', parameters: {'text': data.note ?? ''}),
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+          child: _buildContent(context, isFollow),
+        ),
+      );
+    }
+
+    if (target == null) return body(null);
+    return AnchoredContainer(
+      closedColor: color,
+      openColor: miuixPageBackground(context),
+      closedShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+      closedBuilder: (context, open) => body(open),
+      openBuilder: (context, close) => target,
+    );
+  }
+
+  Widget _buildContent(BuildContext context, bool isFollow) {
+    return Stack(
           children: [
             Align(
               alignment: Alignment.topRight,
@@ -84,9 +111,8 @@ class NotificationCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GestureDetector(
-                    onTap: () =>
-                        Get.toNamed('/u/${data.fromuid ?? data.uid ?? ''}'),
+                  UserAvatarContainer(
+                    uid: '${data.fromuid ?? data.uid ?? ''}',
                     child: clipNetworkImage(
                       data.fromUserAvatar ?? '',
                       isAvatar: true,
@@ -141,8 +167,6 @@ class NotificationCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
     );
   }
 }

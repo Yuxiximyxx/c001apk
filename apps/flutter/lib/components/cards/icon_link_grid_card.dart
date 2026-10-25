@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../logic/model/feed/entity.dart';
 import '../../utils/extensions.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/utils.dart';
 import '../mouse_drag_scroll.dart';
+import '../source_container.dart';
 
 class IconLinkGridCard extends StatefulWidget {
   const IconLinkGridCard({super.key, required this.dataList});
@@ -103,10 +105,9 @@ class _IconLinkGridCardState extends State<IconLinkGridCard> {
   }
 
   Widget _iconLinkGridCardItem(Entity data) {
-    return Expanded(
-      flex: 1,
-      child: InkWell(
-        onTap: () => Utils.onOpenLink(data.url.orEmpty, data.title, true, context),
+    Widget item(VoidCallback? onTap) {
+      return InkWell(
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Column(
@@ -125,7 +126,25 @@ class _IconLinkGridCardState extends State<IconLinkGridCard> {
             ],
           ),
         ),
-      ),
+      );
+    }
+
+    final target =
+        anchoredPageForUrl(data.url.orEmpty, needConvert: true, includeFeed: false);
+    return Expanded(
+      flex: 1,
+      child: target == null
+          ? item(() =>
+              Utils.onOpenLink(data.url.orEmpty, data.title, true, context))
+          : AnchoredContainer(
+              closedColor: Theme.of(context).colorScheme.onInverseSurface,
+              openColor: miuixPageBackground(context),
+              closedShape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+              closedBuilder: (context, open) => item(open),
+              openBuilder: (context, close) => target,
+            ),
     );
   }
 }

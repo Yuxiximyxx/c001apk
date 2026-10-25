@@ -79,6 +79,7 @@ class AdaptiveReadingPaneState extends State<AdaptiveReadingPane> {
                 child: FeedNavigation(
                   openFeed: _open,
                   selectedId: _selectedId,
+                  paneCapable: _canSplit,
                   child: ExcludeFocus(
                       excluding: _selectedId != null && !split,
                       child: ExcludeSemantics(
@@ -100,6 +101,7 @@ class AdaptiveReadingPaneState extends State<AdaptiveReadingPane> {
                         child: FeedNavigation(
                             openFeed: _open,
                             selectedId: _selectedId,
+                            paneCapable: _canSplit,
                             child: widget.detailBuilder(
                                 context, _selectedId!, close))),
                   )),

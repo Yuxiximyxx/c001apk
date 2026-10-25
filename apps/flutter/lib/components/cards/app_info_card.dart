@@ -1,7 +1,7 @@
 import 'package:c001apk_flutter/components/network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../utils/date_util.dart';
 
@@ -21,19 +21,22 @@ class AppInfoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () {
-              Map<dynamic, dynamic> arguments = {
-                "imgList": [data.logo.toString()],
-              };
-              Get.toNamed('/imageview', arguments: arguments);
-            },
-            child: clipNetworkImage(
-              data.logo.toString(),
-              radius: 18,
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
+          ImageContainer(
+            imgList: [data.logo.toString()],
+            initialPage: 0,
+            closedColor: Colors.transparent,
+            closedShape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(18)),
+            ),
+            closedBuilder: (context, open) => GestureDetector(
+              onTap: open,
+              child: clipNetworkImage(
+                data.logo.toString(),
+                radius: 18,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
           const SizedBox(width: 10),

@@ -6,11 +6,13 @@ import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import '../../components/html_text.dart';
 import '../../components/imageview.dart';
 import '../../components/like_button.dart';
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../pages/feed/reply2reply/reply_2_reply_page.dart';
 import '../../utils/date_util.dart';
 import '../../utils/extensions.dart';
 import '../../utils/global_data.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
 
@@ -39,30 +41,22 @@ class FeedReplyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFeedReply = data.fetchType == 'feed_reply';
-    return Material(
-      color: !isFeedReply || (isReply2Reply && !isTopReply)
-          ? Theme.of(context).colorScheme.onInverseSurface
-          : Colors.transparent,
-      borderRadius:
-          !isFeedReply ? const BorderRadius.all(Radius.circular(12)) : null,
-      child: InkWell(
-        onTap: () {
-          if (isFeedReply && onReply != null) {
-            onReply!(
-              data.id,
-              data.userInfo?.username,
-              null,
-            );
-          } else {
-            Utils.onOpenLink(data.url ?? '');
-          }
-        },
-        onLongPress: () {
-          Get.toNamed('/copy', parameters: {'text': data.message.toString()});
-        },
-        borderRadius:
-            !isFeedReply ? const BorderRadius.all(Radius.circular(12)) : null,
-        child: Stack(
+    final cardColor = !isFeedReply || (isReply2Reply && !isTopReply)
+        ? Theme.of(context).colorScheme.onInverseSurface
+        : Colors.transparent;
+    final cardRadius =
+        !isFeedReply ? const BorderRadius.all(Radius.circular(12)) : null;
+    Widget card(VoidCallback? onTap) {
+      return Material(
+        color: cardColor,
+        borderRadius: cardRadius,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: () {
+            Get.toNamed('/copy', parameters: {'text': data.message.toString()});
+          },
+          borderRadius: cardRadius,
+          child: Stack(
           children: [
             Align(
               alignment: Alignment.topRight,
@@ -99,8 +93,8 @@ class FeedReplyCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GestureDetector(
-                    onTap: () => Get.toNamed('/u/${data.uid}'),
+                  UserAvatarContainer(
+                    uid: data.uid?.toString() ?? '',
                     child: clipNetworkImage(
                       data.userAvatar ?? '',
                       isAvatar: true,
@@ -144,7 +138,37 @@ class FeedReplyCard extends StatelessWidget {
             ),
           ],
         ),
+        ),
+      );
+    }
+
+    if (isFeedReply) {
+      // Inside a feed detail the tap composes a reply (or keeps the legacy
+      // link fallback); it is not a page navigation, so no container.
+      return card(() {
+        if (onReply != null) {
+          onReply!(
+            data.id,
+            data.userInfo?.username,
+            null,
+          );
+        } else {
+          Utils.onOpenLink(data.url ?? '');
+        }
+      });
+    }
+    final target = anchoredPageForUrl(data.url ?? '');
+    if (target == null) {
+      return card(() => Utils.onOpenLink(data.url ?? ''));
+    }
+    return AnchoredContainer(
+      closedColor: cardColor,
+      openColor: miuixPageBackground(context),
+      closedShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
+      closedBuilder: (context, open) => card(open),
+      openBuilder: (context, close) => target,
     );
   }
 
@@ -190,52 +214,69 @@ class FeedReplyCard extends StatelessWidget {
 
   Widget _feed(BuildContext context) {
     Datum feed = Datum.fromJson(data.feed);
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: const BorderRadius.all(Radius.circular(12)),
-      child: InkWell(
-        onTap: () => Utils.onOpenLink(feed.url ?? ''),
+    final color = Theme.of(context).colorScheme.surface;
+    Widget block(VoidCallback? onTap) {
+      return Material(
+        color: color,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Row(
-            children: [
-              if (!feed.pic.isNullOrEmpty) ...[
-                clipNetworkImage(
-                  feed.pic!,
-                  radius: 8,
-                  fit: BoxFit.cover,
-                  width: 40,
-                  height: 40,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                if (!feed.pic.isNullOrEmpty) ...[
+                  clipNetworkImage(
+                    feed.pic!,
+                    radius: 8,
+                    fit: BoxFit.cover,
+                    width: 40,
+                    height: 40,
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '@${feed.username}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        Utils.parseHtmlString(feed.message ?? ''),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(context).colorScheme.outline),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 10),
               ],
-              Expanded(
-                flex: 1,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '@${feed.username}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      Utils.parseHtmlString(feed.message ?? ''),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context).colorScheme.outline),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
+      );
+    }
+
+    final target = anchoredPageForUrl(feed.url ?? '');
+    if (target == null) {
+      return block(() => Utils.onOpenLink(feed.url ?? ''));
+    }
+    return AnchoredContainer(
+      closedColor: color,
+      openColor: miuixPageBackground(context),
+      closedShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
+      closedBuilder: (context, open) => block(open),
+      openBuilder: (context, close) => target,
     );
   }
 

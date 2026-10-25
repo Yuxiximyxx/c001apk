@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../components/source_container.dart';
 import '../../logic/local_follow/local_follow_store.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../pages/ffflist/ffflist_page.dart';
@@ -37,28 +38,29 @@ class UserInfoCard extends StatelessWidget {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    Map<dynamic, dynamic> arguments = {
-                      "imgList": [data.cover.toString()],
-                    };
-                    Get.toNamed('/imageview', arguments: arguments);
-                  },
-                  child: networkImage(
-                    data.cover.toString(),
-                    width: double.infinity,
-                    height: 125,
-                    borderRadius: null,
-                    imageBuilder: (context, imageProvider) => Container(
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: imageProvider,
-                          fit: BoxFit.cover,
-                          colorFilter: ColorFilter.mode(
-                            darken
-                                ? const Color(0x8D000000)
-                                : const Color(0x5DFFFFFF),
-                            darken ? BlendMode.darken : BlendMode.lighten,
+                ImageContainer(
+                  imgList: [data.cover.toString()],
+                  initialPage: 0,
+                  closedColor: Colors.transparent,
+                  closedShape: const RoundedRectangleBorder(),
+                  closedBuilder: (context, open) => GestureDetector(
+                    onTap: open,
+                    child: networkImage(
+                      data.cover.toString(),
+                      width: double.infinity,
+                      height: 125,
+                      borderRadius: null,
+                      imageBuilder: (context, imageProvider) => Container(
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: imageProvider,
+                            fit: BoxFit.cover,
+                            colorFilter: ColorFilter.mode(
+                              darken
+                                  ? const Color(0x8D000000)
+                                  : const Color(0x5DFFFFFF),
+                              darken ? BlendMode.darken : BlendMode.lighten,
+                            ),
                           ),
                         ),
                       ),
@@ -71,26 +73,27 @@ class UserInfoCard extends StatelessWidget {
             Positioned(
               top: 85,
               left: 20,
-              child: GestureDetector(
-                onTap: () {
-                  Map<dynamic, dynamic> arguments = {
-                    "imgList": [data.userAvatar.toString()],
-                  };
-                  Get.toNamed('/imageview', arguments: arguments);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      width: 4,
-                      color: Theme.of(context).colorScheme.surface,
+              child: ImageContainer(
+                imgList: [data.userAvatar.toString()],
+                initialPage: 0,
+                closedColor: Colors.transparent,
+                closedShape: const CircleBorder(),
+                closedBuilder: (context, open) => GestureDetector(
+                  onTap: open,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        width: 4,
+                        color: Theme.of(context).colorScheme.surface,
+                      ),
+                      shape: BoxShape.circle,
                     ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: clipNetworkImage(
-                    data.userAvatar ?? '',
-                    isAvatar: true,
-                    width: 76,
-                    height: 76,
+                    child: clipNetworkImage(
+                      data.userAvatar ?? '',
+                      isAvatar: true,
+                      width: 76,
+                      height: 76,
+                    ),
                   ),
                 ),
               ),

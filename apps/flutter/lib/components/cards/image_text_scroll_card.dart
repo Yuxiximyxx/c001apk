@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../../components/cards/title_card.dart';
 import '../../components/self_sized_horizontal_list.dart';
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../logic/model/feed/entity.dart';
 import '../../utils/extensions.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/utils.dart';
 
 class ImageTextScrollCard extends StatelessWidget {
@@ -39,15 +41,14 @@ class ImageTextScrollCard extends StatelessWidget {
   }
 
   Widget _imageTextScrollCard(BuildContext context, double width, Entity data) {
-    return SizedBox(
-      width: width,
-      child: Material(
-        color: Theme.of(context).colorScheme.onInverseSurface,
+    final color = Theme.of(context).colorScheme.onInverseSurface;
+    Widget item(VoidCallback? onTap) {
+      return Material(
+        color: color,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
           borderRadius: const BorderRadius.all(Radius.circular(12)),
-          onTap: () =>
-              Utils.onOpenLink(data.url.orEmpty, data.title, true, context),
+          onTap: onTap,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +76,25 @@ class ImageTextScrollCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
+      );
+    }
+
+    final target =
+        anchoredPageForUrl(data.url.orEmpty, needConvert: true, includeFeed: false);
+    return SizedBox(
+      width: width,
+      child: target == null
+          ? item(() =>
+              Utils.onOpenLink(data.url.orEmpty, data.title, true, context))
+          : AnchoredContainer(
+              closedColor: color,
+              openColor: miuixPageBackground(context),
+              closedShape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              closedBuilder: (context, open) => item(open),
+              openBuilder: (context, close) => target,
+            ),
     );
   }
 }

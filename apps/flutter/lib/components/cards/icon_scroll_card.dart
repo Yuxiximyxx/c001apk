@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../../components/cards/title_card.dart';
 import '../../components/self_sized_horizontal_list.dart';
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../logic/model/feed/entity.dart';
 import '../../utils/extensions.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/utils.dart';
 
 class IconScrollCard extends StatelessWidget {
@@ -46,31 +48,48 @@ class IconScrollCard extends StatelessWidget {
   }
 
   Widget _scrollCardItem(BuildContext context, double width, Entity data) {
-    return InkWell(
-      onTap: () =>
-          Utils.onOpenLink(data.url.orEmpty, data.title, true, context),
-      borderRadius: const BorderRadius.all(Radius.circular(12)),
-      child: Container(
-        margin: const EdgeInsets.all(5),
-        width: width,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            clipNetworkImage(
-              data.userAvatar.orEmpty,
-              isAvatar: true,
-              width: width - 10,
-              height: width - 10,
-            ),
-            const SizedBox(height: 5),
-            Text(
-              data.username.orEmpty,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+    Widget item(VoidCallback? onTap) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+        child: Container(
+          margin: const EdgeInsets.all(5),
+          width: width,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              clipNetworkImage(
+                data.userAvatar.orEmpty,
+                isAvatar: true,
+                width: width - 10,
+                height: width - 10,
+              ),
+              const SizedBox(height: 5),
+              Text(
+                data.username.orEmpty,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
+      );
+    }
+
+    final target =
+        anchoredPageForUrl(data.url.orEmpty, needConvert: true, includeFeed: false);
+    if (target == null) {
+      return item(() =>
+          Utils.onOpenLink(data.url.orEmpty, data.title, true, context));
+    }
+    return AnchoredContainer(
+      closedColor: Theme.of(context).colorScheme.onInverseSurface,
+      openColor: miuixPageBackground(context),
+      closedShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
+      closedBuilder: (context, open) => item(open),
+      openBuilder: (context, close) => target,
     );
   }
 }

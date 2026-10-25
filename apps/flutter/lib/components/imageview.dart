@@ -2,9 +2,9 @@ import 'dart:math';
 
 import 'package:c001apk_flutter/components/network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 import '../components/nine_grid_view.dart';
+import '../components/source_container.dart';
 import '../constants/constants.dart';
 import '../utils/utils.dart';
 
@@ -38,17 +38,18 @@ Widget image(
     height: isFeedArticle || picArr.length == 1 ? imageHeight : null,
     width: isFeedArticle || picArr.length == 1 ? imageWidth : maxWidth,
     itemCount: isFeedArticle ? 1 : picArr.length,
-    itemBuilder: (context, index) => GestureDetector(
-      onTap: () {
-        Map<dynamic, dynamic> arguments = {
-          "imgList": picArr,
-          "initialPage": isFeedArticle
-              ? picArr.indexOf(articleImg!)
-              : picArr.indexOf(picArr[index]),
-        };
-        Get.toNamed('/imageview', arguments: arguments);
-      },
-      child: Container(
+    itemBuilder: (context, index) => ImageContainer(
+      imgList: picArr,
+      initialPage: isFeedArticle
+          ? picArr.indexOf(articleImg!)
+          : picArr.indexOf(picArr[index]),
+      closedColor: Colors.transparent,
+      closedShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+      closedBuilder: (context, open) => GestureDetector(
+        onTap: open,
+        child: Container(
         decoration: BoxDecoration(
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
@@ -79,6 +80,7 @@ Widget image(
                 _badge(context, '长图'),
             ],
           ),
+        ),
         ),
       ),
     ),

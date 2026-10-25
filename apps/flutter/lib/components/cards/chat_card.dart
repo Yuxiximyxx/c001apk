@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:c001apk_flutter/components/network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../components/html_text.dart';
 import '../../components/no_splash_factory.dart';
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../utils/extensions.dart';
 import '../../utils/utils.dart';
@@ -69,10 +69,8 @@ class ChatCard extends StatelessWidget {
                     icon: Icon(Icons.error_outline,
                         color: Theme.of(context).colorScheme.error)),
               if (isLeft) ...[
-                GestureDetector(
-                  onTap: () {
-                    Get.toNamed('/u/${data.messageUid}');
-                  },
+                UserAvatarContainer(
+                  uid: data.messageUid?.toString() ?? '',
                   child: clipNetworkImage(
                     data.fromUserAvatar ?? '',
                     isAvatar: true,
@@ -171,10 +169,8 @@ class ChatCard extends StatelessWidget {
                       ])),
               if (!isLeft) ...[
                 const SizedBox(width: 10),
-                GestureDetector(
-                  onTap: () {
-                    Get.toNamed('/u/${data.fromuid}');
-                  },
+                UserAvatarContainer(
+                  uid: data.fromuid?.toString() ?? '',
                   child: clipNetworkImage(
                     data.fromUserAvatar ?? '',
                     isAvatar: true,

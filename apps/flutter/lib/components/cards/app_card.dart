@@ -2,9 +2,13 @@ import 'package:c001apk_flutter/components/network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../components/feed_navigation.dart';
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
+import '../../pages/user/user_page.dart';
 import '../../utils/date_util.dart';
 import '../../utils/extensions.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/utils.dart';
 
 // ignore: constant_identifier_names
@@ -24,23 +28,61 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      borderRadius: const BorderRadius.all(Radius.circular(12)),
-      color: isHomeCard
-          ? Theme.of(context).colorScheme.surface
-          : Theme.of(context).colorScheme.onInverseSurface,
-      child: InkWell(
-        onTap: () {
-          if (appCardType == AppCardType.CONTACTS) {
-            Get.toNamed(
-                '/u/${data.userInfo?.uid != null ? data.userInfo!.uid.toString() : data.fUserInfo?.uid != null ? data.fUserInfo!.uid.toString() : ''}');
-          } else {
-            Utils.onOpenLink(data.url.orEmpty, data.title, true, context);
-          }
-        },
+    final color = isHomeCard
+        ? Theme.of(context).colorScheme.surface
+        : Theme.of(context).colorScheme.onInverseSurface;
+    Widget body(VoidCallback? onTap) {
+      return Material(
         borderRadius: const BorderRadius.all(Radius.circular(12)),
-        child: _buildBody(context),
+        color: color,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+          child: _buildBody(context),
+        ),
+      );
+    }
+
+    void legacyTap() {
+      if (appCardType == AppCardType.CONTACTS) {
+        Get.toNamed(
+            '/u/${data.userInfo?.uid != null ? data.userInfo!.uid.toString() : data.fUserInfo?.uid != null ? data.fUserInfo!.uid.toString() : ''}');
+      } else {
+        Utils.onOpenLink(data.url.orEmpty, data.title, true, context);
+      }
+    }
+
+    // Source-anchored targets: user rows, topic/product rows and recent
+    // visits. App rows keep the legacy navigation (no anchored target),
+    // and feed targets stay legacy while a reading pane can claim them so
+    // the pane behaviour is unchanged.
+    Widget? target;
+    if (appCardType == AppCardType.CONTACTS) {
+      final uid = data.userInfo?.uid != null
+          ? data.userInfo!.uid.toString()
+          : data.fUserInfo?.uid != null
+              ? data.fUserInfo!.uid.toString()
+              : '';
+      if (uid.isNotEmpty) target = UserPage(uid: uid);
+    } else {
+      final paneCapable =
+          context.getInheritedWidgetOfExactType<FeedNavigation>()?.paneCapable ??
+              false;
+      target = anchoredPageForUrl(
+        data.url.orEmpty,
+        needConvert: true,
+        includeFeed: !paneCapable,
+      );
+    }
+    if (target == null) return body(legacyTap);
+    return AnchoredContainer(
+      closedColor: color,
+      openColor: miuixPageBackground(context),
+      closedShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
+      closedBuilder: (context, open) => body(open),
+      openBuilder: (context, close) => target!,
     );
   }
 

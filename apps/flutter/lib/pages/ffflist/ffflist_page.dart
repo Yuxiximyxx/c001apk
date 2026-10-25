@@ -24,7 +24,14 @@ enum FFFListType {
 }
 
 class FFFListPage extends StatefulWidget {
-  const FFFListPage({super.key});
+  const FFFListPage({super.key, this.uid, this.type, this.id, this.title});
+
+  /// Direct-construction parameters (source-anchored container navigation).
+  /// Fall back to the GetX route arguments when null.
+  final String? uid;
+  final FFFListType? type;
+  final String? id;
+  final String? title;
 
   @override
   State<FFFListPage> createState() => _FFFListPageState();
@@ -32,10 +39,11 @@ class FFFListPage extends StatefulWidget {
 
 class _FFFListPageState extends State<FFFListPage>
     with TickerProviderStateMixin {
-  late final String? _uid = Get.arguments['uid'] ?? GlobalData().uid;
-  late final FFFListType _type = Get.arguments['type'];
-  late final String? _id = Get.arguments['id'];
-  late final String? _title = Get.arguments['title'];
+  late final String? _uid =
+      widget.uid ?? Get.arguments['uid'] ?? GlobalData().uid;
+  late final FFFListType _type = widget.type ?? Get.arguments['type'];
+  late final String? _id = widget.id ?? Get.arguments['id'];
+  late final String? _title = widget.title ?? Get.arguments['title'];
 
   late final bool _isMe = GlobalData().uid == _uid;
 

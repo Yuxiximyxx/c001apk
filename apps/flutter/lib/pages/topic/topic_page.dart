@@ -49,15 +49,21 @@ enum TopicSortType {
 /// 关注按钮改为白底/半透明白底以保证在主题色头部上的可读性。
 
 class TopicPage extends StatefulWidget {
-  const TopicPage({super.key});
+  const TopicPage({super.key, this.tag, this.id});
+
+  /// Direct-construction parameters (source-anchored container navigation).
+  /// Fall back to the GetX route parameters when null. [tag] uses the same
+  /// percent-encoded form the route parameter carries; initState decodes it.
+  final String? tag;
+  final String? id;
 
   @override
   State<TopicPage> createState() => _TopicPageState();
 }
 
 class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
-  String? _tag = Get.parameters['tag'];
-  final String? _id = Get.parameters['id'];
+  late String? _tag = widget.tag ?? Get.parameters['tag'];
+  late final String? _id = widget.id ?? Get.parameters['id'];
 
   bool _shouldShowActions = false;
 

@@ -6,10 +6,17 @@ class FeedNavigation extends InheritedWidget {
       {super.key,
       required this.openFeed,
       required this.selectedId,
+      this.paneCapable = false,
       required super.child});
 
   final bool Function(String) openFeed;
   final String? selectedId;
+
+  /// True when [openFeed] can actually present the feed beside the list
+  /// (split reading pane). When false, [open] falls back to pushing a route,
+  /// so tappable sources may use a source-anchored container transition
+  /// instead of the plain GetX navigation.
+  final bool paneCapable;
 
   static String? selectedOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<FeedNavigation>()?.selectedId;
@@ -21,5 +28,5 @@ class FeedNavigation extends InheritedWidget {
 
   @override
   bool updateShouldNotify(FeedNavigation oldWidget) =>
-      oldWidget.selectedId != selectedId;
+      oldWidget.selectedId != selectedId || oldWidget.paneCapable != paneCapable;
 }

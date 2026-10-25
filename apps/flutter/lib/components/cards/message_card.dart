@@ -2,6 +2,7 @@ import 'package:c001apk_flutter/components/network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../components/source_container.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../utils/date_util.dart';
 import '../../utils/utils.dart';
@@ -85,8 +86,8 @@ class MessageCard extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         child: Row(
           children: [
-            GestureDetector(
-              onTap: () => Get.toNamed('/u/${data.messageUid}'),
+            UserAvatarContainer(
+              uid: data.messageUid?.toString() ?? '',
               child: clipNetworkImage(
                 data.messageUserAvatar ?? '',
                 isAvatar: true,

@@ -10,6 +10,7 @@ import '../../components/icon_text.dart';
 import '../../components/imageview.dart';
 import '../../components/like_button.dart';
 import '../../components/no_splash_factory.dart';
+import '../../components/source_container.dart';
 import '../feed_navigation.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../utils/date_util.dart';
@@ -42,42 +43,51 @@ class FeedCard extends StatelessWidget {
     FeedNavigation.open(context, '${data.id}');
   }
 
+  /// Whether taps on this card are claimed by a split reading pane. Only
+  /// then does the card keep its legacy GetX navigation; everywhere else
+  /// the detail page grows out of the card via a [FeedContainer].
+  bool _paneCapable(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<FeedNavigation>()?.paneCapable ??
+      false;
+
+  Widget _content(BuildContext context, {required VoidCallback onViewFeed}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isFeedContent ? 12 : 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          header(
+            context,
+            data,
+            isFeedContent,
+            isHistory: isHistory,
+            onDelete: onDelete,
+            onBlock: () {
+              if (onBlock != null) {
+                onBlock!(data.uid);
+              }
+            },
+          ),
+          ..._message(),
+          if (!data.picArr.isNullOrEmpty) _image(),
+          if (!data.forwardSourceType.isNullOrEmpty)
+            _forwardSourceFeed(context),
+          if (!data.extraUrl.isNullOrEmpty) _extraUrl(context),
+          if (!data.replyRows.isNullOrEmpty) _hotReply(context, onViewFeed),
+          bottomInfo(context, data, isFeedContent, onViewFeed, () {
+            if (onLike != null) {
+              onLike!(data.id, data.userAction?.like);
+            }
+          }),
+          if (data.targetRow != null || !data.relationRows.isNullOrEmpty)
+            _rows(context),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final content = Padding(
-          padding: EdgeInsets.only(bottom: isFeedContent ? 12 : 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              header(
-                context,
-                data,
-                isFeedContent,
-                isHistory: isHistory,
-                onDelete: onDelete,
-                onBlock: () {
-                  if (onBlock != null) {
-                    onBlock!(data.uid);
-                  }
-                },
-              ),
-              ..._message(),
-              if (!data.picArr.isNullOrEmpty) _image(),
-              if (!data.forwardSourceType.isNullOrEmpty)
-                _forwardSourceFeed(context),
-              if (!data.extraUrl.isNullOrEmpty) _extraUrl(context),
-              if (!data.replyRows.isNullOrEmpty) _hotReply(context),
-              bottomInfo(
-                  context, data, isFeedContent, () => _onViewFeed(context), () {
-                if (onLike != null) {
-                  onLike!(data.id, data.userAction?.like);
-                }
-              }),
-              if (data.targetRow != null || !data.relationRows.isNullOrEmpty)
-                _rows(context),
-            ],
-          ),
-        );
     if (isFeedContent) {
       return Material(
         child: InkWell(
@@ -86,30 +96,46 @@ class FeedCard extends StatelessWidget {
           splashFactory: NoSplashFactory(),
           onLongPress: () =>
               Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
-          child: content,
+          child: _content(context, onViewFeed: () => _onViewFeed(context)),
         ),
       );
     }
-    final card = MiuixCard(
-      cornerRadius: 24,
-      onPressed: () => _onViewFeed(context),
-      onLongPress: () =>
-          Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
-      child: content,
+    if (_paneCapable(context)) {
+      final card = MiuixCard(
+        cornerRadius: 24,
+        onPressed: () => _onViewFeed(context),
+        onLongPress: () =>
+            Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
+        child: _content(context, onViewFeed: () => _onViewFeed(context)),
+      );
+      // Reading-pane selection highlight (upstream FeedNavigation): outline
+      // the card currently open in the reading pane.
+      if (FeedNavigation.selectedOf(context) == '${data.id}') {
+        return Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+                color: Theme.of(context).colorScheme.primary, width: 2),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: card,
+        );
+      }
+      return card;
+    }
+    return FeedContainer(
+      feedId: '${data.id}',
+      closedColor: MiuixTheme.of(context).colors.surfaceContainer,
+      closedShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(24)),
+      ),
+      closedBuilder: (context, open) => MiuixCard(
+        cornerRadius: 24,
+        onPressed: open,
+        onLongPress: () =>
+            Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
+        child: _content(context, onViewFeed: open),
+      ),
     );
-    // Reading-pane selection highlight (upstream FeedNavigation): outline
-    // the card currently open in the reading pane.
-    if (FeedNavigation.selectedOf(context) == '${data.id}') {
-      return Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-              color: Theme.of(context).colorScheme.primary, width: 2),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: card,
-      );
-    }
-    return card;
   }
 
   Widget _image() {
@@ -132,31 +158,24 @@ class FeedCard extends StatelessWidget {
   }
 
   Widget _forwardSourceFeed(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        left: isFeedContent ? 16 : 10,
-        top: 10,
-        right: isFeedContent ? 16 : 10,
-      ),
-      child: Material(
-        color: isFeedContent
-            ? Theme.of(context).colorScheme.onInverseSurface
-            : Theme.of(context).colorScheme.surface,
+    final source = data.forwardSourceFeed;
+    final color = isFeedContent
+        ? Theme.of(context).colorScheme.onInverseSurface
+        : Theme.of(context).colorScheme.surface;
+    Widget block(VoidCallback? onTap) {
+      return Material(
+        color: color,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
-          onTap: data.forwardSourceFeed != null
-              ? () =>
-                  FeedNavigation.open(context, '${data.forwardSourceFeed?.id}')
-              : null,
-          onLongPress: data.forwardSourceFeed != null
+          onTap: onTap,
+          onLongPress: source != null
               ? () => Get.toNamed('/copy',
-                  parameters: {'text': data.forwardSourceFeed?.message ?? ''})
+                  parameters: {'text': source.message ?? ''})
               : null,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(10),
-            child: data.forwardSourceFeed == null
+            child: source == null
                 ? Text(
                     '动态已被删除',
                     maxLines: 1,
@@ -169,30 +188,48 @@ class FeedCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (!data
-                          .forwardSourceFeed!.messageTitle.isNullOrEmpty) ...[
+                      if (!source.messageTitle.isNullOrEmpty) ...[
                         htmlText(
-                            '<a class="feed-link-uname" href="/u/${data.forwardSourceFeed?.uid}">@${data.forwardSourceFeed?.username}</a>: ${data.forwardSourceFeed?.messageTitle}'),
-                        FeedText(data.forwardSourceFeed?.message ?? '',
-                            preview: true),
+                            '<a class="feed-link-uname" href="/u/${source.uid}">@${source.username}</a>: ${source.messageTitle}'),
+                        FeedText(source.message ?? '', preview: true),
                       ],
-                      if (data.forwardSourceFeed!.messageTitle.isNullOrEmpty)
+                      if (source.messageTitle.isNullOrEmpty)
                         FeedText(
-                            '<a class="feed-link-uname" href="/u/${data.forwardSourceFeed?.uid}">@${data.forwardSourceFeed?.username}</a>:\n${data.forwardSourceFeed?.message}',
+                            '<a class="feed-link-uname" href="/u/${source.uid}">@${source.username}</a>:\n${source.message}',
                             preview: true),
-                      if (!data.forwardSourceFeed!.picArr.isNullOrEmpty) ...[
+                      if (!source.picArr.isNullOrEmpty) ...[
                         const SizedBox(height: 10),
                         LayoutBuilder(
-                          builder: (context, constraints) => image(
-                              constraints.maxWidth,
-                              data.forwardSourceFeed!.picArr!),
+                          builder: (context, constraints) =>
+                              image(constraints.maxWidth, source.picArr!),
                         ),
                       ],
                     ],
                   ),
           ),
         ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        left: isFeedContent ? 16 : 10,
+        top: 10,
+        right: isFeedContent ? 16 : 10,
       ),
+      child: source == null
+          ? block(null)
+          : _paneCapable(context)
+              ? block(() => FeedNavigation.open(context, '${source.id}'))
+              : FeedContainer(
+                  feedId: '${source.id}',
+                  closedColor: color,
+                  closedShape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  closedBuilder: (context, open) => block(open),
+                ),
     );
   }
 
@@ -269,7 +306,7 @@ class FeedCard extends StatelessWidget {
     );
   }
 
-  Widget _hotReply(BuildContext context) {
+  Widget _hotReply(BuildContext context, VoidCallback onViewFeed) {
     var reply = data.replyRows![0];
     var replyPic = reply.picArr.isNullOrEmpty
         ? ''
@@ -281,7 +318,7 @@ class FeedCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
-          onTap: () => _onViewFeed(context),
+          onTap: onViewFeed,
           onLongPress: () =>
               Get.toNamed('/copy', parameters: {'text': reply.message.orEmpty}),
           borderRadius: BorderRadius.circular(12),
@@ -290,7 +327,7 @@ class FeedCard extends StatelessWidget {
             child: htmlText(
               """<a class="feed-link-uname" href="/u/${reply.uid}">${reply.userInfo?.username}</a>: ${reply.message}$replyPic""",
               fontSize: 14,
-              onShowTotalReply: _onViewFeed,
+              onShowTotalReply: onViewFeed,
               picArr: reply.picArr,
             ),
           ),
@@ -397,14 +434,19 @@ Widget header(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              GestureDetector(
-                onTap: () => Get.toNamed('/u/${data.uid}'),
-                child: clipNetworkImage(
-                  data.userAvatar.orEmpty,
-                  radius: 50,
-                  width: 35,
-                  height: 35,
-                  isAvatar: true,
+              UserContainer(
+                uid: '${data.uid}',
+                closedColor: Colors.transparent,
+                closedShape: const CircleBorder(),
+                closedBuilder: (context, open) => GestureDetector(
+                  onTap: open,
+                  child: clipNetworkImage(
+                    data.userAvatar.orEmpty,
+                    radius: 50,
+                    width: 35,
+                    height: 35,
+                    isAvatar: true,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -413,11 +455,21 @@ Widget header(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      data.userInfo?.username ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15),
+                    UserContainer(
+                      uid: '${data.uid}',
+                      closedColor: Colors.transparent,
+                      closedShape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(4)),
+                      ),
+                      closedBuilder: (context, open) => GestureDetector(
+                        onTap: open,
+                        child: Text(
+                          data.userInfo?.username ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                      ),
                     ),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
