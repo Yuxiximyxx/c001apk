@@ -312,7 +312,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                   .listenable(keys: [UpdatePreferences.enabledKey]),
               builder: (context, _, __) => MiuixSwitchPreference(
                 startAction: const Icon(Icons.update),
-                title: '自动检查 c001apk 更新',
+                title: '自动检查「宽」更新',
                 summary: '每次启动时检查一次最新正式版本',
                 value: UpdatePreferences(GStorage.settings).enabled,
                 onChanged: (value) =>
@@ -375,23 +375,24 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
   Widget build(BuildContext context) {
     final body = KeyboardScrollRegion(
         child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: ListView(
-                key: PageStorageKey(widget.section),
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                children: [
-                  if (widget.embedded) ItemTitle(title: widget.section.title),
-                  MiuixCard(
-                    cornerRadius: 24,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: _items(context),
-                    ),
-                  ),
-                ]))));
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: ListView(
+                    key: PageStorageKey(widget.section),
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                    children: [
+                      if (widget.embedded)
+                        ItemTitle(title: widget.section.title),
+                      MiuixCard(
+                        cornerRadius: 24,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: _items(context),
+                        ),
+                      ),
+                    ]))));
     return widget.embedded
         ? body
         : Scaffold(

@@ -167,7 +167,27 @@ class C001APKAPP extends StatelessWidget {
         },
       ),
       popupMenuTheme: PopupMenuThemeData(
-        surfaceTintColor: lightColorScheme.surfaceTint,
+        color: miuix.lightColorScheme().surfaceContainer,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 3,
+        shadowColor: const Color(0x26000000),
+        textStyle: TextStyle(
+          color: miuix.lightColorScheme().onSurface,
+          fontSize: 16,
+          fontFamily: fontFamily,
+        ),
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(
+            color: miuix.lightColorScheme().onSurface,
+            fontSize: 16,
+            fontFamily: fontFamily,
+          ),
+        ),
+        iconColor: miuix.lightColorScheme().onSurfaceVariantActions,
+        menuPadding: const EdgeInsets.symmetric(vertical: 6),
       ),
       cardTheme: CardThemeData(
         surfaceTintColor: lightColorScheme.surfaceTint,
@@ -214,12 +234,32 @@ class C001APKAPP extends StatelessWidget {
         actionTextColor: darkColorScheme.primary,
         backgroundColor: darkColorScheme.secondaryContainer,
         closeIconColor: darkColorScheme.secondary,
-        contentTextStyle: TextStyle(
-            color: darkColorScheme.secondary, fontFamily: fontFamily),
+        contentTextStyle:
+            TextStyle(color: darkColorScheme.secondary, fontFamily: fontFamily),
         elevation: 20,
       ),
       popupMenuTheme: PopupMenuThemeData(
-        surfaceTintColor: darkColorScheme.surfaceTint,
+        color: miuix.darkColorScheme().surfaceContainer,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 3,
+        shadowColor: const Color(0x26000000),
+        textStyle: TextStyle(
+          color: miuix.darkColorScheme().onSurface,
+          fontSize: 16,
+          fontFamily: fontFamily,
+        ),
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(
+            color: miuix.darkColorScheme().onSurface,
+            fontSize: 16,
+            fontFamily: fontFamily,
+          ),
+        ),
+        iconColor: miuix.darkColorScheme().onSurfaceVariantActions,
+        menuPadding: const EdgeInsets.symmetric(vertical: 6),
       ),
       cardTheme: CardThemeData(
         surfaceTintColor: darkColorScheme.surfaceTint,
@@ -257,9 +297,11 @@ class C001APKAPP extends StatelessWidget {
         // GetMaterialApp retains its initial themes. Apply the current theme
         // above the navigator so asynchronous system colors and settings
         // changes also reach existing routes and dialogs.
-        // 给系统一个与页面底色一致的不透明导航栏颜色：HyperOS 会按
-        // 应用的导航栏颜色给输入法区域垫底，透明色会被当作"未提供"
-        // 而垫上系统默认灰底（回复时键盘下方的深灰背景）。
+        // 全应用统一沉浸式系统栏：状态栏与导航栏均透明，内容延伸到
+        // 导航栏之后（edge-to-edge）；图标亮度按主题明暗取反，对比度
+        // 强制关闭，避免系统在透明栏后垫对比色。键盘区域的透出由
+        // adjustNothing 与各输入面板自身的透明处理负责，不再靠给
+        // 导航栏声明不透明颜色来垫底。
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
@@ -267,9 +309,7 @@ class C001APKAPP extends StatelessWidget {
                 ? Brightness.light
                 : Brightness.dark,
             statusBarBrightness: brightness,
-            systemNavigationBarColor: brightness == Brightness.dark
-                ? const Color(0xFF000000)
-                : const Color(0xFFF7F7F7),
+            systemNavigationBarColor: Colors.transparent,
             systemNavigationBarIconBrightness: brightness == Brightness.dark
                 ? Brightness.light
                 : Brightness.dark,
@@ -278,32 +318,33 @@ class C001APKAPP extends StatelessWidget {
             systemStatusBarContrastEnforced: false,
           ),
           child: AnimatedTheme(
-          data: brightness == Brightness.dark ? darkTheme : lightTheme,
-          child: miuix.MiuixTheme(
-            data: appMiuixThemeData(brightness),
-            child: FlutterSmartDialog(
-            toastBuilder: (String msg) => CustomToast(msg: msg),
-            child: MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                  textScaler: AppTextScaler(
-                      MediaQuery.textScalerOf(context), fontScale)),
-              child: NotificationListener<NavigationNotification>(
-                onNotification: (notification) {
-                  if (Platform.isAndroid) {
-                    unawaited(const MethodChannel('samples.flutter.dev/channel')
-                        .invokeMethod<void>('setPredictiveBackEnabled',
-                            notification.canHandlePop));
-                  }
-                  return false;
-                },
-                child: AppKeyboardNavigation(
-                  navigatorKey: Get.key,
-                  child: child!,
+            data: brightness == Brightness.dark ? darkTheme : lightTheme,
+            child: miuix.MiuixTheme(
+              data: appMiuixThemeData(brightness),
+              child: FlutterSmartDialog(
+                toastBuilder: (String msg) => CustomToast(msg: msg),
+                child: MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                      textScaler: AppTextScaler(
+                          MediaQuery.textScalerOf(context), fontScale)),
+                  child: NotificationListener<NavigationNotification>(
+                    onNotification: (notification) {
+                      if (Platform.isAndroid) {
+                        unawaited(
+                            const MethodChannel('samples.flutter.dev/channel')
+                                .invokeMethod<void>('setPredictiveBackEnabled',
+                                    notification.canHandlePop));
+                      }
+                      return false;
+                    },
+                    child: AppKeyboardNavigation(
+                      navigatorKey: Get.key,
+                      child: child!,
+                    ),
+                  ),
                 ),
               ),
             ),
-            ),
-          ),
           ),
         );
       },

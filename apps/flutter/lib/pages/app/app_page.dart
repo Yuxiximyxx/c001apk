@@ -241,6 +241,9 @@ class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
                         itemBuilder: (BuildContext context) => AppMenuItem
                             .values
                             .map((item) => PopupMenuItem<AppMenuItem>(
+                                  height: 50,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20),
                                   value: item,
                                   child: Text(
                                     item == AppMenuItem.Block

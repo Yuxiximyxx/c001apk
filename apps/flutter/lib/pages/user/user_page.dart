@@ -315,6 +315,9 @@ class _UserPageState extends State<UserPage> {
                     },
                     itemBuilder: (BuildContext context) => UserMenuItem.values
                         .map((item) => PopupMenuItem<UserMenuItem>(
+                              height: 50,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
                               value: item,
                               child: item == UserMenuItem.Block
                                   ? Text(

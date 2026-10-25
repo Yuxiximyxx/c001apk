@@ -49,8 +49,13 @@ class _AnnouncementInboxPageState extends State<AnnouncementInboxPage> {
                     const SnackBar(content: Text('公告正文缓存已清理，阅读记录已保留')));
               }
             },
-            itemBuilder: (_) =>
-                const [PopupMenuItem(value: 'clear', child: Text('清理公告正文缓存'))]),
+            itemBuilder: (_) => const [
+                  PopupMenuItem(
+                      height: 50,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      value: 'clear',
+                      child: Text('清理公告正文缓存'))
+                ]),
       ]),
       body: SafeArea(
           top: false,

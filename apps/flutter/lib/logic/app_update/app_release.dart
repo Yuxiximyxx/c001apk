@@ -4,8 +4,11 @@ class AppVersion implements Comparable<AppVersion> {
   final int major, minor, patch;
 
   factory AppVersion.parse(String value) {
+    // Fork releases append a MIUIX revision suffix (e.g. v1.3.5-miuix2);
+    // it is accepted here but only the semantic version takes part in
+    // comparisons, so same-base MIUIX revisions do not prompt an update.
     final match = RegExp(
-            r'^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-release)?(?:\+\d+)?$')
+            r'^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:release|miuix\d+))?(?:\+\d+)?$')
         .firstMatch(value);
     if (match == null) throw const FormatException('无法识别正式版本');
     return AppVersion(
@@ -38,7 +41,7 @@ class AppRelease {
   final String notes;
   final DateTime? publishedAt;
   final Map<String, Uri> _assets;
-  static const _repository = '/TG-Twilight/c001apk/releases/';
+  static const _repository = '/Yuxiximyxx/c001apk/releases/';
 
   static bool _trusted(Uri uri, String prefix) =>
       uri.scheme == 'https' &&

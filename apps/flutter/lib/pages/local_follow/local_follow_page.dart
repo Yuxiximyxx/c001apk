@@ -79,6 +79,7 @@ class _FollowFeedPageState extends State<FollowFeedPage>
                   onSelected: _select,
                   itemBuilder: (context) => [
                     const PopupMenuItem<FollowFeedSelection>(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       enabled: false,
                       height: 32,
                       child: Text('账号关注'),
@@ -87,6 +88,8 @@ class _FollowFeedPageState extends State<FollowFeedPage>
                       if (item == FollowFeedSelection.local)
                         const PopupMenuDivider(),
                       CheckedPopupMenuItem(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         value: item,
                         checked: item == _selection,
                         child: Text(item.label),

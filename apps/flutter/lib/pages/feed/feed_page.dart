@@ -686,6 +686,9 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                           .where((item) =>
                               item != FeedMenuItem.Source || _hasMarkdown)
                           .map((item) => PopupMenuItem<FeedMenuItem>(
+                                height: 50,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
                                 value: item,
                                 child: item == FeedMenuItem.Fav
                                     ? Text(

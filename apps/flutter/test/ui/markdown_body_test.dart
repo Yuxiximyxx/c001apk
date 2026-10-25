@@ -141,7 +141,7 @@ void main() {
       'prerelease': false,
       'tag_name': '1.3.3-release',
       'html_url':
-          'https://github.com/TG-Twilight/c001apk/releases/tag/1.3.3-release',
+          'https://github.com/Yuxiximyxx/c001apk/releases/tag/1.3.3-release',
       'assets': <dynamic>[],
       'body': '## 更新说明\n\n- **修复问题**\n- 更好阅读',
     });

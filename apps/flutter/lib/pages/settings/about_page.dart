@@ -36,7 +36,7 @@ class AboutPage extends StatelessWidget {
                       ExpressiveListSection(children: [
                         const ListTile(
                           leading: Icon(Icons.all_inclusive),
-                          title: Text(Constants.APP_NAME),
+                          title: Text('宽'),
                           subtitle: Text('一个轻量的非官方酷安客户端'),
                         ),
                         ListTile(
@@ -59,7 +59,7 @@ class AboutPage extends StatelessWidget {
                           title: const Text('开源许可证'),
                           onTap: () => showLicensePage(
                             context: context,
-                            applicationName: Constants.APP_NAME,
+                            applicationName: '宽',
                             applicationVersion: version,
                             applicationLegalese: '基于 Flutter 构建',
                             applicationIcon: const AppLogo(),

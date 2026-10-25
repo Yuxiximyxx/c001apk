@@ -66,8 +66,8 @@ class _ChatPageState extends State<ChatPage> {
   /// 给消息列表留出底部空白，使最新消息能滚到输入栏上方。
   double _overlayHeight(BuildContext context) => switch (_currentPanelType) {
         PanelType.keyboard => MediaQuery.viewInsetsOf(context).bottom,
-        PanelType.emoji => max(
-            240, _panel.keyboardHeight == 0 ? 300 : _panel.keyboardHeight),
+        PanelType.emoji =>
+          max(240, _panel.keyboardHeight == 0 ? 300 : _panel.keyboardHeight),
         PanelType.none => _panel.safeAreaBottom,
       };
 
@@ -77,55 +77,65 @@ class _ChatPageState extends State<ChatPage> {
     MediaQuery.viewInsetsOf(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final height = _inputBarKey.currentContext?.size?.height;
-      if (height != null &&
-          mounted &&
-          (height - _inputBarHeight).abs() > 0.5) {
+      if (height != null && mounted && (height - _inputBarHeight).abs() > 0.5) {
         setState(() => _inputBarHeight = height);
       }
     });
     return Scaffold(
-        resizeToAvoidBottomInset: false,
-        appBar: AppBar(title: Text(_username), actions: [
-          PopupMenuButton<ChatMenuType>(
-            onOpened: _focusNode.unfocus,
-            onSelected: (value) {
-              switch (value) {
-                case ChatMenuType.profile:
-                  Get.toNamed('/u/$_uid');
-                case ChatMenuType.block:
-                  GStorage.onBlock(_uid);
-                case ChatMenuType.report:
-                  if (Utils.isSupportWebview()) {
-                    Utils.report(_uid, ReportType.User);
-                  } else {
-                    SmartDialog.showToast('当前平台暂不支持此功能');
-                  }
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: ChatMenuType.profile, child: Text('查看用户')),
-              PopupMenuItem(value: ChatMenuType.block, child: Text('屏蔽')),
-              PopupMenuItem(value: ChatMenuType.report, child: Text('举报')),
-            ],
-          ),
-        ]),
-        // 消息列表铺满全高、延伸到键盘后方；输入栏与面板浮在底部随
-        // 键盘上移，键盘覆盖区不再被纯色带填充，透出的是消息内容。
-        body: Stack(children: [
-          Positioned.fill(
-              child: Listener(
-                  onPointerDown: (_) => hidePanel(),
-                  child: _buildList(_inputBarHeight + _overlayHeight(context)))),
-          Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                _buildInputView(),
-                _buildPanelContainer(),
-              ])),
-        ]),
-      );
+      resizeToAvoidBottomInset: false,
+      appBar: AppBar(title: Text(_username), actions: [
+        PopupMenuButton<ChatMenuType>(
+          onOpened: _focusNode.unfocus,
+          onSelected: (value) {
+            switch (value) {
+              case ChatMenuType.profile:
+                Get.toNamed('/u/$_uid');
+              case ChatMenuType.block:
+                GStorage.onBlock(_uid);
+              case ChatMenuType.report:
+                if (Utils.isSupportWebview()) {
+                  Utils.report(_uid, ReportType.User);
+                } else {
+                  SmartDialog.showToast('当前平台暂不支持此功能');
+                }
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                value: ChatMenuType.profile,
+                child: Text('查看用户')),
+            PopupMenuItem(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                value: ChatMenuType.block,
+                child: Text('屏蔽')),
+            PopupMenuItem(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                value: ChatMenuType.report,
+                child: Text('举报')),
+          ],
+        ),
+      ]),
+      // 消息列表铺满全高、延伸到键盘后方；输入栏与面板浮在底部随
+      // 键盘上移，键盘覆盖区不再被纯色带填充，透出的是消息内容。
+      body: Stack(children: [
+        Positioned.fill(
+            child: Listener(
+                onPointerDown: (_) => hidePanel(),
+                child: _buildList(_inputBarHeight + _overlayHeight(context)))),
+        Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              _buildInputView(),
+              _buildPanelContainer(),
+            ])),
+      ]),
+    );
   }
 
   Widget _buildList(double bottomPadding) => Obx(() {
@@ -371,41 +381,40 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildPanelContainer() {
     final panelBg = Theme.of(context).colorScheme.onInverseSurface;
     return ChatBottomPanelContainer<PanelType>(
-        controller: _panel,
-        inputFocusNode: _focusNode,
-        // 默认容器会把 panelBgColor 涂满整个面板区，包括键盘态的等高
-        // 占位区——透明输入法会透出一整条纯色带。改走自定义容器：
-        // 键盘态不涂色，让消息列表透出来；其余状态保持原底色。
-        customPanelContainer: (panelType, data) => AnimatedSize(
-              alignment: Alignment.topCenter,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.linear,
-              child: Container(
-                color: panelType == ChatBottomPanelType.keyboard
-                    ? Colors.transparent
-                    : panelBg,
-                child:
-                    _panel.buildInPanel(panelType) ?? const SizedBox.shrink(),
-              ),
-            ),
-        otherPanelWidget: (type) => type == PanelType.emoji
-            ? SizedBox(
-                height: max(240,
-                    _panel.keyboardHeight == 0 ? 300 : _panel.keyboardHeight),
-                child: EmotePanel(index: 1, onClick: _onChooseEmote),
-              )
-            : const SizedBox.shrink(),
-        onPanelTypeChange: (type, data) {
-          final next = type == ChatBottomPanelType.keyboard
-              ? PanelType.keyboard
-              : type == ChatBottomPanelType.other
-                  ? data ?? PanelType.none
-                  : PanelType.none;
-          if (next == _currentPanelType) return;
-          _currentPanelType = next;
-          if (mounted) setState(() {});
-        },
-      );
+      controller: _panel,
+      inputFocusNode: _focusNode,
+      // 默认容器会把 panelBgColor 涂满整个面板区，包括键盘态的等高
+      // 占位区——透明输入法会透出一整条纯色带。改走自定义容器：
+      // 键盘态不涂色，让消息列表透出来；其余状态保持原底色。
+      customPanelContainer: (panelType, data) => AnimatedSize(
+        alignment: Alignment.topCenter,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.linear,
+        child: Container(
+          color: panelType == ChatBottomPanelType.keyboard
+              ? Colors.transparent
+              : panelBg,
+          child: _panel.buildInPanel(panelType) ?? const SizedBox.shrink(),
+        ),
+      ),
+      otherPanelWidget: (type) => type == PanelType.emoji
+          ? SizedBox(
+              height: max(240,
+                  _panel.keyboardHeight == 0 ? 300 : _panel.keyboardHeight),
+              child: EmotePanel(index: 1, onClick: _onChooseEmote),
+            )
+          : const SizedBox.shrink(),
+      onPanelTypeChange: (type, data) {
+        final next = type == ChatBottomPanelType.keyboard
+            ? PanelType.keyboard
+            : type == ChatBottomPanelType.other
+                ? data ?? PanelType.none
+                : PanelType.none;
+        if (next == _currentPanelType) return;
+        _currentPanelType = next;
+        if (mounted) setState(() {});
+      },
+    );
   }
 
   void updatePanelType(PanelType type) {

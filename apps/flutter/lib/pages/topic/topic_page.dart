@@ -289,15 +289,21 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                     },
                     itemBuilder: (context) => [
                       PopupMenuItem(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         value: TopicMenuItem.Copy,
                         child: Text(TopicMenuItem.Copy.label),
                       ),
                       PopupMenuItem(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         value: TopicMenuItem.Share,
                         child: Text(TopicMenuItem.Share.label),
                       ),
                       if (_shouldShowActions)
                         PopupMenuItem(
+                          height: 50,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
                           value: TopicMenuItem.Sort,
                           child: Row(
                             children: [
@@ -310,10 +316,14 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                           ),
                         ),
                       PopupMenuItem(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         value: TopicMenuItem.Follow,
                         child: Text(_topicController.isFollow ? '取消关注' : '关注'),
                       ),
                       PopupMenuItem(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         value: TopicMenuItem.Block,
                         child: Text(_topicController.isBlocked ? '取消屏蔽' : '屏蔽'),
                       ),
@@ -356,7 +366,11 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
       position:
           RelativeRect.fromLTRB(screenSize.width, 0, 0, screenSize.height),
       items: TopicSortType.values
-          .map((type) => PopupMenuItem(value: type, child: Text(type.label)))
+          .map((type) => PopupMenuItem(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              value: type,
+              child: Text(type.label)))
           .toList(),
       elevation: 8.0,
     ).then((value) {

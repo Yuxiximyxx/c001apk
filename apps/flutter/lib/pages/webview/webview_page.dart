@@ -103,7 +103,8 @@ class _WebviewPageState extends State<WebviewPage> {
         for (final cookie in cookies) cookie.name: cookie.value.toString()
       };
       if (!mounted ||
-          ['uid', 'username', 'token'].any((key) => values[key].isNullOrEmpty)) {
+          ['uid', 'username', 'token']
+              .any((key) => values[key].isNullOrEmpty)) {
         return;
       }
       await AccountStore().saveLogin(
@@ -205,9 +206,15 @@ class _WebviewPageState extends State<WebviewPage> {
             },
             itemBuilder: (context) => <PopupMenuEntry<WebviewMenuItem>>[
               ...WebviewMenuItem.values.sublist(0, 4).map((item) =>
-                  PopupMenuItem(value: item, child: Text(item.label))),
+                  PopupMenuItem(
+                      height: 50,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      value: item,
+                      child: Text(item.label))),
               const PopupMenuDivider(),
               PopupMenuItem(
+                  height: 50,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   value: WebviewMenuItem.Go_Back,
                   child: Text(
                     WebviewMenuItem.Go_Back.label,

@@ -181,6 +181,9 @@ class _SearchResultPageState extends State<SearchResultPage>
                     },
                     itemBuilder: (context) => SearchMenuType.values
                         .map((item) => PopupMenuItem<SearchMenuType>(
+                              height: 50,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
                               value: item,
                               child: Row(
                                 children: [
@@ -260,12 +263,18 @@ class _SearchResultPageState extends State<SearchResultPage>
           RelativeRect.fromLTRB(screenSize.width, 0, 0, screenSize.height),
       items: isSearchType
           ? SearchType.values
-              .map(
-                  (type) => PopupMenuItem(value: type, child: Text(type.label)))
+              .map((type) => PopupMenuItem(
+                  height: 50,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  value: type,
+                  child: Text(type.label)))
               .toList()
           : SearchSortType.values
-              .map(
-                  (type) => PopupMenuItem(value: type, child: Text(type.label)))
+              .map((type) => PopupMenuItem(
+                  height: 50,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  value: type,
+                  child: Text(type.label)))
               .toList(),
       elevation: 8.0,
     ).then((value) {

@@ -134,7 +134,7 @@ class _UpdateCheckTileState extends State<UpdateCheckTile> {
   @override
   Widget build(BuildContext context) => MiuixBasicComponent(
       title: _checking ? '正在检查更新…' : '检查更新',
-      summary: '查看 c001apk 的最新正式版本',
+      summary: '查看宽的最新正式版本',
       startAction: const Icon(Icons.system_update_alt),
       endActions: _checking
           ? const [
