@@ -7,6 +7,7 @@ uniform sampler2D uTexture;
 uniform vec2 uSize;    // 元素尺寸（物理像素）
 uniform float uBand;   // 折射带宽（物理像素，24dp）
 uniform float uAmount; // 折射量（物理像素，24dp；剖面峰值取 0.5 倍）
+uniform float uChromatic; // 色差开关（1=开，0=关）；miuix15 药丸透镜用
 
 out vec4 fragColor;
 
@@ -48,14 +49,18 @@ void main() {
   float disp = uAmount * 0.5 * sin(t * 3.14159265);
   vec2 offset = -grad * disp;
 
+  vec2 sampleUv = clamp((p + offset) / uSize, vec2(0.001), vec2(0.999));
+  if (uChromatic < 0.5) {
+    fragColor = texture(uTexture, sampleUv);
+    return;
+  }
+
   // 极轻色差：三通道沿同一偏移微量缩放。
   vec4 color;
   color.r = texture(uTexture, clamp((p + offset * 1.07) / uSize,
                                     vec2(0.001), vec2(0.999)))
                 .r;
-  color.g = texture(uTexture, clamp((p + offset) / uSize, vec2(0.001),
-                                    vec2(0.999)))
-                .g;
+  color.g = texture(uTexture, sampleUv).g;
   color.b = texture(uTexture, clamp((p + offset * 0.93) / uSize,
                                     vec2(0.001), vec2(0.999)))
                 .b;

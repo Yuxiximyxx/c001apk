@@ -73,6 +73,8 @@ void main() {
     expect(icon.center.dx, closeTo(label.center.dx, 24));
 
     await pumpDock(tester, selectedIndex: 1, brightness: Brightness.dark);
+    // miuix15：选中态由药丸弹簧位置连续驱动，切换后等弹簧到位再断言终态。
+    await tester.pumpAndSettle(const Duration(milliseconds: 16));
     expect(find.text('我的'), findsOneWidget);
     expect(find.text('首页'), findsNothing);
   });
@@ -103,6 +105,121 @@ void main() {
           reason: '$material 应渲染出胶囊');
       expect(tester.takeException(), isNull, reason: '$material 不应抛异常');
     }
+  });
+
+  group('miuix15 draggable lens dock', () {
+    final pillFinder = find.byKey(const Key('floatingDockPill'));
+
+    Future<void> pumpFrames(WidgetTester tester, int frames) async {
+      for (var i = 0; i < frames; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+    }
+
+    Future<TestGesture> dragBy(
+        WidgetTester tester, Offset start, double dx, int steps) async {
+      final gesture = await tester.startGesture(start);
+      final stepDx = dx / steps;
+      for (var i = 0; i < steps; i++) {
+        await gesture.moveBy(Offset(stepDx, 0));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      return gesture;
+    }
+
+    testWidgets('drag past midpoint switches only on release',
+        (tester) async {
+      final tapped = <int>[];
+      await pumpDock(tester,
+          selectedIndex: 0, brightness: Brightness.dark, onTap: tapped.add);
+      final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
+      // 槽宽 = 232/2 = 116；指距 100px（手势检测吃掉约一个 slop 后仍过中点 58）。
+      final gesture = await dragBy(
+          tester, Offset(rect.left + rect.width * 0.25, rect.center.dy), 100, 10);
+      expect(tapped, isEmpty, reason: '拖动中不得触发切换');
+      await gesture.up();
+      await pumpFrames(tester, 45);
+      expect(tapped, [1], reason: '松手吸附到最近索引并切换');
+    });
+
+    testWidgets('drag below midpoint springs back without switching',
+        (tester) async {
+      final tapped = <int>[];
+      await pumpDock(tester,
+          selectedIndex: 0, brightness: Brightness.dark, onTap: tapped.add);
+      final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
+      final restCenter = tester.getCenter(pillFinder).dx;
+      final gesture = await dragBy(
+          tester, Offset(rect.left + rect.width * 0.25, rect.center.dy), 30, 3);
+      await gesture.up();
+      await pumpFrames(tester, 45);
+      expect(tapped, isEmpty, reason: '未过中点松手应弹回、不切换');
+      expect(tester.getCenter(pillFinder).dx, closeTo(restCenter, 2),
+          reason: '药丸应弹回原槽中心');
+    });
+
+    testWidgets('pill position follows with spring lag and converges',
+        (tester) async {
+      await pumpDock(tester, selectedIndex: 0, brightness: Brightness.dark);
+      final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
+      final slot1Center = rect.left + rect.width * 0.75;
+      await tester.tapAt(Offset(slot1Center, rect.center.dy));
+      final samples = <double>[];
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        samples.add(tester.getCenter(pillFinder).dx);
+      }
+      // 弹簧跟随：不瞬移（首帧仍未过中点）、单调趋近、终点收敛到槽 1 中心。
+      expect(samples.first, lessThan(rect.center.dx),
+          reason: '点按后药丸应从原位弹簧滑出而非瞬移');
+      for (var i = 1; i < samples.length; i++) {
+        expect(samples[i], greaterThanOrEqualTo(samples[i - 1] - 0.6),
+            reason: '临界阻尼跟随应单调不回摆（帧 $i）');
+      }
+      expect(samples.last, closeTo(slot1Center, 2.5));
+    });
+
+    testWidgets('pressing the pill scales it up beyond rest size',
+        (tester) async {
+      await pumpDock(tester, selectedIndex: 0, brightness: Brightness.dark);
+      final restSize = tester.getRect(pillFinder).size;
+      final center = tester.getCenter(pillFinder);
+      final gesture = await tester.startGesture(center);
+      await pumpFrames(tester, 25);
+      final pressedSize = tester.getRect(pillFinder).size;
+      expect(pressedSize.width, greaterThan(restSize.width * 1.2),
+          reason: '按压时药丸应向 pressedScale=78/56 膨胀');
+      await gesture.up();
+      await pumpFrames(tester, 45);
+      expect(tester.getRect(pillFinder).width, closeTo(restSize.width, 2),
+          reason: '松手后药丸应缩回静止尺寸');
+    });
+
+    testWidgets('drag switching works without the refraction shader',
+        (tester) async {
+      // 非液态材质没有 shader 滤镜链（回退路径），拖动行为必须一致。
+      for (final material in [
+        DockGlassMaterial.clear,
+        DockGlassMaterial.frosted,
+        DockGlassMaterial.liquid,
+      ]) {
+        final tapped = <int>[];
+        await pumpDock(tester,
+            selectedIndex: 0,
+            brightness: Brightness.dark,
+            material: material,
+            onTap: tapped.add);
+        final rect =
+            tester.getRect(find.byKey(const Key('floatingDockCapsule')));
+        final gesture = await dragBy(
+            tester, Offset(rect.left + rect.width * 0.25, rect.center.dy), 100, 10);
+        expect(tapped, isEmpty, reason: '$material 拖动中不切换');
+        await gesture.up();
+        await pumpFrames(tester, 45);
+        expect(tapped, [1], reason: '$material 松手后应切换');
+        expect(tester.takeException(), isNull, reason: '$material 不应抛异常');
+      }
+    });
   });
 
   group('glass material mapping', () {

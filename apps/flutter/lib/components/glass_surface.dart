@@ -168,7 +168,8 @@ class RefractionSupport {
         ..setFloat(0, 2)
         ..setFloat(1, 2)
         ..setFloat(2, 2)
-        ..setFloat(3, 2);
+        ..setFloat(3, 2)
+        ..setFloat(4, 1);
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder);
       final paint = ui.Paint()..imageFilter = ui.ImageFilter.shader(shader);
@@ -194,17 +195,24 @@ const double glassRefractionBandDp = 24;
 const double glassRefractionAmountDp = 24;
 
 /// 玻璃滤镜链（Kyant 顺序）：饱和提升（vibrancy）→ 模糊打底 →
-/// （液态且 shader 可用时）SDF 透镜折射。
+/// （液态且 shader 可用时）SDF 透镜折射。折射带宽/量与色差开关可覆写
+/// （miuix15 的 Dock 药丸透镜按 pressProgress 驱动带宽/量，见
+/// floating_dock_bar.dart）；不传时用整栏的 Kyant 24/24dp 与色差开。
 ui.ImageFilter glassImageFilter({
   required DockGlassSpec spec,
   required Size size,
   required double dpr,
   required ui.FragmentProgram? refractionProgram,
+  double? blurSigma,
+  double? refractionBandDp,
+  double? refractionAmountDp,
+  bool chromaticAberration = true,
 }) {
+  final sigma = blurSigma ?? spec.sigma;
   ui.ImageFilter filter =
       ui.ColorFilter.matrix(dockSaturationMatrix(spec.saturate));
   filter = ui.ImageFilter.compose(
-    outer: ui.ImageFilter.blur(sigmaX: spec.sigma, sigmaY: spec.sigma),
+    outer: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
     inner: filter,
   );
   final program = refractionProgram;
@@ -212,8 +220,9 @@ ui.ImageFilter glassImageFilter({
     final shader = program.fragmentShader()
       ..setFloat(0, size.width * dpr)
       ..setFloat(1, size.height * dpr)
-      ..setFloat(2, glassRefractionBandDp * dpr)
-      ..setFloat(3, glassRefractionAmountDp * dpr);
+      ..setFloat(2, (refractionBandDp ?? glassRefractionBandDp) * dpr)
+      ..setFloat(3, (refractionAmountDp ?? glassRefractionAmountDp) * dpr)
+      ..setFloat(4, chromaticAberration ? 1 : 0);
     filter = ui.ImageFilter.compose(
         outer: ui.ImageFilter.shader(shader), inner: filter);
   }
