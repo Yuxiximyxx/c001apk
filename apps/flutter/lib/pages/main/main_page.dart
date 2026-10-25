@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
 import '../../pages/home/return_top_controller.dart';
@@ -13,6 +11,7 @@ import '../../logic/accounts/account_store.dart';
 import '../../components/adaptive_reading_pane.dart';
 import '../../components/feed_reading_pane.dart';
 import '../../components/expressive_loading_indicator.dart';
+import '../../components/floating_dock_bar.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -126,35 +125,9 @@ class _MainPageState extends State<MainPage> {
                     ? StreamBuilder(
                         initialData: _selectedIndex,
                         stream: _indexSctream.stream,
-                        builder: (_, snapshot) => ClipRect(
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                            child: MiuixNavigationBar(
-                              color: MiuixTheme.of(context)
-                                  .colors
-                                  .surface
-                                  .withValues(alpha: 0.86),
-                              mode: MiuixNavigationBarDisplayMode.iconAndText,
-                              children: [
-                                MiuixNavigationBarItem(
-                                  selected: snapshot.data == 0,
-                                  onPressed: () => onDestinationSelected(0),
-                                  icon: Icon(snapshot.data == 0
-                                      ? Icons.home
-                                      : Icons.home_outlined),
-                                  label: '首页',
-                                ),
-                                MiuixNavigationBarItem(
-                                  selected: snapshot.data == 1,
-                                  onPressed: () => onDestinationSelected(1),
-                                  icon: Icon(snapshot.data == 1
-                                      ? Icons.person
-                                      : Icons.person_outline),
-                                  label: '我的',
-                                ),
-                              ],
-                            ),
-                          ),
+                        builder: (_, snapshot) => FloatingDockBar(
+                          selectedIndex: snapshot.data ?? _selectedIndex,
+                          onDestinationSelected: onDestinationSelected,
                         ),
                       )
                     : null,

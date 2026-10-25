@@ -12,6 +12,7 @@ import 'package:c001apk_flutter/main.dart';
 import 'package:c001apk_flutter/pages/settings/settings_page.dart';
 import 'package:c001apk_flutter/components/settings/drop_down_menu_item.dart';
 import 'package:c001apk_flutter/components/cards/feed_card.dart';
+import 'package:c001apk_flutter/components/floating_dock_bar.dart';
 import 'package:c001apk_flutter/components/cards/carousel_card.dart';
 import 'package:c001apk_flutter/components/cards/icon_link_grid_card.dart';
 import 'package:c001apk_flutter/components/cards/icon_mini_scroll_card.dart';
@@ -259,13 +260,18 @@ class EmptyGuestAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
-/// Fork bottom bar: index of the selected MiuixNavigationBarItem, mirroring
+/// Fork bottom bar: index of the selected dock destination, mirroring
 /// what upstream tests read from NavigationBar.selectedIndex.
-int miuixSelectedIndex(WidgetTester tester) => tester
-    .widget<MiuixNavigationBar>(find.byType(MiuixNavigationBar))
-    .children
-    .cast<MiuixNavigationBarItem>()
-    .indexWhere((item) => item.selected);
+int miuixSelectedIndex(WidgetTester tester) =>
+    tester.widget<FloatingDockBar>(find.byType(FloatingDockBar)).selectedIndex;
+
+/// 未选中项没有文字，点 Dock 目标一律按胶囊内位置点（左半=首页、右半=我的）。
+Future<void> tapDockDestination(WidgetTester tester, String destination) async {
+  final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
+  final index = FloatingDockBar.labels.indexOf(destination);
+  await tester.tapAt(Offset(
+      rect.left + rect.width * (index * 2 + 1) / 4, rect.center.dy));
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -458,8 +464,7 @@ void main() {
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
     for (final destination in ['首页', '我的']) {
-      await tester
-          .tap(find.widgetWithText(MiuixNavigationBarItem, destination));
+      await tapDockDestination(tester, destination);
       await tester.pumpAndSettle();
       final selected = miuixSelectedIndex(tester);
       await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
@@ -565,7 +570,7 @@ void main() {
     // so the page actually overflows and can be scrolled by arrow keys.
     tester.view.physicalSize = const Size(400, 380);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
+    await tapDockDestination(tester, '我的');
     await tester.pumpAndSettle();
     final myList = find
         .descendant(
@@ -578,7 +583,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(myPosition.pixels, greaterThan(0));
     expect(homePosition.pixels, closeTo(0, 1));
-    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '首页'));
+    await tapDockDestination(tester, '首页');
     await tester.pumpAndSettle();
     final controller = ScrollController();
     final editor = TextEditingController(text: '第一行\n第二行');
@@ -647,20 +652,14 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const C001APKAPP());
     await tester.pump(const Duration(milliseconds: 500));
-    final context = tester.element(find.byType(MiuixNavigationBar));
+    final context = tester.element(find.byType(FloatingDockBar));
     expect(Localizations.localeOf(context), const Locale('zh', 'CN'));
     final material = MaterialLocalizations.of(context);
     expect(material.backButtonTooltip, '返回');
     expect(material.copyButtonLabel, '复制');
     expect(material.pasteButtonLabel, '粘贴');
     expect(find.text('首页'), findsOneWidget);
-    expect(
-        tester
-            .widget<MiuixNavigationBar>(find.byType(MiuixNavigationBar))
-            .children
-            .cast<MiuixNavigationBarItem>()
-            .map((item) => item.label),
-        ['首页', '我的']);
+    expect(FloatingDockBar.labels, ['首页', '我的']);
     expect(find.widgetWithText(Tab, '关注'), findsNothing);
     expect(find.text('Home'), findsNothing);
     tester.view.physicalSize = const Size(1400, 900);
@@ -702,12 +701,11 @@ void main() {
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
     for (final destination in ['首页', '我的']) {
-      await tester
-          .tap(find.widgetWithText(MiuixNavigationBarItem, destination));
+      await tapDockDestination(tester, destination);
       await tester.pumpAndSettle();
       final selected = miuixSelectedIndex(tester);
       final route =
-          ModalRoute.of(tester.element(find.byType(MiuixNavigationBar)))!;
+          ModalRoute.of(tester.element(find.byType(FloatingDockBar)))!;
       expect(route.popDisposition, RoutePopDisposition.bubble);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -758,7 +756,7 @@ void main() {
     await event('commitBackGesture', 0.5);
     await tester.pumpAndSettle();
     expect(find.byType(SettingsDetailPage), findsNothing);
-    expect(find.byType(MiuixNavigationBar), findsOneWidget);
+    expect(find.byType(FloatingDockBar), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -807,7 +805,7 @@ void main() {
         uid: '321', username: 'synthetic', token: 'synthetic-token'));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
+    await tapDockDestination(tester, '我的');
     await tester.pumpAndSettle();
     expect(find.textContaining('合成系统信息', findRichText: true), findsNothing);
     expect(adapter.notificationPages, isEmpty);
@@ -855,7 +853,7 @@ void main() {
     await tester.runAsync(() => AccountStore().useGuest());
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
+    await tapDockDestination(tester, '我的');
     await tester.pumpAndSettle();
     await tester.tap(find.text('消息通知'));
     await tester.pumpAndSettle();
@@ -882,7 +880,7 @@ void main() {
         }));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
+    await tapDockDestination(tester, '我的');
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('设置'));
     await tester.pumpAndSettle();
@@ -1166,7 +1164,7 @@ void main() {
         token: 'synthetic-current-token'));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(MiuixNavigationBarItem, '我的'));
+    await tapDockDestination(tester, '我的');
     await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     final oldController = Get.find<MessageController>();

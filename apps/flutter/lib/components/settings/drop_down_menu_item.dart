@@ -14,6 +14,7 @@ class DropDownMenuItem extends StatefulWidget {
     this.subtitle,
     this.enabled = true,
     this.forceAppUpdate = false,
+    this.defaultValue = 0,
   });
 
   final IconData icon;
@@ -23,6 +24,7 @@ class DropDownMenuItem extends StatefulWidget {
   final List<DropdownMenuItem<int>> items;
   final bool enabled;
   final bool forceAppUpdate;
+  final int defaultValue;
 
   @override
   State<DropDownMenuItem> createState() => _DropDownMenuItemState();
@@ -34,7 +36,7 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
   @override
   void initState() {
     super.initState();
-    value = GStorage.settings.get(widget.boxKey, defaultValue: 0);
+    value = GStorage.settings.get(widget.boxKey, defaultValue: widget.defaultValue);
   }
 
   @override

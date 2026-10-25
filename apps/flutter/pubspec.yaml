@@ -149,6 +149,9 @@ flutter:
     - assets/emojis/
     - assets/icon/icon.png
 
+  shaders:
+    - assets/shaders/dock_refraction.frag
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

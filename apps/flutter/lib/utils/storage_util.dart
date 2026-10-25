@@ -542,6 +542,7 @@ class SettingsBoxKey {
       szlmId = 'szlmId',
       fontScale = 'fontScale',
       useSystemFont = 'useSystemFont',
+      dockGlassMaterial = 'dockGlassMaterial',
       readingMode = 'readingMode',
       followType = 'followType',
       imageQuality = 'imageQuality',
