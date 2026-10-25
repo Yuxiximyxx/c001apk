@@ -28,6 +28,10 @@ export 'glass_surface.dart';
 /// - 整栏橡皮筋：拖动时整栏水平位移 = 4dp × sign × EaseOut(|拖距/栏宽|)。
 /// - 标签按邻近度 progress = 1 − |index − value| 连续驱动：图标着色与
 ///   填充态渐变、竖排文字渐入、按压时图标随邻近度放大。
+///
+/// miuix16：透镜剖面换 Kyant 原生 circleMap（边缘弯光最强；此前半正弦
+/// 剖面物理反了是「玻璃假」的主因），色散换 7 段光谱采样，底栏本体
+/// 三档都带透镜且参数按身份拉开（见 glass_surface.dart 的 spec）。
 class FloatingDockBar extends StatefulWidget {
   const FloatingDockBar({
     super.key,
@@ -526,12 +530,16 @@ class _SelectionPill extends StatelessWidget {
                     dpr: MediaQuery.devicePixelRatioOf(context),
                     refractionProgram: program,
                     // 药丸透镜按 Legado：无模糊打底、只透镜（采样已含
-                    // 底栏玻璃处理过的背景），带宽/量随 pressProgress。
+                    // 底栏玻璃处理过的背景），带宽/量随 pressProgress；
+                    // miuix16 剖面换 Kyant circleMap（边缘达全量）、
+                    // 色散走 shader 的 7 段光谱采样，rim/内阴影随 p。
                     blurSigma: 0,
                     refractionBandDp: _FloatingDockBarState._pillLensBandDp * p,
                     refractionAmountDp:
                         _FloatingDockBarState._pillLensAmountDp * p,
-                    chromaticAberration: true,
+                    dispersion: material.spec.dispersion,
+                    rimStrength: 0.3 * p,
+                    innerShadow: 0.25 * p,
                   ),
                   child: const SizedBox.expand(),
                 ),

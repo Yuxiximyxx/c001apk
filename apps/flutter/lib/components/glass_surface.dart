@@ -15,17 +15,17 @@ import '../utils/storage_util.dart';
 
 /// 玻璃材质（设置项「玻璃材质」，以 int 索引存设置盒
 /// [SettingsBoxKey.dockGlassMaterial]），悬浮 Dock 与全应用悬浮按钮共用。
-/// 三档参数按 Kyant0/AndroidLiquidGlass 的 LiquidBottomTabs 配方校准
-/// （miuix14）：玻璃感主要来自饱和提升 + 透镜折射，模糊只是打底；
-/// 纱走深色薄纱（深 #121212 / 浅 #FAFAFA），不再用乳白厚涂。
+/// miuix16 按「身份」重新拉开三档（miuix14 的参数在真实信息流背景上
+/// 差异太小、切换后几乎看不出区别，小乐真机反馈）：毛玻璃=最清透、
+/// 磨砂=最哑光、液态=折射最强，逐项对照见 [DockGlassMaterialSpec]。
 enum DockGlassMaterial {
-  /// 毛玻璃：blur 12 + 薄纱 + 强高光 + 饱和 1.6。
+  /// 毛玻璃：模糊最轻、饱和最高、纱最薄、rim 高光最亮、透镜中低。
   clear,
 
-  /// 磨砂玻璃（默认）：blur 16 + 纱略厚于液态 + 弱高光 + 饱和 1.5。
+  /// 磨砂玻璃（默认）：模糊最重、纱最厚、饱和最低（哑光）、透镜最弱。
   frosted,
 
-  /// 液态玻璃：blur 8 + Kyant 原方薄纱 + SDF 透镜折射 + 饱和 1.45。
+  /// 液态玻璃：模糊次轻、纱薄、透镜最强 + 光谱色散。
   liquid;
 
   static DockGlassMaterial fromStorage(Object? value) => value is int &&
@@ -35,8 +35,9 @@ enum DockGlassMaterial {
       : DockGlassMaterial.frosted;
 }
 
-/// 一种玻璃材质的完整参数。配方出处：liquid-glass-recipes（毛玻璃/磨砂
-/// 玻璃/液态玻璃三档），已换算到 Flutter 的 BackdropFilter 参数。
+/// 一种玻璃材质的完整参数。配方出处：liquid-glass-recipes 三档 +
+/// Kyant0/AndroidLiquidGlass 的透镜模型（miuix16 起底栏本体三档都带
+/// circleMap 剖面透镜，参数按身份拉开，见各档数值）。
 class DockGlassSpec {
   const DockGlassSpec({
     required this.sigma,
@@ -47,7 +48,9 @@ class DockGlassSpec {
     required this.highlightAlphaLight,
     required this.borderAlphaDark,
     required this.borderAlphaLight,
-    required this.refraction,
+    required this.refractionBandDp,
+    required this.refractionAmountDp,
+    required this.dispersion,
   });
 
   final double sigma;
@@ -58,43 +61,66 @@ class DockGlassSpec {
   final double highlightAlphaLight;
   final double borderAlphaDark;
   final double borderAlphaLight;
-  final bool refraction;
+
+  /// 底栏本体透镜的折射带宽（dp，Kyant refractionHeight）。
+  final double refractionBandDp;
+
+  /// 底栏本体透镜的折射量（dp，Kyant refractionAmount，正值；
+  /// shader 内取负实现向内采样）。
+  final double refractionAmountDp;
+
+  /// 光谱色散强度（0=关，单采样快路径；Kyant 典型 0.1  subtle /
+  /// 0.2 类 Apple 药丸 / 0.3+ 明显彩虹边）。
+  final double dispersion;
+
+  /// 是否带透镜折射（三档恒 true，量不同；保留此派生量供旧断言语义）。
+  bool get refraction => refractionAmountDp > 0;
 }
 
 extension DockGlassMaterialSpec on DockGlassMaterial {
   DockGlassSpec get spec => switch (this) {
+        // 毛玻璃（最清透）：模糊最轻、饱和最高、纱最薄、高光最亮。
         DockGlassMaterial.clear => const DockGlassSpec(
-            sigma: 12,
-            saturate: 1.6,
-            tintAlphaDark: 0.30,
-            tintAlphaLight: 0.32,
-            highlightAlphaDark: 0.45,
-            highlightAlphaLight: 0.80,
+            sigma: 6,
+            saturate: 1.8,
+            tintAlphaDark: 0.16,
+            tintAlphaLight: 0.18,
+            highlightAlphaDark: 0.60,
+            highlightAlphaLight: 0.95,
             borderAlphaDark: 0.30,
             borderAlphaLight: 0.55,
-            refraction: false,
+            refractionBandDp: 16,
+            refractionAmountDp: 10,
+            dispersion: 0,
           ),
+        // 磨砂玻璃（最哑光）：模糊最重、纱最厚（相对本组；深色基仍
+        // #121212 深纱，不回 1.7.0 的乳白厚涂）、饱和最低、透镜最弱。
         DockGlassMaterial.frosted => const DockGlassSpec(
-            sigma: 16,
-            saturate: 1.5,
-            tintAlphaDark: 0.45,
-            tintAlphaLight: 0.52,
-            highlightAlphaDark: 0.18,
-            highlightAlphaLight: 0.45,
+            sigma: 20,
+            saturate: 1.3,
+            tintAlphaDark: 0.55,
+            tintAlphaLight: 0.58,
+            highlightAlphaDark: 0.12,
+            highlightAlphaLight: 0.30,
             borderAlphaDark: 0.30,
             borderAlphaLight: 0.55,
-            refraction: false,
+            refractionBandDp: 20,
+            refractionAmountDp: 6,
+            dispersion: 0,
           ),
+        // 液态玻璃：模糊次轻、纱薄、透镜 = Kyant 原方 24/24 + 色散。
         DockGlassMaterial.liquid => const DockGlassSpec(
             sigma: 8,
-            saturate: 1.45,
-            tintAlphaDark: 0.40,
-            tintAlphaLight: 0.40,
+            saturate: 1.5,
+            tintAlphaDark: 0.32,
+            tintAlphaLight: 0.32,
             highlightAlphaDark: 0.50,
             highlightAlphaLight: 0.85,
             borderAlphaDark: 0.50,
             borderAlphaLight: 0.70,
-            refraction: true,
+            refractionBandDp: glassRefractionBandDp,
+            refractionAmountDp: glassRefractionAmountDp,
+            dispersion: 0.2,
           ),
       };
 }
@@ -153,7 +179,7 @@ Color glassIconColor(BuildContext context) =>
 /// 折射 shader 的一次性加载+能力探测：ImageFilter.shader 仅 Impeller
 /// 可用，Skia 后端（测试环境、无 Vulkan 的老设备回退）在绘制时会抛
 /// UnsupportedError 且无法在使用点 catch，所以先用 2x2 离屏绘制探一遍，
-/// 不可用就返回 null，液态档走近似参数（低模糊+高饱和+强高光）。
+/// 不可用就返回 null，三档一律退回无透镜的滤镜链（饱和+模糊不变）。
 /// 全应用共享同一次加载。
 class RefractionSupport {
   static Future<ui.FragmentProgram?>? _future;
@@ -169,7 +195,9 @@ class RefractionSupport {
         ..setFloat(1, 2)
         ..setFloat(2, 2)
         ..setFloat(3, 2)
-        ..setFloat(4, 1);
+        ..setFloat(4, 0.2)
+        ..setFloat(5, 0.5)
+        ..setFloat(6, 0.3);
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder);
       final paint = ui.Paint()..imageFilter = ui.ImageFilter.shader(shader);
@@ -187,17 +215,20 @@ class RefractionSupport {
   }
 }
 
-/// 液态透镜的折射带宽（dp，Kyant lens 的 refractionHeight）。
+/// 液态档底栏本体透镜的折射带宽（dp，Kyant lens 的 refractionHeight；
+/// 液态 spec 直接引用此常量，三档数值见 [DockGlassSpec]）。
 const double glassRefractionBandDp = 24;
 
-/// 液态透镜的折射量（dp，Kyant lens 的 refractionAmount；shader 内
-/// 位移剖面峰值取其 0.5 倍，见 dock_refraction.frag）。
+/// 液态档底栏本体透镜的折射量（dp，Kyant lens 的 refractionAmount；
+/// miuix16 起剖面换 Kyant circleMap——边缘处即达全量，不再减半）。
 const double glassRefractionAmountDp = 24;
 
 /// 玻璃滤镜链（Kyant 顺序）：饱和提升（vibrancy）→ 模糊打底 →
-/// （液态且 shader 可用时）SDF 透镜折射。折射带宽/量与色差开关可覆写
-/// （miuix15 的 Dock 药丸透镜按 pressProgress 驱动带宽/量，见
-/// floating_dock_bar.dart）；不传时用整栏的 Kyant 24/24dp 与色差开。
+/// （shader 可用时）circleMap 剖面透镜折射。miuix16 起三档底栏本体
+/// 都走透镜（量按档拉开）；折射带宽/量、色散强度可覆写（Dock 药丸
+/// 透镜按 pressProgress 驱动，见 floating_dock_bar.dart），不传时用
+/// spec 的档位值。[rimStrength] 为 shader 边缘镜面高光强度、
+/// [innerShadow] 为底部内阴影强度（0=关）。
 ui.ImageFilter glassImageFilter({
   required DockGlassSpec spec,
   required Size size,
@@ -206,7 +237,9 @@ ui.ImageFilter glassImageFilter({
   double? blurSigma,
   double? refractionBandDp,
   double? refractionAmountDp,
-  bool chromaticAberration = true,
+  double? dispersion,
+  double rimStrength = 0,
+  double innerShadow = 0,
 }) {
   final sigma = blurSigma ?? spec.sigma;
   ui.ImageFilter filter =
@@ -215,14 +248,18 @@ ui.ImageFilter glassImageFilter({
     outer: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
     inner: filter,
   );
+  final band = refractionBandDp ?? spec.refractionBandDp;
+  final amount = refractionAmountDp ?? spec.refractionAmountDp;
   final program = refractionProgram;
-  if (spec.refraction && program != null) {
+  if (program != null && band > 0 && amount > 0) {
     final shader = program.fragmentShader()
       ..setFloat(0, size.width * dpr)
       ..setFloat(1, size.height * dpr)
-      ..setFloat(2, (refractionBandDp ?? glassRefractionBandDp) * dpr)
-      ..setFloat(3, (refractionAmountDp ?? glassRefractionAmountDp) * dpr)
-      ..setFloat(4, chromaticAberration ? 1 : 0);
+      ..setFloat(2, band * dpr)
+      ..setFloat(3, amount * dpr)
+      ..setFloat(4, dispersion ?? spec.dispersion)
+      ..setFloat(5, rimStrength)
+      ..setFloat(6, innerShadow);
     filter = ui.ImageFilter.compose(
         outer: ui.ImageFilter.shader(shader), inner: filter);
   }
@@ -307,6 +344,10 @@ class _GlassSurfaceState extends State<GlassSurface> {
               size: Size(constraints.maxWidth, constraints.maxHeight),
               dpr: dpr,
               refractionProgram: _refractionProgram,
+              // shader 端边缘镜面光（rim）跟随本档高光身份强度、
+              // 底部内阴影固定克制值——给玻璃补轮廓光与厚度感。
+              rimStrength: glassHighlightAlpha(spec, dark),
+              innerShadow: 0.3,
             ),
             child: Container(
               decoration: BoxDecoration(

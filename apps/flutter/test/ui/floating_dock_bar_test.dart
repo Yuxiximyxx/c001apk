@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:c001apk_flutter/components/floating_dock_bar.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
@@ -197,7 +198,7 @@ void main() {
 
     testWidgets('drag switching works without the refraction shader',
         (tester) async {
-      // 非液态材质没有 shader 滤镜链（回退路径），拖动行为必须一致。
+      // 测试环境无可用 shader（三档都走无透镜回退路径），拖动行为必须一致。
       for (final material in [
         DockGlassMaterial.clear,
         DockGlassMaterial.frosted,
@@ -233,38 +234,66 @@ void main() {
     });
 
     test('specs follow the recipes', () {
-      // miuix14 按 Kyant0/AndroidLiquidGlass（LiquidBottomTabs）重校准：
-      // 饱和在前、模糊打底（8/12/16）、深色走 #121212 深纱不再乳白厚涂。
+      // miuix16 按「身份」重新拉开三档（miuix14 的 Kyant 校准在真机上
+      // 三档几乎看不出区别，小乐反馈）：毛=最清透（模糊最轻/饱和最高/
+      // 纱最薄/高光最亮）、磨砂=最哑光（模糊最重/纱最厚/饱和最低/透镜
+      // 最弱）、液态=透镜最强（Kyant 24/24 + 色散）。三档底栏本体都带
+      // circleMap 透镜（miuix16 起），深色纱基色仍一律 #121212。
       final clear = DockGlassMaterial.clear.spec;
-      expect(clear.sigma, 12);
-      expect(clear.saturate, 1.6);
-      expect(clear.refraction, isFalse);
-      expect(clear.tintAlphaDark, 0.30);
-      expect(clear.tintAlphaLight, 0.32);
+      expect(clear.sigma, 6);
+      expect(clear.saturate, 1.8);
+      expect(clear.refraction, isTrue);
+      expect(clear.refractionBandDp, 16);
+      expect(clear.refractionAmountDp, 10);
+      expect(clear.dispersion, 0);
+      expect(clear.tintAlphaDark, 0.16);
+      expect(clear.tintAlphaLight, 0.18);
+      expect(clear.highlightAlphaDark, 0.60);
+      expect(clear.highlightAlphaLight, 0.95);
 
       final frosted = DockGlassMaterial.frosted.spec;
-      expect(frosted.sigma, 16);
-      expect(frosted.saturate, 1.5);
-      expect(frosted.refraction, isFalse);
-      // 磨砂的纱略厚于液态、高光最弱
-      expect(frosted.tintAlphaDark, 0.45);
-      expect(frosted.tintAlphaLight, 0.52);
-      expect(frosted.tintAlphaDark,
-          greaterThan(DockGlassMaterial.liquid.spec.tintAlphaDark));
-      expect(frosted.highlightAlphaDark,
-          lessThan(DockGlassMaterial.clear.spec.highlightAlphaDark));
+      expect(frosted.sigma, 20);
+      expect(frosted.saturate, 1.3);
+      expect(frosted.refraction, isTrue);
+      expect(frosted.refractionBandDp, 20);
+      expect(frosted.refractionAmountDp, 6);
+      expect(frosted.dispersion, 0);
+      expect(frosted.tintAlphaDark, 0.55);
+      expect(frosted.tintAlphaLight, 0.58);
+      expect(frosted.highlightAlphaDark, 0.12);
+      expect(frosted.highlightAlphaLight, 0.30);
 
       final liquid = DockGlassMaterial.liquid.spec;
       expect(liquid.sigma, 8);
-      expect(liquid.saturate, inInclusiveRange(1.4, 1.5));
+      expect(liquid.saturate, 1.5);
       expect(liquid.refraction, isTrue);
-      // 液态纱 = Kyant 原方：深 #121212 α0.4 / 浅 #FAFAFA α0.4
-      expect(liquid.tintAlphaDark, 0.40);
-      expect(liquid.tintAlphaLight, 0.40);
+      expect(liquid.refractionBandDp, 24);
+      expect(liquid.refractionAmountDp, 24);
+      expect(liquid.dispersion, 0.2);
+      expect(liquid.tintAlphaDark, 0.32);
+      expect(liquid.tintAlphaLight, 0.32);
       expect(glassTintColor(liquid, true),
-          const Color(0xFF121212).withValues(alpha: 0.40));
+          const Color(0xFF121212).withValues(alpha: 0.32));
       expect(glassTintColor(liquid, false),
-          const Color(0xFFFAFAFA).withValues(alpha: 0.40));
+          const Color(0xFFFAFAFA).withValues(alpha: 0.32));
+
+      // 身份排序：并排一眼可辨的每条轴都不许交叉或并列。
+      expect(clear.sigma, lessThan(liquid.sigma));
+      expect(liquid.sigma, lessThan(frosted.sigma));
+      expect(clear.saturate, greaterThan(liquid.saturate));
+      expect(liquid.saturate, greaterThan(frosted.saturate));
+      expect(clear.tintAlphaDark, lessThan(liquid.tintAlphaDark));
+      expect(liquid.tintAlphaDark, lessThan(frosted.tintAlphaDark));
+      expect(clear.tintAlphaLight, lessThan(liquid.tintAlphaLight));
+      expect(liquid.tintAlphaLight, lessThan(frosted.tintAlphaLight));
+      expect(clear.highlightAlphaDark,
+          greaterThan(liquid.highlightAlphaDark));
+      expect(liquid.highlightAlphaDark,
+          greaterThan(frosted.highlightAlphaDark));
+      expect(frosted.refractionAmountDp,
+          lessThan(clear.refractionAmountDp));
+      expect(clear.refractionAmountDp, lessThan(liquid.refractionAmountDp));
+      expect(liquid.dispersion, greaterThan(0));
       // 深色模式三档一律深纱（121212），不再是乳白色
       for (final m in DockGlassMaterial.values) {
         final c = glassTintColor(m.spec, true);
@@ -272,11 +301,13 @@ void main() {
         expect(c.g, const Color(0xFF121212).g);
         expect(c.b, const Color(0xFF121212).b);
       }
-      // 液态的边缘描边最亮；折射带宽/量 = Kyant lens 的 24/24dp
+      // 液态的边缘描边最亮；液态透镜常量仍 = Kyant lens 的 24/24dp
       expect(liquid.borderAlphaDark,
           greaterThan(DockGlassMaterial.frosted.spec.borderAlphaDark));
       expect(glassRefractionBandDp, 24);
       expect(glassRefractionAmountDp, 24);
+      expect(liquid.refractionBandDp, glassRefractionBandDp);
+      expect(liquid.refractionAmountDp, glassRefractionAmountDp);
     });
 
     test('saturation matrix is identity at 1.0', () {
@@ -321,6 +352,66 @@ void main() {
           () => GStorage.settings.put(SettingsBoxKey.dockGlassMaterial, 2));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const Key('floatingDockCapsule')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('switching the stored material changes the live filter',
+        (tester) async {
+      // miuix16 链路审计（小乐真机反馈「切换三种玻璃没什么区别」）：
+      // 设置存储 → listenable → Dock 重建 → 实际挂到 BackdropFilter 上
+      // 的 filter。逐档切换存储值，断言树上真实 filter 与纱色逐档等于
+      // 新 spec 现算的结果——只断言规格表不同不算数。
+      Future<void> store(int v) => tester.runAsync(
+          () => GStorage.settings.put(SettingsBoxKey.dockGlassMaterial, v));
+
+      ({ui.ImageFilter filter, Color tint}) capture() {
+        final filterWidget = tester.widget<BackdropFilter>(
+          find
+              .descendant(
+                of: find.byKey(const Key('floatingDockCapsule')),
+                matching: find.byType(BackdropFilter),
+              )
+              .first,
+        );
+        final tinted = filterWidget.child as Container;
+        return (
+          filter: filterWidget.filter!,
+          tint: (tinted.decoration! as BoxDecoration).color!,
+        );
+      }
+
+      ui.ImageFilter expectedFilter(DockGlassMaterial material) =>
+          glassImageFilter(
+            spec: material.spec,
+            size: const Size(232, FloatingDockBar.height),
+            dpr: 1,
+            refractionProgram: null,
+          );
+
+      await store(0);
+      await pumpDock(tester,
+          selectedIndex: 0, brightness: Brightness.dark, useOverride: false);
+      final clearShot = capture();
+      expect(clearShot.tint,
+          glassTintColor(DockGlassMaterial.clear.spec, true));
+      expect(clearShot.filter, expectedFilter(DockGlassMaterial.clear));
+
+      await store(2);
+      await tester.pump(const Duration(milliseconds: 300));
+      final liquidShot = capture();
+      expect(liquidShot.tint,
+          glassTintColor(DockGlassMaterial.liquid.spec, true));
+      expect(liquidShot.filter, expectedFilter(DockGlassMaterial.liquid));
+      expect(liquidShot.filter, isNot(equals(clearShot.filter)));
+
+      await store(1);
+      await tester.pump(const Duration(milliseconds: 300));
+      final frostedShot = capture();
+      expect(frostedShot.tint,
+          glassTintColor(DockGlassMaterial.frosted.spec, true));
+      expect(frostedShot.filter, expectedFilter(DockGlassMaterial.frosted));
+      expect(frostedShot.filter, isNot(equals(liquidShot.filter)));
+      expect(frostedShot.filter, isNot(equals(clearShot.filter)));
       expect(tester.takeException(), isNull);
     });
   });

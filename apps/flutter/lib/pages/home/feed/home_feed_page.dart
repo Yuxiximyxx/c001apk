@@ -1,19 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
-import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
 import '../../../components/common_body.dart';
-import '../../../components/glass_surface.dart';
 import '../../../pages/home/feed/home_feed_controller.dart';
 import '../../../pages/home/home_page.dart' show TabType;
 import '../../../pages/home/return_top_controller.dart';
-import '../../../utils/global_data.dart';
 import '../../../utils/storage_util.dart';
 import '../../../utils/utils.dart';
-import '../../feed/reply/reply_page.dart';
 
 class HomeFeedPage extends StatefulWidget {
   const HomeFeedPage({
@@ -30,14 +25,11 @@ class HomeFeedPage extends StatefulWidget {
 }
 
 class _HomeFeedPageState extends State<HomeFeedPage>
-    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
-  late final bool isLogin = GlobalData().isLogin;
-  AnimationController? _fabAnimationCtr;
   StreamSubscription<int>? _returnTopSubscription;
-  late bool _isFabVisible = true;
 
   late final followType = widget.followType ?? GStorage.followType;
   late final _tag = widget.tabType == TabType.FOLLOW
@@ -69,7 +61,6 @@ class _HomeFeedPageState extends State<HomeFeedPage>
     _returnTopSubscription?.cancel();
     _homeFeedController.scrollController?.removeListener(() {});
     _homeFeedController.scrollController?.dispose();
-    _fabAnimationCtr?.dispose();
     Get.delete<HomeFeedController>(
       tag: _tag,
     );
@@ -91,90 +82,14 @@ class _HomeFeedPageState extends State<HomeFeedPage>
         _homeFeedController.animateToTop();
       }
     });
-
-    if (isLogin) {
-      _fabAnimationCtr = AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 300));
-      _fabAnimationCtr?.forward();
-      _homeFeedController.scrollController?.addListener(() {
-        final ScrollDirection? direction =
-            _homeFeedController.scrollController?.position.userScrollDirection;
-        if (direction == ScrollDirection.forward) {
-          _showFab();
-        } else if (direction == ScrollDirection.reverse) {
-          _hideFab();
-        }
-      });
-    }
-  }
-
-  void _showFab() {
-    if (!_isFabVisible) {
-      _isFabVisible = true;
-      _fabAnimationCtr?.forward();
-    }
-  }
-
-  void _hideFab() {
-    if (_isFabVisible) {
-      _isFabVisible = false;
-      _fabAnimationCtr?.reverse();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // miuix16：首页发布悬浮按钮已按小乐要求去除（连同其滚动显隐动画
+    // 与控制器一并删除）；发布入口保留在应用其他既有位置，不新造。
     return Scaffold(
-      floatingActionButton:
-          GlobalData().isLogin && widget.tabType == TabType.FEED
-              ? SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 2),
-                    end: const Offset(0, 0),
-                  ).animate(CurvedAnimation(
-                    parent: _fabAnimationCtr!,
-                    curve: Curves.easeInOut,
-                  )),
-                  child: GlassFab(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        GetDialogRoute(
-                          // 无变暗层：ReplyPage 不带变暗层（miuix10
-                          // 摘除），路线 barrier 保持透明。
-                          barrierColor: Colors.transparent,
-                          pageBuilder:
-                              (buildContext, animation, secondaryAnimation) {
-                            return const ReplyPage();
-                          },
-                          transitionDuration: const Duration(milliseconds: 500),
-                          transitionBuilder:
-                              (context, animation, secondaryAnimation, child) {
-                            const begin = Offset(0.0, 1.0);
-                            const end = Offset.zero;
-                            const curve = Curves.linear;
-
-                            var tween = Tween(begin: begin, end: end)
-                                .chain(CurveTween(curve: curve));
-
-                            return SlideTransition(
-                              position: animation.drive(tween),
-                              child: child,
-                            );
-                          },
-                        ),
-                      );
-                      // showModalBottomSheet<dynamic>(
-                      //   context: context,
-                      //   isScrollControlled: true,
-                      //   builder: (context) => const ReplyDialog(),
-                      // );
-                    },
-                    tooltip: '发布动态',
-                    icon: Icons.add,
-                  ),
-                )
-              : null,
       body: commonBody(_homeFeedController),
     );
   }
