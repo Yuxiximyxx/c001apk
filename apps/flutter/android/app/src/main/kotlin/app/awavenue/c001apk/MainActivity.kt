@@ -15,13 +15,9 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.P
 import android.os.Environment
 import android.os.Build
-import android.os.Bundle
-import android.window.BackEvent
 import android.webkit.MimeTypeMap;
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.BackEventCompat
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -46,50 +42,16 @@ class MainActivity : FlutterFragmentActivity() {
         enqueueLink(intent)
     }
 
-    // Flutter 3.24's FragmentActivity forwards only completed back presses.
-    // Keep the FragmentActivity required by the document picker, and bridge
-    // Android 14+ progress through Flutter's existing back gesture channel.
-    private val predictiveBackCallback = object : OnBackPressedCallback(false) {
-        private var gestureStarted = false
-
-        override fun handleOnBackStarted(backEvent: BackEventCompat) {
-            if (SDK_INT >= 34) {
-                gestureStarted = true
-                flutterEngine?.backGestureChannel?.startBackGesture(
-                    BackEvent(backEvent.touchX, backEvent.touchY,
-                        backEvent.progress, backEvent.swipeEdge))
-            }
-        }
-
-        override fun handleOnBackProgressed(backEvent: BackEventCompat) {
-            if (SDK_INT >= 34) {
-                flutterEngine?.backGestureChannel?.updateBackGestureProgress(
-                    BackEvent(backEvent.touchX, backEvent.touchY,
-                        backEvent.progress, backEvent.swipeEdge))
-            }
-        }
-
-        override fun handleOnBackCancelled() {
-            gestureStarted = false
-            flutterEngine?.backGestureChannel?.cancelBackGesture()
-        }
-
-        override fun handleOnBackPressed() {
-            if (gestureStarted) {
-                gestureStarted = false
-                flutterEngine?.backGestureChannel?.commitBackGesture()
-            } else {
-                flutterEngine?.navigationChannel?.popRoute()
-            }
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (SDK_INT >= 34) {
-            onBackPressedDispatcher.addCallback(this, predictiveBackCallback)
-        }
-    }
+    // Predictive back is handled entirely by the Flutter 3.47 embedding:
+    // FlutterFragment registers its own OnBackPressedCallback that forwards
+    // started/progressed/cancelled/committed to the engine's back gesture
+    // channel, gated by the framework's setFrameworkHandlesBack. A previous
+    // hand-rolled callback (a Flutter 3.24-era workaround, when the fragment
+    // activity forwarded only completed presses) registered a second handler
+    // on the same dispatcher; the dispatcher delivers started/progressed to
+    // only one handler, and the duplicate silently swallowed gesture
+    // progress on device (pages popped on release with no follow animation),
+    // so the bridge and its custom gating channel were removed.
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -113,11 +75,7 @@ class MainActivity : FlutterFragmentActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             CHANNEL
         ).setMethodCallHandler { call, result ->
-            if (call.method == "setPredictiveBackEnabled") {
-                // Root destinations leave back-to-home to Android itself.
-                predictiveBackCallback.isEnabled = SDK_INT >= 34 && call.arguments == true
-                result.success(null)
-            } else if (call.method == "getProtocolDeviceProfile") {
+            if (call.method == "getProtocolDeviceProfile") {
                 result.success(mapOf(
                     "manufacturer" to Build.MANUFACTURER,
                     "brand" to Build.BRAND,

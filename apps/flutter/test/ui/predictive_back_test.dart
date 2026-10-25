@@ -329,4 +329,48 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  // Regression test for the on-device failure where a swipe produced no
+  // predictive animation and the page only popped on release. The production
+  // path is the engine's standard 'flutter/backgesture' channel, driven by
+  // the embedding's own callback and the framework's setFrameworkHandlesBack
+  // gating. The app must not depend on (or call) the removed hand-rolled
+  // 'samples.flutter.dev/channel' setPredictiveBackEnabled gate anymore.
+  testWidgets(
+      'predictive back runs on the standard channel with no legacy gating',
+      (tester) async {
+    final legacyCalls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('samples.flutter.dev/channel'),
+      (call) async {
+        legacyCalls.add(call);
+        return null;
+      },
+    );
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+            const MethodChannel('samples.flutter.dev/channel'), null));
+
+    await openPage(tester);
+    final original = pageBounds(tester);
+    await backEvent(tester, 'startBackGesture');
+    await backEvent(tester, 'updateBackGestureProgress', progress: 0.5);
+    expect(pageBounds(tester).width, lessThan(original.width));
+    await backEvent(tester, 'cancelBackGesture');
+    await tester.pumpAndSettle();
+    expect(pageBounds(tester), original);
+    expect(Get.currentRoute, '/about');
+
+    await backEvent(tester, 'startBackGesture');
+    await backEvent(tester, 'updateBackGestureProgress', progress: 0.5);
+    await backEvent(tester, 'commitBackGesture');
+    await tester.pumpAndSettle();
+    expect(find.text('上一页'), findsOneWidget);
+
+    expect(
+      legacyCalls.where((call) => call.method == 'setPredictiveBackEnabled'),
+      isEmpty,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

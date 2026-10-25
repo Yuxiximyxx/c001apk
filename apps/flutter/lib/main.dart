@@ -327,20 +327,18 @@ class C001APKAPP extends StatelessWidget {
                   data: MediaQuery.of(context).copyWith(
                       textScaler: AppTextScaler(
                           MediaQuery.textScalerOf(context), fontScale)),
-                  child: NotificationListener<NavigationNotification>(
-                    onNotification: (notification) {
-                      if (Platform.isAndroid) {
-                        unawaited(
-                            const MethodChannel('samples.flutter.dev/channel')
-                                .invokeMethod<void>('setPredictiveBackEnabled',
-                                    notification.canHandlePop));
-                      }
-                      return false;
-                    },
-                    child: AppKeyboardNavigation(
-                      navigatorKey: Get.key,
-                      child: child!,
-                    ),
+                  // Predictive back gating is left to the framework:
+                  // WidgetsApp's default NavigationNotification handler calls
+                  // SystemNavigator.setFrameworkHandlesBack, which enables the
+                  // FlutterFragment's predictive callback in the embedding.
+                  // The former hand-rolled listener fed a parallel
+                  // MainActivity callback over a custom MethodChannel; that
+                  // second handler competed for the dispatcher's exclusive
+                  // started/progressed events and silently swallowed them on
+                  // device, so it was removed together with the native bridge.
+                  child: AppKeyboardNavigation(
+                    navigatorKey: Get.key,
+                    child: child!,
                   ),
                 ),
               ),
