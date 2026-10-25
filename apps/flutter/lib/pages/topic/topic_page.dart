@@ -44,11 +44,9 @@ enum TopicSortType {
       };
 }
 
-/// Header green sampled from the official topic page (图二).
-const Color _topicHeaderGreen = Color(0xFF3E7E6E);
-
-/// Accent green for the follow button / FAB (sampled from 图二).
-const Color _topicAccentGreen = Color(0xFF4C8F59);
+/// miuix5 起头部底色、发帖 FAB 改用应用主题色（MIUIX primary，
+/// 浅 #3482FF / 深 #277AF7，随主题取值），不再用 miuix4 的采样绿；
+/// 关注按钮改为白底/半透明白底以保证在主题色头部上的可读性。
 
 class TopicPage extends StatefulWidget {
   const TopicPage({super.key});
@@ -191,7 +189,7 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
   Widget _buildHeader(BuildContext context) {
     final followNum = _topicController.followNum;
     return Container(
-      color: _topicHeaderGreen,
+      color: MiuixTheme.of(context).colors.primary,
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -346,8 +344,10 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                     style: TextButton.styleFrom(
                       backgroundColor: _topicController.isFollow
                           ? Colors.white.withOpacity(0.25)
-                          : _topicAccentGreen,
-                      foregroundColor: Colors.white,
+                          : Colors.white,
+                      foregroundColor: _topicController.isFollow
+                          ? Colors.white
+                          : MiuixTheme.of(context).colors.primary,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 18, vertical: 8),
                       shape: RoundedRectangleBorder(
@@ -516,7 +516,7 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                 systemStatusBarContrastEnforced: false,
               ),
               child: Scaffold(
-                backgroundColor: _topicHeaderGreen,
+                backgroundColor: MiuixTheme.of(context).colors.primary,
                 floatingActionButton: GlobalData().isLogin &&
                         !_topicController.isBlocked
                     ? FloatingActionButton(
@@ -524,6 +524,9 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                         onPressed: () {
                           Navigator.of(context).push(
                             GetDialogRoute(
+                              // 变暗层由 ReplyPage 自带（见 reply_page.dart），
+                              // 路线 barrier 改透明，避免双层变暗叠加。
+                              barrierColor: Colors.transparent,
                               pageBuilder: (buildContext, animation,
                                   secondaryAnimation) {
                                 return ReplyPage(
@@ -555,7 +558,8 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                           );
                         },
                         tooltip: '发布动态',
-                        backgroundColor: _topicAccentGreen,
+                        backgroundColor:
+                            MiuixTheme.of(context).colors.primary,
                         foregroundColor: Colors.white,
                         shape: const CircleBorder(),
                         child: const Icon(Icons.add),

@@ -360,6 +360,9 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
     Navigator.of(context)
         .push(
       GetDialogRoute(
+        // 变暗层由 ReplyPage 自带（见 reply_page.dart），路线 barrier
+        // 改透明，避免双层变暗叠加。
+        barrierColor: Colors.transparent,
         pageBuilder: (buildContext, animation, secondaryAnimation) {
           return ReplyPage(
             type: type,

@@ -127,23 +127,43 @@ class _ReplyPageState extends State<ReplyPage>
         child: Scaffold(
           resizeToAvoidBottomInset: false,
           backgroundColor: Colors.transparent,
-          body: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          body: Stack(
             children: [
-              Expanded(
-                child: InkWell(
-                  highlightColor: Colors.transparent,
-                  splashColor: Colors.transparent,
-                  splashFactory: NoSplashFactory(),
-                  onTap: () {
-                    FocusScope.of(context).unfocus();
-                    Get.back();
-                  },
-                ),
+              // 变暗层由本页自带，不再依赖路线 barrier。原先变暗只靠
+              // GetDialogRoute 的 barrier（0x80000000）：键盘弹起时面板
+              // 占位按 viewInsets.bottom（=IME 窗口高度）把卡片顶到键盘
+              // 窗口顶边，而本机透明皮肤键盘的窗口顶部有约 27dp 的透明
+              // 边距，绘制内容比窗口顶边低一截——卡片（含 12dp 底边距）
+              // 与可见键盘之间留出一条缝，缝落在 IME 窗口范围内，下层
+              // 页面以接近原亮度透出，应用窗口里的 barrier 变暗盖不住
+              // 它（miuix5 话题发布截图实测：缝内亮度约 245，正常
+              // barrier 区约 123）。把同色变暗层铺满本页（含键盘占位
+              // 区，占位 widget 本身仍保持全透明）后，缝里透出的是经
+              // 本页变暗的下层页面，与上方均匀一致、一直覆盖到可见
+              // 键盘顶边。各入口路线的 barrierColor 已同步改透明，
+              // 避免双层变暗叠加。
+              const Positioned.fill(
+                child: ColoredBox(color: Color(0x80000000)),
               ),
-              _buildInputView(),
-              _buildImagePreview(),
-              _buildPanelContainer(),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      highlightColor: Colors.transparent,
+                      splashColor: Colors.transparent,
+                      splashFactory: NoSplashFactory(),
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        Get.back();
+                      },
+                    ),
+                  ),
+                  _buildInputView(),
+                  _buildImagePreview(),
+                  _buildPanelContainer(),
+                ],
+              ),
             ],
           ),
         ));
