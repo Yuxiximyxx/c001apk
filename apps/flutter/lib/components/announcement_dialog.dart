@@ -10,6 +10,7 @@ import 'announcement_avatar.dart';
 import 'glass_surface.dart';
 import 'markdown_body.dart';
 import 'glass_dialog.dart';
+import 'glass_snackbar.dart';
 
 String announcementDate(DateTime date) {
   final local = date.toLocal();
@@ -100,8 +101,10 @@ class _AnnouncementDialogState extends State<AnnouncementDialog>
           : widget.service.markRead(widget.item);
       unawaited(write.catchError((Object _) {
         if (mounted) {
-          ScaffoldMessenger.maybeOf(context)
-              ?.showSnackBar(const SnackBar(content: Text('公告阅读状态未能保存，请稍后重试')));
+          final messenger = ScaffoldMessenger.maybeOf(context);
+          if (messenger != null) {
+            showGlassSnackBar(context, message: '公告阅读状态未能保存，请稍后重试');
+          }
         }
       }));
     });

@@ -329,6 +329,7 @@ class C001APKAPP extends StatelessWidget {
               data: appMiuixThemeData(brightness),
               child: FlutterSmartDialog(
                 toastBuilder: (String msg) => CustomToast(msg: msg),
+                loadingBuilder: (String msg) => CustomLoading(msg: msg),
                 child: MediaQuery(
                   data: MediaQuery.of(context).copyWith(
                       textScaler: AppTextScaler(

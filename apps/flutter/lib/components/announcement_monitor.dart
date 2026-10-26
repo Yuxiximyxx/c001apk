@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../logic/announcements/announcement_service.dart';
 import 'announcement_dialog.dart';
+import 'glass_snackbar.dart';
 import 'update_check_tile.dart';
 
 /// One automatic prompt per process, with version updates taking priority.
@@ -145,8 +146,7 @@ class AnnouncementAutoCheckTile extends StatelessWidget {
               await service.setAutomaticEnabled(value);
             } catch (_) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('公告设置保存失败，请稍后重试')));
+                showGlassSnackBar(context, message: '公告设置保存失败，请稍后重试');
               }
             }
           }));

@@ -70,6 +70,35 @@ class _GlassDialogRoute<T> extends DialogRoute<T> {
   }
 }
 
+/// 通用玻璃对话框面（miuix20 补漏）：给内容形态自由的对话框（选择
+/// 列表、图片预览、选择器整页等 [GlassAlertDialog] 的标题/正文/actions
+/// 模型装不下的）用的整面玻璃——与 [GlassAlertDialog] 同构：透明
+/// [Dialog] 壳 + large 面积档 [GlassSurface]（圆角 28），child 原样放
+/// 进透明 Material（内部不要再套玻璃，规范禁止玻璃叠玻璃）。配合
+/// [showGlassDialog] 使用，首帧即带最终态滤镜。
+class GlassDialogSurface extends StatelessWidget {
+  const GlassDialogSurface({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      child: GlassSurface(
+        borderRadius: BorderRadius.circular(28),
+        sizeClass: GlassSizeClass.large,
+        child: Material(
+          type: MaterialType.transparency,
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 /// 玻璃对话框（miuix17）：按苹果 Liquid Glass 规范，对话框属于悬浮
 /// 控制层，用 Regular 变体 + large 面积档（透镜收敛 0.35、band 封顶
 /// 14dp）的 [GlassSurface] 做面，替代 AlertDialog 的实色面。布局度量

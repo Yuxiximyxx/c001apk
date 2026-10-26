@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../components/glass_menu.dart';
+import '../../components/glass_snackbar.dart';
 
 import '../../components/announcement_dialog.dart';
 import '../../components/expressive_refresh_indicator.dart';
@@ -46,8 +47,7 @@ class _AnnouncementInboxPageState extends State<AnnouncementInboxPage> {
             onSelected: (_) async {
               await widget.service.clearBodyCache();
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('公告正文缓存已清理，阅读记录已保留')));
+                showGlassSnackBar(context, message: '公告正文缓存已清理，阅读记录已保留');
               }
             },
             itemBuilder: (_) => const [

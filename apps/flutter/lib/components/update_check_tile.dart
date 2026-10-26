@@ -12,6 +12,7 @@ import '../logic/app_update/update_service.dart';
 import '../utils/storage_util.dart';
 import 'update_dialog.dart';
 import 'glass_dialog.dart';
+import 'glass_snackbar.dart';
 
 class AppUpdates {
   static final service =
@@ -35,8 +36,7 @@ class AppUpdates {
       }
     }
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('无法打开下载链接，请检查系统浏览器设置')));
+      showGlassSnackBar(context, message: '无法打开下载链接，请检查系统浏览器设置');
     }
   }
 
@@ -101,10 +101,10 @@ class AppUpdates {
       } else if (!automatic &&
           (result.status == UpdateStatus.failed ||
               result.status == UpdateStatus.upToDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(result.status == UpdateStatus.upToDate
+        showGlassSnackBar(context,
+            message: result.status == UpdateStatus.upToDate
                 ? '已是最新版本'
-                : result.message)));
+                : result.message);
       }
     } finally {
       _active = null;

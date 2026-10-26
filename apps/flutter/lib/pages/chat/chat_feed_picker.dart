@@ -66,7 +66,7 @@ class _ChatFeedPickerState extends State<ChatFeedPicker> {
       onTap: () => _choose(id));
 
   @override
-  Widget build(BuildContext context) => Dialog(
+  Widget build(BuildContext context) => GlassDialogSurface(
           child: SizedBox(
         width: 520,
         height: MediaQuery.sizeOf(context).height * .7,

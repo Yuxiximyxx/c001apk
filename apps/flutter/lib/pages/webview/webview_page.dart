@@ -1,5 +1,6 @@
 import '../../components/expressive_loading_indicator.dart';
 import '../../components/glass_dialog.dart';
+import '../../components/glass_snackbar.dart';
 // ignore_for_file: constant_identifier_names
 
 import 'dart:async';
@@ -280,15 +281,13 @@ class _WebviewPageState extends State<WebviewPage> {
                 var url = navigationAction.request.url!.toString();
 
                 if (!url.startsWith('http')) {
-                  var snackBar = SnackBar(
-                    content: const Text('当前网页将要打开外部链接，是否打开'),
+                  showGlassSnackBar(
+                    context,
+                    message: '当前网页将要打开外部链接，是否打开',
                     showCloseIcon: true,
-                    action: SnackBarAction(
-                      label: '打开',
-                      onPressed: () => Utils.launchURL(url),
-                    ),
+                    actionLabel: '打开',
+                    onAction: () => Utils.launchURL(url),
                   );
-                  ScaffoldMessenger.of(context).showSnackBar(snackBar);
                   return NavigationActionPolicy.CANCEL;
                 }
 

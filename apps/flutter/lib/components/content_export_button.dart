@@ -40,10 +40,17 @@ class _ContentExportButtonState extends State<ContentExportButton> {
     final generation = GlobalData().sessionGeneration;
     setState(() => _busy = true);
     try {
-      final format = await showDialog<ExportFormat>(
+      final format = await showGlassDialog<ExportFormat>(
           context: context,
-          builder: (context) =>
-              SimpleDialog(title: const Text('保存内容'), children: [
+          builder: (context) => GlassDialogSurface(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Padding(
+                    padding: EdgeInsets.fromLTRB(24, 24, 24, 8),
+                    child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('保存内容',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w500)))),
                 ListTile(
                     leading: const Icon(Icons.description_outlined),
                     title: const Text('Markdown (.md)'),
@@ -57,7 +64,7 @@ class _ContentExportButtonState extends State<ContentExportButton> {
                 const Padding(
                     padding: EdgeInsets.fromLTRB(24, 8, 24, 12),
                     child: Text('正文与最多三条评论；置顶优先，其余按热门排序。')),
-              ]));
+              ])));
       if (format == null || !_active(generation)) return;
       final service = widget.serviceFactory?.call() ?? ContentExportService();
       _service = service;

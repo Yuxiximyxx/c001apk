@@ -192,9 +192,9 @@ class _ChatPageState extends State<ChatPage> {
               onViewImage: () {
                 if (delivery?.image != null &&
                     delivery?.state != DeliveryState.sent) {
-                  showDialog<void>(
+                  showGlassDialog<void>(
                       context: context,
-                      builder: (context) => Dialog(
+                      builder: (context) => GlassDialogSurface(
                               child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -222,21 +222,23 @@ class _ChatPageState extends State<ChatPage> {
                   _showFailure(delivery!);
                   return;
                 }
-                showDialog<void>(
+                showGlassDialog<void>(
                     context: context,
-                    builder: (context) => SimpleDialog(
-                          children: [
+                    builder: (context) => GlassDialogSurface(
+                          child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                             if (!data.message.isNullOrEmpty)
-                              SimpleDialogOption(
-                                  child: const Text('复制'),
-                                  onPressed: () {
+                              ListTile(
+                                  title: const Text('复制'),
+                                  onTap: () {
                                     Navigator.pop(context);
                                     Utils.copyText(
                                         Utils.parseHtmlString(data.message!));
                                   }),
-                            SimpleDialogOption(
-                                child: const Text('删除'),
-                                onPressed: () async {
+                            ListTile(
+                                title: const Text('删除'),
+                                onTap: () async {
                                   Navigator.pop(context);
                                   final confirmed = await showGlassDialog<bool>(
                                       context: this.context,
@@ -259,7 +261,7 @@ class _ChatPageState extends State<ChatPage> {
                                     _chatController.onDeleteMsg(data.id);
                                   }
                                 }),
-                          ],
+                            ]),
                         ));
               },
             );
@@ -371,7 +373,7 @@ class _ChatPageState extends State<ChatPage> {
     await hidePanel();
     if (!mounted) return;
     final generation = GlobalData().sessionGeneration;
-    final url = await showDialog<String>(
+    final url = await showGlassDialog<String>(
         context: context, builder: (_) => const ChatFeedPicker());
     if (url != null &&
         mounted &&
