@@ -291,7 +291,7 @@ class _UserPageState extends State<UserPage> {
                           }
                           break;
                         case UserMenuItem.UserInfo:
-                          showDialog<void>(
+                          showGlassDialog<void>(
                             context: context,
                             builder: (BuildContext context) {
                               Datum user =

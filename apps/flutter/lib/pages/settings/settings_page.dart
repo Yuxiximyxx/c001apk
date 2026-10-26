@@ -28,6 +28,7 @@ import '../../utils/global_data.dart';
 import '../../logic/local_follow/local_follow_store.dart';
 import '../local_follow/local_follow_page.dart';
 import 'device_identity_page.dart';
+import '../../components/glass_dialog.dart';
 
 enum ImageQuality {
   AUTO,
@@ -226,7 +227,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
               title: '字体大小',
               summary: '调整界面文字大小 · ${GStorage.fontScale.toStringAsFixed(2)}x',
               startAction: const Icon(Icons.text_fields),
-              onClick: () => showDialog<void>(
+              onClick: () => showGlassDialog<void>(
                 context: context,
                 builder: (context) => SliderDialog(
                   fontScale: GStorage.fontScale,
@@ -342,7 +343,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                 onClick: () async {
                   await _settingsController.getCacheSize();
                   if (context.mounted) {
-                    showDialog<void>(
+                    showGlassDialog<void>(
                       context: context,
                       builder: (context) => ClearDialog(
                         cacheSize: _settingsController.cacheSize.value,

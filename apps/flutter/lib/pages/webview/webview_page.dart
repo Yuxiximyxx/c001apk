@@ -295,7 +295,7 @@ class _WebviewPageState extends State<WebviewPage> {
                 return NavigationActionPolicy.ALLOW;
               },
               onDownloadStartRequest: (controller, request) {
-                showDialog(
+                showGlassDialog(
                     context: context,
                     builder: (context) {
                       String suggestedFilename =

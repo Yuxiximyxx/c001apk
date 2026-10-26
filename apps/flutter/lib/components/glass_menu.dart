@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show SemanticsRole;
 
+import 'app_anim.dart';
 import 'glass_surface.dart';
 
 /// 玻璃弹出菜单（miuix17）：按苹果 Liquid Glass 规范，弹出菜单属于
@@ -13,10 +14,30 @@ import 'glass_surface.dart';
 /// 原样工作，所以调用点只需把 PopupMenuButton 换成
 /// [GlassPopupMenuButton]、showMenu 换成 [showGlassMenu]。
 ///
+/// 尺寸（miuix18 修正）：miuix17 的菜单面被撑成近全屏宽——根因是
+/// 内容 Column 用了 CrossAxisAlignment.stretch，它在滚动视图里会把
+/// 横轴尺寸顶到约束上限，于是菜单恒为 ConstrainedBox 的 maxWidth
+/// 320dp（约占屏 87%），与条目内容无关。现改为 IntrinsicWidth 按
+/// 最宽条目的固有宽度定宽（Material 官方菜单同法），并收紧常量：
+/// 下限 [kGlassMenuMinWidth]、上限 [kGlassMenuMaxWidth] 且不超过
+/// 屏宽 −32dp；高度贴合内容（条目 48dp 标准高 + 组内距），超高才
+/// 滚动，上限为屏高 55%。所有调用点共用这一处实现，尺寸自动受益。
+///
 /// 定位：菜单优先开在锚点下方（Material 的 PopupMenuPosition.under
 /// 语义，全应用统一），下方空间不足则翻到锚点上方；水平先对齐锚点
-/// 左缘，溢出时改为对齐右缘，四周留 8dp 安全边距。菜单高度超出可用
-/// 空间时内部滚动。
+/// 左缘，溢出时改为对齐右缘，四周留 8dp 安全边距。
+///
+/// 动画（[AppAnim]）：从锚点方向 fade + scale 0.95→1（transform
+/// origin 对齐锚点侧）+ ≤4dp 微位移，进入 200ms、退出 130ms；
+/// 只动 opacity/transform，不动滤镜参数。
+const double kGlassMenuMinWidth = 168;
+const double kGlassMenuMaxWidth = 280;
+const double kGlassMenuScreenInset = 32;
+const double kGlassMenuMargin = 8;
+const double kGlassMenuGap = 4;
+const double kGlassMenuMaxHeightFactor = 0.55;
+const double kGlassMenuVerticalPadding = 4;
+
 Future<T?> showGlassMenu<T>({
   required BuildContext context,
   required RelativeRect position,
@@ -25,8 +46,7 @@ Future<T?> showGlassMenu<T>({
   double? menuMaxHeight,
 }) {
   final navigator = Navigator.of(context);
-  final overlayBox =
-      navigator.context.findRenderObject() as RenderBox?;
+  final overlayBox = navigator.context.findRenderObject() as RenderBox?;
   final overlaySize = overlayBox?.size ?? MediaQuery.sizeOf(context);
   final anchorRect = Rect.fromLTRB(
     position.left,
@@ -57,10 +77,10 @@ class _GlassMenuRoute<T> extends PopupRoute<T> {
   final double? menuMaxHeight;
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 160);
+  Duration get transitionDuration => AppAnim.menuEnter;
 
   @override
-  Duration get reverseTransitionDuration => const Duration(milliseconds: 120);
+  Duration get reverseTransitionDuration => AppAnim.menuExit;
 
   @override
   bool get barrierDismissible => true;
@@ -78,21 +98,16 @@ class _GlassMenuRoute<T> extends PopupRoute<T> {
       anchorRect: anchorRect,
       items: items,
       menuMaxHeight: menuMaxHeight,
+      animation: animation,
     ));
   }
 
   @override
   Widget buildTransitions(BuildContext context, Animation<double> animation,
       Animation<double> secondaryAnimation, Widget child) {
-    return FadeTransition(
-      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-      child: ScaleTransition(
-        scale: Tween<double>(begin: 0.96, end: 1)
-            .animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-        alignment: Alignment.topCenter,
-        child: child,
-      ),
-    );
+    // 进出动画由面板自己驱动（需要知道菜单落在锚点上/下方来对齐
+    // transform origin 与微位移方向），路由层不再叠加。
+    return child;
   }
 }
 
@@ -100,12 +115,14 @@ class _GlassMenuPanel<T> extends StatefulWidget {
   const _GlassMenuPanel({
     required this.anchorRect,
     required this.items,
+    required this.animation,
     this.menuMaxHeight,
   });
 
   final Rect anchorRect;
   final List<PopupMenuEntry<T>> items;
   final double? menuMaxHeight;
+  final Animation<double> animation;
 
   @override
   State<_GlassMenuPanel<T>> createState() => _GlassMenuPanelState<T>();
@@ -114,6 +131,11 @@ class _GlassMenuPanel<T> extends StatefulWidget {
 class _GlassMenuPanelState<T> extends State<_GlassMenuPanel<T>> {
   final _menuKey = GlobalKey();
   Size? _menuSize;
+  late final CurvedAnimation _entrance = CurvedAnimation(
+    parent: widget.animation,
+    curve: AppAnim.enterCurve,
+    reverseCurve: AppAnim.exitCurve,
+  );
 
   @override
   void initState() {
@@ -127,63 +149,103 @@ class _GlassMenuPanelState<T> extends State<_GlassMenuPanel<T>> {
   }
 
   @override
+  void dispose() {
+    _entrance.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.sizeOf(context);
-    const margin = 8.0;
-    const gap = 4.0;
+    const margin = kGlassMenuMargin;
+    const gap = kGlassMenuGap;
     final maxHeight = widget.menuMaxHeight ??
-        screen.height - margin * 2 - MediaQuery.paddingOf(context).top;
+        math.min(
+          screen.height * kGlassMenuMaxHeightFactor,
+          screen.height - margin * 2 - MediaQuery.paddingOf(context).top,
+        );
+    final maxWidth =
+        math.min(kGlassMenuMaxWidth, screen.width - kGlassMenuScreenInset);
     final size = _menuSize;
     double left = -10000, top = -10000;
+    var opensBelow = true;
     if (size != null) {
       left = widget.anchorRect.left;
       if (left + size.width > screen.width - margin) {
         left = widget.anchorRect.right - size.width;
       }
-      left = left.clamp(margin, math.max(margin, screen.width - margin - size.width));
+      left = left.clamp(
+          margin, math.max(margin, screen.width - margin - size.width));
       top = widget.anchorRect.bottom + gap;
       if (top + size.height > screen.height - margin) {
         top = widget.anchorRect.top - size.height - gap;
+        opensBelow = false;
       }
-      top = top.clamp(margin, math.max(margin, screen.height - margin - size.height));
+      top = top.clamp(
+          margin, math.max(margin, screen.height - margin - size.height));
     }
+    // 微位移：从锚点方向滑入 ≤4dp（按菜单高度换算成 Offset 分数）。
+    final shiftFraction =
+        size == null || size.height == 0 ? 0.0 : 4.0 / size.height;
+    final surface = GlassSurface(
+      key: _menuKey,
+      borderRadius: BorderRadius.circular(20),
+      sizeClass: GlassSizeClass.medium,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            // GlassSurface 的描边占内外各 1dp，内容约束预扣 2dp，
+            // 让菜单总宽精确落在 [kGlassMenuMinWidth]–上限之间。
+            minWidth: math.min(kGlassMenuMinWidth - 2, maxWidth - 2),
+            maxWidth: maxWidth - 2,
+            maxHeight: maxHeight,
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  vertical: kGlassMenuVerticalPadding),
+              // PopupMenuItem 带 menuItem 语义角色，语义树校验
+              // 要求祖先有 menu 角色节点（Material 菜单路由同理）。
+              child: Semantics(
+                container: true,
+                role: SemanticsRole.menu,
+                child: IntrinsicWidth(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: widget.items,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
     return Stack(
       children: [
         Positioned(
           left: left,
           top: top,
-          child: Opacity(
-            // 首帧先量尺寸再定位，避免菜单跳位。
-            opacity: size == null ? 0 : 1,
-            child: GlassSurface(
-              key: _menuKey,
-              borderRadius: BorderRadius.circular(20),
-              sizeClass: GlassSizeClass.medium,
-              child: Material(
-                type: MaterialType.transparency,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: 112,
-                    maxWidth: 320,
-                    maxHeight: maxHeight,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      // PopupMenuItem 带 menuItem 语义角色，语义树校验
-                      // 要求祖先有 menu 角色节点（Material 菜单路由同理）。
-                      child: Semantics(
-                        container: true,
-                        role: SemanticsRole.menu,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: widget.items,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+          // 进出动画只动 opacity/transform：fade 用路由动画的曲线值，
+          // 量尺寸完成前额外乘 0（首帧先量尺寸再定位，避免跳位）。
+          child: AnimatedBuilder(
+            animation: _entrance,
+            builder: (context, child) => Opacity(
+              opacity: _entrance.value * (size == null ? 0 : 1),
+              child: child,
+            ),
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: Offset(0, opensBelow ? -shiftFraction : shiftFraction),
+                end: Offset.zero,
+              ).animate(_entrance),
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.95, end: 1).animate(_entrance),
+                alignment:
+                    opensBelow ? Alignment.topCenter : Alignment.bottomCenter,
+                child: surface,
               ),
             ),
           ),

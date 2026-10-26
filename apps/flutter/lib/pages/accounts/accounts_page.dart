@@ -34,7 +34,7 @@ class _AccountsPageState extends State<AccountsPage> {
   }
 
   Future<void> _remove(SavedAccount account) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGlassDialog<bool>(
         context: context,
         builder: (context) => GlassAlertDialog(
               title: const Text('移除本机登录？'),

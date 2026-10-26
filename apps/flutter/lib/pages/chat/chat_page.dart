@@ -238,7 +238,7 @@ class _ChatPageState extends State<ChatPage> {
                                 child: const Text('删除'),
                                 onPressed: () async {
                                   Navigator.pop(context);
-                                  final confirmed = await showDialog<bool>(
+                                  final confirmed = await showGlassDialog<bool>(
                                       context: this.context,
                                       builder: (context) => GlassAlertDialog(
                                               title: const Text('删除消息？'),
@@ -268,7 +268,7 @@ class _ChatPageState extends State<ChatPage> {
       });
 
   Future<void> _showFailure(ChatDelivery delivery) async {
-    final result = await showDialog<String>(
+    final result = await showGlassDialog<String>(
         context: context,
         builder: (context) => GlassAlertDialog(
               title: Text(delivery.unconfirmed ? '发送结果未确认' : '消息发送失败'),

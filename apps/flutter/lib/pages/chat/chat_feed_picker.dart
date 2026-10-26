@@ -40,7 +40,7 @@ class _ChatFeedPickerState extends State<ChatFeedPicker> {
   }
 
   void _choose(String id) async {
-    final yes = await showDialog<bool>(
+    final yes = await showGlassDialog<bool>(
         context: context,
         builder: (context) => GlassAlertDialog(
                 title: const Text('发送动态？'),

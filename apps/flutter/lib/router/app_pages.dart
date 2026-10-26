@@ -29,6 +29,7 @@ import '../pages/settings/params_page.dart';
 import '../pages/topic/topic_page.dart';
 import '../pages/user/user_page.dart';
 import '../pages/webview/webview_page.dart';
+import '../components/app_anim.dart';
 
 class AppPages {
   static GetPage _getPage({
@@ -53,7 +54,7 @@ class AppPages {
           : page(),
       transition: Transition.native,
       customTransition: AppPageTransition(),
-      transitionDuration: const Duration(milliseconds: 450),
+      transitionDuration: AppAnim.page,
     );
   }
 

@@ -50,7 +50,7 @@ class MessageCard extends StatelessWidget {
                             title: const Text('删除会话'),
                             onTap: () async {
                               Navigator.pop(context);
-                              final confirmed = await showDialog<bool>(
+                              final confirmed = await showGlassDialog<bool>(
                                   context: thisContext,
                                   builder: (context) => GlassAlertDialog(
                                           title: const Text('删除此会话？'),

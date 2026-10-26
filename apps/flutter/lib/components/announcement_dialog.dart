@@ -9,6 +9,7 @@ import '../utils/markdown_content.dart';
 import 'announcement_avatar.dart';
 import 'glass_surface.dart';
 import 'markdown_body.dart';
+import 'glass_dialog.dart';
 
 String announcementDate(DateTime date) {
   final local = date.toLocal();
@@ -18,7 +19,7 @@ String announcementDate(DateTime date) {
 Future<void> showAnnouncement(
         BuildContext context, AnnouncementService service, Announcement item,
         {bool automatic = false, String? loadedBody}) =>
-    showDialog<void>(
+    showGlassDialog<void>(
         context: context,
         builder: (_) => AnnouncementDialog(
             service: service,

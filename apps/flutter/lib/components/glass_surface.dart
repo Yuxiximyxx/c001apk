@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../utils/storage_util.dart';
+import 'app_anim.dart';
 
 /// 玻璃材质（设置项「玻璃材质」，以 int 索引存设置盒
 /// [SettingsBoxKey.dockGlassMaterial]），悬浮 Dock 与全应用悬浮按钮共用。
@@ -700,8 +701,8 @@ class _GlassFabState extends State<GlassFab> {
         onPointerCancel: (_) => _setPressed(false),
         child: AnimatedScale(
           scale: _pressed ? 0.94 : 1,
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
+          duration: AppAnim.fast,
+          curve: AppAnim.enterCurve,
           child: GlassSurface(
             borderRadius: borderRadius,
             materialOverride: widget.materialOverride,

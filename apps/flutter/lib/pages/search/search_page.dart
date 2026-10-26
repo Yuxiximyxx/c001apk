@@ -122,7 +122,7 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                     IconButton(
                       tooltip: '清除全部',
-                      onPressed: () => showDialog(
+                      onPressed: () => showGlassDialog(
                           context: context,
                           builder: (context) => GlassAlertDialog(
                                 title: const Text('确定清除全部搜索历史？'),

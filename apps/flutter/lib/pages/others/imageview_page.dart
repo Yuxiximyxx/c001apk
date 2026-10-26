@@ -13,6 +13,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 import '../../components/glass_surface.dart';
 import '../../utils/download_util.dart';
 import '../../utils/utils.dart';
+import '../../../components/app_anim.dart';
 
 class ImageViewPage extends StatefulWidget {
   const ImageViewPage({super.key, this.imgList, this.initialPage});
@@ -99,7 +100,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
     final next = (current + delta).clamp(0, _imgList.length - 1);
     if (next == current) return;
     unawaited(_pageController.animateToPage(next,
-        duration: const Duration(milliseconds: 255), curve: Curves.ease));
+        duration: AppAnim.standard, curve: AppAnim.enterCurve));
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
@@ -169,7 +170,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
     _menuOpen = true;
     final imageUrl = _imgList[_currentPage];
     try {
-      await showDialog<void>(
+      await showGlassDialog<void>(
         context: context,
         builder: (context) => GlassAlertDialog(
           clipBehavior: Clip.hardEdge,

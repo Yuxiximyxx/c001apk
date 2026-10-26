@@ -104,7 +104,7 @@ class _BlackListPageState extends State<BlackListPage> {
             ),
             if (_controller.dataList.isNotEmpty)
               IconButton(
-                onPressed: () => showDialog(
+                onPressed: () => showGlassDialog(
                   context: context,
                   builder: (context) => GlassAlertDialog(
                     title: Text(

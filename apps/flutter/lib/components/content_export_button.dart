@@ -69,7 +69,7 @@ class _ContentExportButtonState extends State<ContentExportButton> {
       if (!mounted || !_active(generation)) return;
       setState(() => _preparing = false);
       if (prepared.warnings.isNotEmpty) {
-        final proceed = await showDialog<bool>(
+        final proceed = await showGlassDialog<bool>(
             context: context,
             builder: (context) => GlassAlertDialog(
                     title: const Text('部分内容未能保存'),

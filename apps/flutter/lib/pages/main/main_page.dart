@@ -12,6 +12,7 @@ import '../../components/adaptive_reading_pane.dart';
 import '../../components/feed_reading_pane.dart';
 import '../../components/expressive_loading_indicator.dart';
 import '../../components/floating_dock_bar.dart';
+import '../../../components/app_anim.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -147,7 +148,7 @@ class _MainPageState extends State<MainPage> {
     } else {
       _contrller.animateToPage(
         index,
-        duration: const Duration(milliseconds: 400),
+        duration: AppAnim.page,
         curve: Curves.easeInOutCubicEmphasized,
       );
     }

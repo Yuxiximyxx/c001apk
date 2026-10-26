@@ -65,8 +65,10 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
           .map((item) => PopupMenuItem<int>(
                 value: item.value,
                 onTap: item.onTap,
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                // miuix18：条目密度回标准菜单量级（48dp 高、16dp 横距），
+                // 全设置页下拉共用这一处构造。
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(_labelOf(item),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ))

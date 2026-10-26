@@ -36,7 +36,7 @@ class _AppKeyboardNavigationState extends State<AppKeyboardNavigation> {
     if (_exitPromptOpen) return;
     _exitPromptOpen = true;
     try {
-      final exit = await showDialog<bool>(
+      final exit = await showGlassDialog<bool>(
         context: navigator.context,
         builder: (context) => GlassAlertDialog(
           title: const Text('退出 c001apk？'),

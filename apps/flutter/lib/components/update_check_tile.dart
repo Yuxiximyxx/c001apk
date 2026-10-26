@@ -11,6 +11,7 @@ import '../logic/app_update/update_preferences.dart';
 import '../logic/app_update/update_service.dart';
 import '../utils/storage_util.dart';
 import 'update_dialog.dart';
+import 'glass_dialog.dart';
 
 class AppUpdates {
   static final service =
@@ -70,7 +71,7 @@ class AppUpdates {
       if (result.status == UpdateStatus.available) {
         final release = result.release!;
         _hasShownDialog = true;
-        final action = await showDialog<UpdateAction>(
+        final action = await showGlassDialog<UpdateAction>(
             context: context,
             builder: (_) => AppUpdateDialog(
                 release: release,

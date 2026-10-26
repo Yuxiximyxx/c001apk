@@ -27,6 +27,7 @@ import 'utils/app_theme.dart';
 import 'utils/desktop_window.dart';
 import 'utils/android_links.dart';
 import 'utils/utils.dart';
+import 'components/app_anim.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -291,7 +292,7 @@ class C001APKAPP extends StatelessWidget {
       themeMode: GStorage.getThemeMode(),
       getPages: AppPages.getPages,
       customTransition: AppPageTransition(),
-      transitionDuration: const Duration(milliseconds: 450),
+      transitionDuration: AppAnim.page,
       initialRoute: '/',
       builder: (BuildContext context, Widget? child) {
         final brightness = switch (GStorage.getThemeMode()) {

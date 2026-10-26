@@ -60,7 +60,7 @@ class _HistoryPageState extends State<HistoryPage> {
           actions: _controller.dataList.isNotEmpty
               ? [
                   IconButton(
-                    onPressed: () => showDialog(
+                    onPressed: () => showGlassDialog(
                       context: context,
                       builder: (context) => GlassAlertDialog(
                         title: Text(

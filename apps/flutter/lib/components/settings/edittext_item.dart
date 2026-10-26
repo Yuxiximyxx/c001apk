@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../components/dialog.dart';
 import '../../utils/storage_util.dart';
+import '../glass_dialog.dart';
 
 class EdittextItem extends StatefulWidget {
   const EdittextItem({
@@ -66,7 +67,7 @@ class EdittextItemState extends State<EdittextItem> {
       subtitle: widget.subtitle != null
           ? Text(widget.subtitle!)
           : (value.isNotEmpty ? Text(value) : null),
-      onTap: () => showDialog<void>(
+      onTap: () => showGlassDialog<void>(
         context: context,
         builder: (context) {
           return EditTextDialog(

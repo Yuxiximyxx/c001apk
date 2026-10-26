@@ -12,6 +12,7 @@ import '../../../pages/feed/reply/reply_dialog.dart' show ReplyType;
 import '../../../pages/feed/reply/reply_page.dart';
 import '../../../pages/feed/reply2reply/reply_2_reply_controller.dart';
 import '../../../utils/global_data.dart';
+import '../../../components/app_anim.dart';
 
 class Reply2ReplyPage extends StatelessWidget {
   const Reply2ReplyPage({
@@ -70,13 +71,12 @@ class Reply2ReplyPage extends StatelessWidget {
                                 id: id,
                               );
                             },
-                            transitionDuration:
-                                const Duration(milliseconds: 500),
+                            transitionDuration: AppAnim.page,
                             transitionBuilder: (context, animation,
                                 secondaryAnimation, child) {
                               const begin = Offset(0.0, 1.0);
                               const end = Offset.zero;
-                              const curve = Curves.linear;
+                              const curve = AppAnim.enterCurve;
 
                               var tween = Tween(begin: begin, end: end)
                                   .chain(CurveTween(curve: curve));

@@ -34,6 +34,7 @@ import '../../utils/markdown_content.dart';
 import '../../components/content_export_button.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
+import '../../../components/app_anim.dart';
 
 enum FeedMenuItem {
   Copy,
@@ -90,7 +91,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
     super.initState();
     if (GlobalData().isLogin) {
       _fabAnimationCtr = AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 300));
+          vsync: this, duration: AppAnim.standard);
       _fabAnimationCtr?.forward();
       _scrollController.addListener(() {
         final ScrollDirection direction =
@@ -257,7 +258,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
   }
 
   Future<void> _showAccountDetailStatus() async {
-    final retry = await showDialog<bool>(
+    final retry = await showGlassDialog<bool>(
       context: context,
       builder: (context) => GlassAlertDialog(
         title: const Text('账号信息暂不可用'),
@@ -373,11 +374,11 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
             id: id,
           );
         },
-        transitionDuration: const Duration(milliseconds: 500),
+        transitionDuration: AppAnim.page,
         transitionBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(0.0, 1.0);
           const end = Offset.zero;
-          const curve = Curves.linear;
+          const curve = AppAnim.enterCurve;
 
           var tween =
               Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
@@ -561,7 +562,8 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                   end: const Offset(0, 0),
                 ).animate(CurvedAnimation(
                   parent: _fabAnimationCtr!,
-                  curve: Curves.easeInOut,
+                  curve: AppAnim.enterCurve,
+                  reverseCurve: AppAnim.exitCurve,
                 )),
                 child: GlassFab(
                   tooltip: '回复',

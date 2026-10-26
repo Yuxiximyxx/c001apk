@@ -744,7 +744,7 @@ class _ReplyPageState extends State<ReplyPage>
       Response response = await NetworkRepo.getValidateCaptcha();
       if (mounted) {
         _captchaController.clear();
-        showDialog(
+        showGlassDialog(
           context: context,
           builder: (context) => GlassAlertDialog(
             title: const Text('验证码'),

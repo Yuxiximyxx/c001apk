@@ -138,7 +138,7 @@ class _DeviceIdentityPageState extends State<DeviceIdentityPage> {
 
   void _showOfficialError(bool notInstalled) {
     if (!mounted) return;
-    showDialog<void>(
+    showGlassDialog<void>(
       context: context,
       builder: (dialogContext) => GlassAlertDialog(
         title: Text(notInstalled ? '尚未安装官方酷安' : '无法打开酷安 OAID 界面'),

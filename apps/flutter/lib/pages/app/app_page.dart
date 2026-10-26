@@ -22,6 +22,7 @@ import '../../utils/global_data.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
 import '../feed/reply/reply_page.dart';
+import '../../../components/app_anim.dart';
 
 enum AppMenuItem {
   Copy,
@@ -160,12 +161,12 @@ class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
                                 '${1000000000 + int.parse(controller.id ?? '4599')}',
                           );
                         },
-                        transitionDuration: const Duration(milliseconds: 500),
+                        transitionDuration: AppAnim.page,
                         transitionBuilder:
                             (context, animation, secondaryAnimation, child) {
                           const begin = Offset(0.0, 1.0);
                           const end = Offset.zero;
-                          const curve = Curves.linear;
+                          const curve = AppAnim.enterCurve;
 
                           var tween = Tween(begin: begin, end: end)
                               .chain(CurveTween(curve: curve));

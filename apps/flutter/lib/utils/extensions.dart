@@ -6,14 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher_string.dart';
+import '../components/app_anim.dart';
 
 extension ScrollControllerExt on ScrollController {
   void animToTop() {
     if (hasClients) {
       animateTo(
         0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.ease,
+        duration: AppAnim.page,
+        curve: AppAnim.enterCurve,
       );
     }
   }

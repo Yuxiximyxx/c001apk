@@ -93,7 +93,7 @@ window.addEventListener('flutterInAppWebViewPlatformReady',startCaptcha);
           IconButton(
             tooltip: '重复验证帮助',
             icon: const Icon(Icons.help_outline),
-            onPressed: () => showDialog<void>(
+            onPressed: () => showGlassDialog<void>(
               context: context,
               builder: (dialogContext) => GlassAlertDialog(
                 title: const Text('反复出现人机验证？'),

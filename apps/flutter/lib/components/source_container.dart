@@ -8,6 +8,7 @@ import '../pages/others/imageview_page.dart';
 import '../pages/topic/topic_page.dart';
 import '../pages/user/user_page.dart';
 import '../utils/miuix_palette.dart';
+import 'app_anim.dart';
 
 /// Source-anchored page transitions ("container transform").
 ///
@@ -32,8 +33,9 @@ import '../utils/miuix_palette.dart';
 /// behaviour (inner buttons, long-press menus, nested containers) keeps the
 /// exact arena resolution it had before.
 
-/// Shared duration, matching the app's GetX page transitions (450ms).
-const Duration kAnchoredTransitionDuration = Duration(milliseconds: 450);
+/// Shared duration, matching the app's GetX page transitions
+/// (miuix18 起统一为 [AppAnim.page] = 300ms，见全局动画规范）。
+const Duration kAnchoredTransitionDuration = AppAnim.page;
 
 typedef AnchoredClosedBuilder = Widget Function(
     BuildContext context, VoidCallback open);
@@ -268,7 +270,7 @@ class ImageContainer extends StatelessWidget {
       openColor: Theme.of(context).scaffoldBackgroundColor,
       closedShape: closedShape,
       transitionType: ContainerTransitionType.fade,
-      transitionDuration: const Duration(milliseconds: 350),
+      transitionDuration: AppAnim.page,
       closedBuilder: closedBuilder,
       openBuilder: (_, __) =>
           ImageViewPage(imgList: imgList, initialPage: initialPage),

@@ -12,6 +12,7 @@ import '../../../pages/home/app/app_list_controller.dart';
 import '../../../pages/home/return_top_controller.dart';
 import '../../../utils/extensions.dart';
 import '../../../utils/storage_util.dart';
+import '../../../components/app_anim.dart';
 
 class AppListPage extends StatefulWidget {
   const AppListPage({super.key});
@@ -47,7 +48,7 @@ class _AppListPageState extends State<AppListPage>
 
     if (_checkUpdate) {
       _fabAnimationCtr = AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 300));
+          vsync: this, duration: AppAnim.standard);
       _fabAnimationCtr?.forward();
       _scrollController.addListener(() {
         final ScrollDirection direction =
@@ -107,7 +108,8 @@ class _AppListPageState extends State<AppListPage>
                     end: const Offset(0, 0),
                   ).animate(CurvedAnimation(
                     parent: _fabAnimationCtr!,
-                    curve: Curves.easeInOut,
+                    curve: AppAnim.enterCurve,
+                    reverseCurve: AppAnim.exitCurve,
                   )),
                   child: GlassFab(
                     onPressed: () => Get.toNamed('/appUpdate'),

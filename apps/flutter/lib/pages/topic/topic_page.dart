@@ -21,6 +21,7 @@ import '../../utils/extensions.dart';
 import '../../utils/global_data.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
+import '../../../components/app_anim.dart';
 
 enum TopicMenuItem {
   Copy,
@@ -161,8 +162,7 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
       parts.add('$hot热度');
     }
     final discuss = _topicController.entityType == 'product'
-        ? (_topicController.feedCommentNumTxt ??
-            _topicController.commentnumTxt)
+        ? (_topicController.feedCommentNumTxt ?? _topicController.commentnumTxt)
         : (_topicController.commentnumTxt ??
             _topicController.feedCommentNumTxt);
     if (discuss != null && '$discuss'.isNotEmpty) {
@@ -384,9 +384,8 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
       return Container(
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withOpacity(0.12)
-              : const Color(0xFFF4F3F8),
+          color:
+              isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFF4F3F8),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
@@ -401,8 +400,7 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                     const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
                 decoration: selected
                     ? BoxDecoration(
-                        color:
-                            isDark ? const Color(0xFF3A3A3C) : Colors.white,
+                        color: isDark ? const Color(0xFF3A3A3C) : Colors.white,
                         borderRadius: BorderRadius.circular(999),
                         boxShadow: [
                           BoxShadow(
@@ -417,9 +415,9 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                   type.label,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
-                    color: selected ? colorScheme.onSurface : colorScheme.outline,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                    color:
+                        selected ? colorScheme.onSurface : colorScheme.outline,
                   ),
                 ),
               ),
@@ -525,51 +523,50 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
               ),
               child: Scaffold(
                 backgroundColor: MiuixTheme.of(context).colors.primary,
-                floatingActionButton: GlobalData().isLogin &&
-                        !_topicController.isBlocked
-                    ? GlassFab(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            GetDialogRoute(
-                              // 无变暗层：ReplyPage 不带变暗层（miuix10
-                              // 摘除），路线 barrier 保持透明。
-                              barrierColor: Colors.transparent,
-                              pageBuilder: (buildContext, animation,
-                                  secondaryAnimation) {
-                                return ReplyPage(
-                                  targetType:
-                                      _topicController.entityType == 'topic'
-                                          ? 'tag'
-                                          : 'product_phone',
-                                  targetId: _topicController.id,
-                                  title: _topicController.title,
-                                );
-                              },
-                              transitionDuration:
-                                  const Duration(milliseconds: 500),
-                              transitionBuilder: (context, animation,
-                                  secondaryAnimation, child) {
-                                const begin = Offset(0.0, 1.0);
-                                const end = Offset.zero;
-                                const curve = Curves.linear;
+                floatingActionButton:
+                    GlobalData().isLogin && !_topicController.isBlocked
+                        ? GlassFab(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                GetDialogRoute(
+                                  // 无变暗层：ReplyPage 不带变暗层（miuix10
+                                  // 摘除），路线 barrier 保持透明。
+                                  barrierColor: Colors.transparent,
+                                  pageBuilder: (buildContext, animation,
+                                      secondaryAnimation) {
+                                    return ReplyPage(
+                                      targetType:
+                                          _topicController.entityType == 'topic'
+                                              ? 'tag'
+                                              : 'product_phone',
+                                      targetId: _topicController.id,
+                                      title: _topicController.title,
+                                    );
+                                  },
+                                  transitionDuration: AppAnim.page,
+                                  transitionBuilder: (context, animation,
+                                      secondaryAnimation, child) {
+                                    const begin = Offset(0.0, 1.0);
+                                    const end = Offset.zero;
+                                    const curve = AppAnim.enterCurve;
 
-                                var tween = Tween(begin: begin, end: end)
-                                    .chain(CurveTween(curve: curve));
+                                    var tween = Tween(begin: begin, end: end)
+                                        .chain(CurveTween(curve: curve));
 
-                                return SlideTransition(
-                                  position: animation.drive(tween),
-                                  child: child,
-                                );
-                              },
-                            ),
-                          );
-                        },
-                        tooltip: '发布动态',
-                        // 原为主题色实心圆钮，现统一改玻璃材质（正圆保持）。
-                        circular: true,
-                        icon: Icons.add,
-                      )
-                    : null,
+                                    return SlideTransition(
+                                      position: animation.drive(tween),
+                                      child: child,
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                            tooltip: '发布动态',
+                            // 原为主题色实心圆钮，现统一改玻璃材质（正圆保持）。
+                            circular: true,
+                            icon: Icons.add,
+                          )
+                        : null,
                 body: Column(
                   children: [
                     _buildHeader(context),

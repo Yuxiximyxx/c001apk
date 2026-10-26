@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'glass_surface.dart';
+import 'app_anim.dart';
 
 /// 玻璃底部 sheet（miuix17）：按苹果 Liquid Glass 规范，底部 sheet 是
 /// 悬浮在内容之上的控制层，用 Regular 变体 + large 面积档（透镜收敛
@@ -24,6 +25,14 @@ Future<T?> showGlassBottomSheet<T>({
     isDismissible: isDismissible,
     enableDrag: enableDrag,
     barrierColor: barrierColor,
+    // miuix18：sheet 进出动画收编到全局规范（自下滑动+fade，
+    // 260ms 进入 / 200ms 退出，曲线走 AppAnim）。
+    sheetAnimationStyle: AnimationStyle(
+      duration: AppAnim.sheetEnter,
+      reverseDuration: AppAnim.sheetExit,
+      curve: AppAnim.enterCurve,
+      reverseCurve: AppAnim.exitCurve,
+    ),
     backgroundColor: Colors.transparent,
     elevation: 0,
     builder: (context) => GlassSheetSurface(child: builder(context)),

@@ -7,6 +7,7 @@ import '../../utils/date_util.dart';
 import '../../utils/extensions.dart';
 import '../../utils/utils.dart';
 import '../source_container.dart';
+import '../app_anim.dart';
 
 class AppUpdateCard extends StatefulWidget {
   const AppUpdateCard({
@@ -35,8 +36,8 @@ class _AppUpdateCardState extends State<AppUpdateCard> {
     Widget card(VoidCallback? onTap) {
       return AnimatedSize(
         alignment: Alignment.topCenter,
-        curve: Curves.linearToEaseOut,
-        duration: const Duration(milliseconds: 500),
+        curve: AppAnim.enterCurve,
+        duration: AppAnim.standard,
         child: Material(
           color: Theme.of(context).colorScheme.onInverseSurface,
           borderRadius: const BorderRadius.all(Radius.circular(12)),
