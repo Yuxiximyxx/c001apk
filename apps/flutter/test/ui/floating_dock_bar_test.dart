@@ -443,34 +443,60 @@ void main() {
     });
   });
 
-  group('fluid glass dock spike', () {
-    test(
-        'sigma to fluid blur radius round-trips through the library conversion',
+  group('fluid glass kyant dock spike', () {
+    test('spec maps into LiquidGlassColors through tint and accent only',
         () {
-      // 本仓 sigma（直接喂 ImageFilter.blur）→ fluid blur() 的半径 →
-      // 库自带 blurRadiusToSigma 必须还原同一个 sigma，否则三档模糊
-      // 量在 fluid 引擎下会整体偏移。
-      for (final sigma in [6.0, 8.0, 20.0, 30.0]) {
-        for (final dpr in [1.0, 2.75]) {
-          final radius = fluidBlurRadiusForSigma(sigma, dpr);
-          expect(radius, greaterThan(0));
-          expect(blurRadiusToSigma(radius, devicePixelRatio: dpr),
-              closeTo(sigma, 1e-9));
-        }
+      // Kyant 组件的光学参数（blur/vibrancy/lens/色散）在组件内写死，
+      // spec 只能经颜色进组件：container = glassTintColor（纱色+透明度，
+      // 三预设身份经此可辨）、accent 原样透传。映射函数单独钉住，
+      // 防止日后有人把字段静默吞掉。
+      const accent = Color(0xFF3366FF);
+      for (final material in DockGlassMaterial.values) {
+        final colors =
+            dockGlassColorsForSpec(material.spec, dark: true, accent: accent);
+        expect(colors.accent, accent);
+        expect(colors.container, glassTintColor(material.spec, true));
+        final light = dockGlassColorsForSpec(material.spec,
+            dark: false, accent: accent);
+        expect(light.container, glassTintColor(material.spec, false));
       }
-      // sigma 0 钳 0（库内 blur 跳过）；色散开关只看 spec 正负。
-      expect(fluidBlurRadiusForSigma(0, 2.75), 0);
-      expect(fluidChromaticAberration(DockGlassMaterial.liquid.spec), isTrue);
-      expect(fluidChromaticAberration(DockGlassMaterial.frosted.spec), isFalse);
-      expect(fluidChromaticAberration(DockGlassMaterial.clear.spec), isFalse);
+      // 三预设的 container 必须两两不同（Kyant 路上预设只剩纱色深浅
+      // 一条身份线，连这条都丢了就是映射坏了）。
+      final darkTints = DockGlassMaterial.values
+          .map((m) =>
+              dockGlassColorsForSpec(m.spec, dark: true, accent: accent)
+                  .container)
+          .toSet();
+      expect(darkTints, hasLength(DockGlassMaterial.values.length));
+    });
+
+    test('unmapped LiquidGlassColors fields keep the library defaults', () {
+      // content/track 等非映射字段必须等于库的明暗默认——映射函数只许
+      // 动 accent 与 container。
+      const accent = Color(0xFF3366FF);
+      final colors = dockGlassColorsForSpec(DockGlassMaterial.frosted.spec,
+          dark: true, accent: accent);
+      final defaults = LiquidGlassColors.forBrightness(Brightness.dark);
+      expect(colors.content, defaults.content);
+      expect(colors.track, defaults.track);
+      expect(colors.toggleAccent, defaults.toggleAccent);
+      expect(colors.destructive, defaults.destructive);
+      final lightColors = dockGlassColorsForSpec(
+          DockGlassMaterial.frosted.spec,
+          dark: false,
+          accent: accent);
+      final lightDefaults = LiquidGlassColors.forBrightness(Brightness.light);
+      expect(lightColors.content, lightDefaults.content);
+      expect(lightColors.track, lightDefaults.track);
     });
 
     testWidgets(
         'injected page backdrop still falls back without runtime shaders',
         (tester) async {
       // 测试环境无运行时 shader：即便主页注入了页面录制，Dock 也必须
-      // 整栏回落现引擎（BackdropFilter 出图、几何/点按一致、不抛异常）。
-      // fluid 出图路径只能在真机 Impeller 上目视，本测试钉住回落门。
+      // 整栏回落 miuix20 现 Dock（BackdropFilter 出图、几何/点按一致、
+      // 不抛异常、LiquidBottomTabs 不出现）。Kyant 路只能在真机
+      // Impeller 上目视，本测试钉住回落门。
       final tapped = <int>[];
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1;
@@ -494,6 +520,7 @@ void main() {
         ),
       ));
       await tester.pump();
+      expect(find.byType(LiquidBottomTabs), findsNothing);
       final capsule = find.byKey(const Key('floatingDockCapsule'));
       expect(capsule, findsOneWidget);
       expect(

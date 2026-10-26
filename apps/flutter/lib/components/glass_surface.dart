@@ -582,24 +582,6 @@ ui.ImageFilter glassImageFilter({
   return filter;
 }
 
-/// fluid_glass 试验（分支 fluid-dock-spike）：把本仓 spec 的模糊量
-/// 换算成 fluid_glass `blur()` 吃的 Android 口径半径。库内按 Skia 的
-/// ConvertRadiusToSigma 换算 sigma = (0.57735·r·dpr + 0.5) / dpr，
-/// 而本仓 spec.sigma 是直接喂 ImageFilter.blur 的高斯 sigma——要在
-/// fluid 链上得到同一个模糊量必须反解半径（与
-/// [fluid_glass 的 blurRadiusToSigma] 互为逆运算，单测钉住往返）。
-/// sigma·dpr ≤ 0.5 时半径钳 0（库内 blur 直接跳过），与 sigma≈0 视觉
-/// 等价。
-double fluidBlurRadiusForSigma(double sigma, double dpr) {
-  final radius = (sigma * dpr - 0.5) / (0.57735 * dpr);
-  return radius > 0 ? radius : 0;
-}
-
-/// fluid 链的色散开关：本仓 spec.dispersion 是强度值（自研 shader 的
-/// 7 段光谱采样位移系数），Kyant/fluid 的 chromaticAberration 是布尔
-/// （shader 内固定强度，与 Kyant 原生一致），只能映射开/关。
-bool fluidChromaticAberration(DockGlassSpec spec) => spec.dispersion > 0;
-
 /// 共享玻璃面：柔和投影 + 真毛玻璃（BackdropFilter 模糊/折射/饱和）+
 /// 乳纱 + 描边 + 顶缘 inset 高光，[child] 叠在玻璃之上。悬浮 Dock、
 /// [GlassFab] 与 miuix17 起的菜单/sheet/对话框/回复输入卡共用同一套

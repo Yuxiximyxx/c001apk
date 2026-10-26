@@ -1,6 +1,6 @@
 import 'dart:async' show unawaited;
 import 'dart:math' as math;
-import 'dart:ui' as ui show FragmentProgram, Gradient;
+import 'dart:ui' as ui show FragmentProgram;
 
 import 'package:fluid_glass/fluid_glass.dart';
 import 'package:flutter/material.dart';
@@ -54,12 +54,13 @@ class FloatingDockBar extends StatefulWidget {
   /// 测试/预览覆写材质；为空时读设置盒并监听变化（即时生效）。
   final DockGlassMaterial? materialOverride;
 
-  /// fluid_glass 试验（分支 fluid-dock-spike）：页面内容的录制句柄，
-  /// 由主页把正文包进 fluid_glass 的 BackdropLayer 时注入。为空
-  /// （测试、宽屏 rail 等无注入场景）或运行时 shader 不可用时，整栏
-  /// 回落现引擎（GlassSurface + BackdropFilter），行为与 main 一致；
-  /// 注入且 shader 可用时，壳与药丸改走 fluid 的 DrawBackdrop 出图，
-  /// 交互（拖动弹簧/果冻/橡皮筋/点按）一律保留现实现。
+  /// fluid_glass 试验（分支 fluid-dock-spike，第二版改线）：页面内容
+  /// 的录制句柄，由主页把正文包进 fluid_glass 的 BackdropLayer 时
+  /// 注入。注入且运行时 shader 可用（Impeller）时，整栏换成 Kyant
+  /// 同源组件 [LiquidBottomTabs]（与泥坛同组件），参数经
+  /// [dockGlassColorsForSpec] 从有效 spec 映射；为空（测试、宽屏
+  /// rail 等无注入场景）或 shader 不可用时，整栏回落 miuix20 的现
+  /// Dock 整体（GlassSurface + BackdropFilter + 自研弹簧手势）。
   final LayerBackdrop? pageBackdrop;
 
   /// miuix19 前的旧宽度口径（固定屏宽 58%），仅保留供测试对照
@@ -141,14 +142,11 @@ class _FloatingDockBarState extends State<FloatingDockBar>
   Ticker? _ticker;
   Duration? _lastTick;
 
-  /// fluid 试验：标签行的录制句柄。药丸的采样 = 页面内容 + 标签行
-  /// （与 Kyant LiquidBottomTabs 的组合口径一致——不含壳玻璃本身），
-  /// 标签行照常可见绘制、同时被录下来给药丸折射。
-  final LayerBackdrop _labelsBackdrop = LayerBackdrop();
-
-  /// fluid 出图开关：有页面录制注入且运行时 shader 可用（Impeller）
-  /// 才走 fluid；否则整栏回落现引擎。测试环境 shader 不可用，恒回落。
-  bool get _useFluidGlass =>
+  /// fluid 试验：Kyant 组件路开关——有页面录制注入且运行时 shader
+  /// 可用（Impeller）才走 [LiquidBottomTabs]；否则整栏回落 miuix20
+  /// 现 Dock。测试环境 shader 不可用，恒回落（fluid 路径只能真机
+  /// 目视，widget 测试钉住回落门与映射函数）。
+  bool get _useKyantTabs =>
       widget.pageBackdrop != null && isRuntimeShaderSupported();
 
   /// 药丸位置（槽索引单位），弹簧 ζ1.0/k1000。
@@ -179,8 +177,8 @@ class _FloatingDockBarState extends State<FloatingDockBar>
     super.initState();
     _value = _Spring(1.0, 1000, widget.selectedIndex.toDouble());
     _targetValue = widget.selectedIndex.toDouble();
-    // fluid 试验：预热 fluid 的 shader 程序，避免首帧无折射（库的
-    // 程序本来也会在首次使用时懒加载，这里只是提前量）。
+    // fluid 试验：预热 fluid 的 shader 程序，避免 Kyant 组件首帧无
+    // 折射（库的程序本来也会在首次使用时懒加载，这里只是提前量）。
     if (widget.pageBackdrop != null) {
       unawaited(FluidGlass.ensureInitialized());
     }
@@ -207,7 +205,6 @@ class _FloatingDockBarState extends State<FloatingDockBar>
   @override
   void dispose() {
     _ticker?.dispose();
-    _labelsBackdrop.dispose();
     super.dispose();
   }
 
@@ -368,6 +365,20 @@ class _FloatingDockBarState extends State<FloatingDockBar>
     // 整栏宽同值同义，只是来源改成公式）。
     _barWidth = barWidth;
 
+    // fluid 试验（第二版改线）：Kyant 同源组件路——整栏交给
+    // LiquidBottomTabs（与泥坛同组件）；下面的自研实现只在 shader
+    // 不可用时整体回落（= miuix20 现 Dock），两路互斥。
+    if (_useKyantTabs) {
+      return _buildKyantBar(
+        context,
+        spec,
+        barWidth: barWidth,
+        bottomMargin: bottomMargin,
+        accent: accent,
+        dark: dark,
+      );
+    }
+
     // 整栏橡皮筋位移：4dp × sign × EaseOut(|原始拖距/栏宽| 钳 1)。
     var panelOffset = 0.0;
     if (_barWidth > 0 && _panelRaw.value != 0) {
@@ -383,9 +394,6 @@ class _FloatingDockBarState extends State<FloatingDockBar>
     final effScaleX = _scaleX.value / (1 - jellyX);
     final effScaleY = _scaleY.value * (1 - jellyY);
 
-    // fluid 试验：出图引擎二选一（fluid DrawBackdrop / 现 GlassSurface），
-    // 内容（手势、标签、药丸几何与弹簧）共用同一份，不因引擎分叉。
-    final useFluid = _useFluidGlass;
     final content = Material(
       type: MaterialType.transparency,
       // 槽区两侧留 [FloatingDockBar.sidePadding] 内距：槽宽
@@ -397,8 +405,6 @@ class _FloatingDockBarState extends State<FloatingDockBar>
         child: LayoutBuilder(
           builder: (context, constraints) {
             _slotWidth = constraints.maxWidth / FloatingDockBar.labels.length;
-            // 标签行单独成变量：fluid 时要把同一行交给
-            // BackdropLayer 录制（见下方 Stack 第一层）。
             final labelsRow = Row(
               children: [
                 for (var i = 0; i < FloatingDockBar.labels.length; i++)
@@ -438,15 +444,7 @@ class _FloatingDockBarState extends State<FloatingDockBar>
               child: Stack(
                 children: [
                   // 标签内容层（在药丸之下，药丸透镜采样得到它）。
-                  // fluid 时同一行再被 BackdropLayer 录下来：
-                  // 可见绘制不变，录像供药丸的组合采样折射。
-                  if (useFluid)
-                    BackdropLayer(
-                      backdrop: _labelsBackdrop,
-                      child: labelsRow,
-                    )
-                  else
-                    labelsRow,
+                  labelsRow,
                   // 药丸：连续位置 + 双轴弹簧缩放 + 速度果冻。
                   Positioned(
                     left:
@@ -460,26 +458,14 @@ class _FloatingDockBarState extends State<FloatingDockBar>
                         alignment: Alignment.center,
                         transform: Matrix4.identity()
                           ..scaleByDouble(effScaleX, effScaleY, 1, 1),
-                        child: useFluid && spec.dispersion > 0
-                            ? _FluidSelectionPill(
-                                key: const Key('floatingDockPill'),
-                                backdrop: CombinedBackdrop.of(
-                                  widget.pageBackdrop!,
-                                  _labelsBackdrop,
-                                ),
-                                spec: spec,
-                                color: pillColor,
-                                pressProgress:
-                                    _press.value.clamp(0.0, 1.0).toDouble(),
-                              )
-                            : _SelectionPill(
-                                key: const Key('floatingDockPill'),
-                                spec: spec,
-                                color: pillColor,
-                                pressProgress:
-                                    _press.value.clamp(0.0, 1.0).toDouble(),
-                                refractionProgram: _refractionProgram,
-                              ),
+                        child: _SelectionPill(
+                          key: const Key('floatingDockPill'),
+                          spec: spec,
+                          color: pillColor,
+                          pressProgress:
+                              _press.value.clamp(0.0, 1.0).toDouble(),
+                          refractionProgram: _refractionProgram,
+                        ),
                       ),
                     ),
                   ),
@@ -491,21 +477,12 @@ class _FloatingDockBarState extends State<FloatingDockBar>
       ),
     );
 
-    // 壳的出图：fluid DrawBackdrop 或现 GlassSurface（二选一，见上）。
-    final capsule = useFluid
-        ? _FluidDockCapsule(
-            key: const Key('floatingDockCapsule'),
-            backdrop: widget.pageBackdrop!,
-            spec: spec,
-            dark: dark,
-            child: content,
-          )
-        : GlassSurface(
-            key: const Key('floatingDockCapsule'),
-            borderRadius: BorderRadius.circular(FloatingDockBar.height / 2),
-            specOverride: spec,
-            child: content,
-          );
+    final capsule = GlassSurface(
+      key: const Key('floatingDockCapsule'),
+      borderRadius: BorderRadius.circular(FloatingDockBar.height / 2),
+      specOverride: spec,
+      child: content,
+    );
 
     return SizedBox(
       height: FloatingDockBar.height + bottomMargin,
@@ -517,6 +494,86 @@ class _FloatingDockBarState extends State<FloatingDockBar>
           child: Transform.translate(
             offset: Offset(panelOffset, 0),
             child: capsule,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// fluid 试验的 Kyant 组件路：整栏 = fluid_glass 的
+  /// [LiquidBottomTabs]（Kyant LiquidBottomTabs 的逐行移植，与泥坛
+  /// 同组件同弹簧），外壳尺寸/下边距与回落路一致（总宽走
+  /// [FloatingDockBar.barWidthForTabCount]、高 68）。
+  ///
+  /// 接线口径：
+  /// - 采样：组件的 backdrop = 主页注入的页面录制；药丸里的强调色
+  ///   标签副本由组件内部合成采样（页面录制 + 副本行），不经二次
+  ///   录制；
+  /// - 点按未选中 Tab 走 LiquidBottomTab.onPressed；拖动药丸落定走
+  ///   onTabSelected（仅索引变更时转发）；点按药丸（已选中 Tab）走
+  ///   onTabReselected——三者汇入 onDestinationSelected，与回落路的
+  ///   点按语义一致（主页据此处理「再点首页回顶」）；
+  /// - 标签按 selectedIndex 离散构建：选中项竖排图标+文字（强调色）、
+  ///   未选只有图标，图标尺寸取回落路连续渐变的终点值（选中 22 /
+  ///   未选 24）；拖动中途不跟随渐变，切换在吸附落定后随重建出现；
+  /// - 系统要求减少动态时 isInteractive=false：组件掐掉拖动与按压
+  ///   膨胀、选择改为瞬移（主页的 PageView 同步走 jumpToPage）。
+  Widget _buildKyantBar(
+    BuildContext context,
+    DockGlassSpec spec, {
+    required double barWidth,
+    required double bottomMargin,
+    required Color accent,
+    required bool dark,
+  }) {
+    final unselectedColor = glassIconColor(context);
+    final selected = widget.selectedIndex;
+    return SizedBox(
+      height: FloatingDockBar.height + bottomMargin,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          width: barWidth,
+          height: FloatingDockBar.height,
+          child: LiquidGlassTheme(
+            colors: dockGlassColorsForSpec(spec, dark: dark, accent: accent),
+            child: LiquidBottomTabs(
+              selectedTabIndex: selected,
+              onTabSelected: (index) {
+                if (index != widget.selectedIndex) {
+                  widget.onDestinationSelected(index);
+                }
+              },
+              onTabReselected: widget.onDestinationSelected,
+              backdrop: widget.pageBackdrop!,
+              tabsCount: FloatingDockBar.labels.length,
+              height: FloatingDockBar.height,
+              isInteractive: !MediaQuery.disableAnimationsOf(context),
+              children: [
+                for (var i = 0; i < FloatingDockBar.labels.length; i++)
+                  LiquidBottomTab(
+                    onPressed: () => widget.onDestinationSelected(i),
+                    children: [
+                      Icon(
+                        selected == i
+                            ? FloatingDockBar._selectedIcons[i]
+                            : FloatingDockBar._icons[i],
+                        size: selected == i ? 22 : 24,
+                        color: selected == i ? accent : unselectedColor,
+                      ),
+                      if (selected == i)
+                        Text(
+                          FloatingDockBar.labels[i],
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1,
+                            color: accent,
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -708,151 +765,29 @@ class _SelectionPill extends StatelessWidget {
   }
 }
 
-/// fluid 试验的 Dock 壳（替代 [GlassSurface] 出图，几何/内容不变）：
-/// 页面内容录制（BackdropLayer）→ DrawBackdrop 采样，效果链按 spec
-/// 逐项映射 Kyant 口径——饱和走 colorControls（= spec.saturate）、
-/// 模糊走 blur（半径由 spec.sigma 反解，见 [fluidBlurRadiusForSigma]）、
-/// 折射走 lens（band/amount = spec 全量，色散按 [fluidChromaticAberration]
-/// 开/关）；纱色经 onDrawSurface 画、描边经 onDrawFront 沿胶囊轮廓描
-/// （fluid 的 rim 高光只管边缘镜面光，spec.borderAlpha 的描边单列），
-/// 高光 = Highlight（alpha 取 spec 高光强度）、投影 = GlassShadow
-/// （与现引擎同的 18/(0,6)/黑 0.35·0.18）。形状用库的 Capsule
-/// （连续角，Kyant Shapes 的形状语言；现引擎是圆角胶囊）。
-class _FluidDockCapsule extends StatelessWidget {
-  const _FluidDockCapsule({
-    super.key,
-    required this.backdrop,
-    required this.spec,
-    required this.dark,
-    required this.child,
-  });
-
-  final LayerBackdrop backdrop;
-  final DockGlassSpec spec;
-  final bool dark;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return DrawBackdrop(
-      backdrop: backdrop,
-      shape: () => const Capsule(),
-      effects: (scope) => scope
-        ..colorControls(saturation: spec.saturate)
-        ..blur(fluidBlurRadiusForSigma(spec.sigma, scope.devicePixelRatio))
-        ..lens(
-          spec.refractionBandDp,
-          spec.refractionAmountDp,
-          chromaticAberration: fluidChromaticAberration(spec),
-        ),
-      highlight: () => Highlight(alpha: glassHighlightAlpha(spec, dark)),
-      shadow: () => GlassShadow(
-        radius: 18,
-        offset: const Offset(0, 6),
-        color: Colors.black.withValues(alpha: dark ? 0.35 : 0.18),
-      ),
-      onDrawSurface: (canvas, size) => canvas.drawRect(
-        Offset.zero & size,
-        Paint()..color = glassTintColor(spec, dark),
-      ),
-      onDrawFront: (canvas, size) {
-        final rect = (Offset.zero & size).deflate(0.5);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-              rect, Radius.circular(FloatingDockBar.height / 2)),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1
-            ..color = glassBorderColor(spec, dark),
-        );
-      },
-      // 纱色只是 src-over 一层，隔离 save-layer 无收益（库目录同款判断）。
-      isolateSurface: false,
-      // 标签不接库的光照系统（无 GlassLight 光源，保持现渲染原样）。
-      receivesLight: false,
-      child: child,
-    );
-  }
-}
-
-/// fluid 试验的选中药丸（替代 [_SelectionPill] 的 BackdropFilter 出图）：
-/// 采样 = 页面内容 + 标签行录制的组合（CombinedBackdrop，与 Kyant
-/// LiquidBottomTabs 同口径，不含壳玻璃本身）；仅在 spec 带色散时
-/// 启用（与现引擎的透镜身份门一致，其余档位仍走 [_SelectionPill]
-/// 的纯色层）。透镜 band 10dp / amount 14dp 随 pressProgress 门控
-/// （现口径原样映射到库的 lens），色散恒开（本 widget 的启用条件
-/// 就是 dispersion > 0，库内强度固定与 Kyant 一致）。静止（p=0）时
-/// lens 量为 0、效果链为空，库直出原始采样再压三层色——深色椭圆
-/// 身份与现引擎一致（仅少了现引擎静止时那道饱和提升）。颜色三层
-/// （深色基/表面 tint/按压阴影）经 onDrawSurface 画、触点径向高光
-/// 经 onDrawFront 画，与现引擎同值；高光/投影/内阴影走库的
-/// Highlight/GlassShadow/GlassInnerShadow，alpha 随 p。
-class _FluidSelectionPill extends StatelessWidget {
-  const _FluidSelectionPill({
-    super.key,
-    required this.backdrop,
-    required this.spec,
-    required this.color,
-    required this.pressProgress,
-  });
-
-  /// 组合采样：页面内容 + 标签行录制。
-  final Backdrop backdrop;
-  final DockGlassSpec spec;
-  final Color color;
-  final double pressProgress;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final p = pressProgress;
-    final baseColor = color.withValues(alpha: color.a * (1 - p));
-    final surfaceTint =
-        (dark ? Colors.white : Colors.black).withValues(alpha: 0.1 * (1 - p));
-    final pressShade = Colors.black.withValues(alpha: 0.03 * p);
-    return DrawBackdrop(
-      backdrop: backdrop,
-      shape: () => const Capsule(),
-      effects: (scope) => scope.lens(
-        _FloatingDockBarState._pillLensBandDp * p,
-        _FloatingDockBarState._pillLensAmountDp * p,
-        chromaticAberration: true,
-      ),
-      highlight: () => Highlight(alpha: glassHighlightAlpha(spec, dark) * p),
-      shadow: () => GlassShadow(
-        radius: 12,
-        offset: const Offset(0, 4),
-        color: Colors.black.withValues(alpha: 0.25),
-        alpha: p,
-      ),
-      innerShadow:
-          p > 0.01 ? () => GlassInnerShadow(radius: 8 * p, alpha: p) : null,
-      onDrawSurface: (canvas, size) {
-        final rect = Offset.zero & size;
-        canvas.drawRect(rect, Paint()..color = baseColor);
-        canvas.drawRect(rect, Paint()..color = surfaceTint);
-        canvas.drawRect(rect, Paint()..color = pressShade);
-      },
-      onDrawFront: p > 0
-          ? (canvas, size) {
-              // 触点高光近似（与现引擎同：药丸中心径向高光，α 随 p；
-              // 现引擎另有一道顶部线性高光，fluid 侧由 Highlight 的
-              // 边缘镜面光承担，不重复叠加）。
-              final paint = Paint()
-                ..shader = ui.Gradient.radial(
-                  size.center(Offset.zero),
-                  size.height * 0.9,
-                  [
-                    Colors.white.withValues(alpha: 0.14 * p),
-                    Colors.white.withValues(alpha: 0),
-                  ],
-                );
-              canvas.drawRect(Offset.zero & size, paint);
-            }
-          : null,
-      isolateSurface: false,
-      receivesLight: false,
-      child: const SizedBox.expand(),
-    );
-  }
+/// fluid 试验：把有效 spec 映射成 Kyant 组件的颜色面。
+/// [LiquidBottomTabs] 的光学参数在组件内写死为 Kyant 原方（面板
+/// vibrancy 饱和 1.5 + blur 8 + lens 24·24；药丸 lens 10·14 ×
+/// pressProgress、色散恒开），不吃 spec——能经 [LiquidGlassColors]
+/// 进组件的只有颜色：
+/// - accent ← 应用强调色（与回落路选中项着色同源，组件拿它染
+///   药丸里的标签副本与选中标记）；
+/// - container ← [glassTintColor]（spec 的纱基色 #121212/#FAFAFA
+///   + tintAlpha，即三预设身份与「透明度」滑杆经此生效）；
+/// - content/track 等 ← 库的明暗默认（标签本体颜色由
+///   [_FloatingDockBarState._buildKyantBar] 逐项给，不经 content）。
+/// 其余 spec 字段（sigma / saturate / refractionBandDp /
+/// refractionAmountDp / dispersion / highlightAlpha / borderAlpha）
+/// 在 Kyant 路没有入口，逐项缺口见试验报告，不要在此静默吞掉。
+LiquidGlassColors dockGlassColorsForSpec(
+  DockGlassSpec spec, {
+  required bool dark,
+  required Color accent,
+}) {
+  final base = LiquidGlassColors.forBrightness(
+      dark ? Brightness.dark : Brightness.light);
+  return base.copyWith(
+    accent: accent,
+    container: glassTintColor(spec, dark),
+  );
 }
