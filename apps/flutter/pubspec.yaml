@@ -149,6 +149,7 @@ flutter:
   assets:
     - assets/emojis/
     - assets/icon/icon.png
+    - assets/icon/icon_green.png
 
   shaders:
     - assets/shaders/dock_refraction.frag

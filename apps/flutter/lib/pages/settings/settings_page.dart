@@ -18,6 +18,7 @@ import '../../logic/app_update/update_preferences.dart';
 import '../../logic/accounts/account_store.dart';
 import '../../components/settings/drop_down_menu_item.dart';
 import '../../components/settings/glass_settings_item.dart';
+import '../../components/settings/app_icon_item.dart';
 import '../../components/settings/item_title.dart';
 import '../../components/settings/switch_item.dart';
 import '../../constants/constants.dart';
@@ -170,6 +171,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
               ],
             ),
             const GlassSettingsItem(),
+            if (Platform.isAndroid) const AppIconItem(),
             const SwitchItem(
               icon: Icons.palette_outlined,
               title: '动态取色',

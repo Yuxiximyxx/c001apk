@@ -517,6 +517,16 @@ class GStorage {
     return settings.get(SettingsBoxKey.nextExp, defaultValue: 1);
   }
 
+  /// 桌面图标变体 id（'default' / 'green'，见 app_icon_util.dart）。
+  /// 设置页显示以此存储值为准；桌面实际刷新可能稍有延迟（系统行为）。
+  static String get appIcon {
+    return settings.get(SettingsBoxKey.appIcon, defaultValue: 'default');
+  }
+
+  static void setAppIcon(String value) {
+    settings.put(SettingsBoxKey.appIcon, value);
+  }
+
   static void setNextExp(int value) {
     settings.put(SettingsBoxKey.nextExp, value);
   }
@@ -544,6 +554,7 @@ class SettingsBoxKey {
       useSystemFont = 'useSystemFont',
       dockGlassMaterial = 'dockGlassMaterial',
       dockGlassCustom = 'dockGlassCustom',
+      appIcon = 'appIcon',
       readingMode = 'readingMode',
       followType = 'followType',
       imageQuality = 'imageQuality',

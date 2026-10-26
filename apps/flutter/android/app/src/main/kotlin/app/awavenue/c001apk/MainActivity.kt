@@ -1,6 +1,7 @@
 package app.awavenue.c001apk
 
 import android.app.DownloadManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -122,9 +123,75 @@ class MainActivity : FlutterFragmentActivity() {
                 result.notImplemented()
             }
         }
+
+        // Switchable launcher icon: the two activity-aliases declared in
+        // the manifest carry the LAUNCHER entry (exactly one enabled at a
+        // time). Settings persists the chosen variant on the Dart side and
+        // calls this channel to apply it.
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "app.awavenue.c001apk/app_icon"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setAppIcon" -> {
+                    val variant = call.argument<String>("variant")
+                    if (variant != null && APP_ICON_ALIASES.containsKey(variant)) {
+                        applyAppIcon(variant)
+                        result.success(currentAppIconVariant())
+                    } else {
+                        result.error("invalid_variant", "Unknown icon variant: $variant", null)
+                    }
+                }
+                "getAppIcon" -> result.success(currentAppIconVariant())
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun isAppIconAliasEnabled(variant: String): Boolean {
+        val alias = APP_ICON_ALIASES.getValue(variant)
+        return when (packageManager.getComponentEnabledSetting(
+            ComponentName(packageName, alias))) {
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED -> false
+            // Never explicitly set: fall back to the manifest default.
+            else -> APP_ICON_MANIFEST_DEFAULTS.getValue(variant)
+        }
+    }
+
+    private fun currentAppIconVariant(): String =
+        if (isAppIconAliasEnabled("green")) "green" else "default"
+
+    private fun applyAppIcon(variant: String) {
+        // Enable the target first so the launcher never observes a state
+        // with zero entry points, then disable the other alias.
+        val flags = PackageManager.DONT_KILL_APP
+        packageManager.setComponentEnabledSetting(
+            ComponentName(packageName, APP_ICON_ALIASES.getValue(variant)),
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED, flags)
+        for ((other, alias) in APP_ICON_ALIASES) {
+            if (other != variant) {
+                packageManager.setComponentEnabledSetting(
+                    ComponentName(packageName, alias),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED, flags)
+            }
+        }
     }
 
     private var exportData: String? = null
+
+    companion object {
+        // Launcher icon variants -> activity-alias class names, and each
+        // alias's manifest-declared default enabled state.
+        private val APP_ICON_ALIASES = mapOf(
+            "default" to "app.awavenue.c001apk.MainActivityDefault",
+            "green" to "app.awavenue.c001apk.MainActivityGreen",
+        )
+        private val APP_ICON_MANIFEST_DEFAULTS = mapOf(
+            "default" to true,
+            "green" to false,
+        )
+    }
 
     private val backupSAFLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) backup@{ uri ->
