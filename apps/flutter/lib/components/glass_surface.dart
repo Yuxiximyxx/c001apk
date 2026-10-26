@@ -414,8 +414,25 @@ Color glassIconColor(BuildContext context) =>
 /// UnsupportedError 且无法在使用点 catch，所以先用 2x2 离屏绘制探一遍，
 /// 不可用就返回 null，三档一律退回无透镜的滤镜链（饱和+模糊不变）。
 /// 全应用共享同一次加载。
+///
+/// miuix19：加载结果同步缓存（[cachedProgram]/[settled]）。此前每个
+/// GlassSurface 都在 initState 里各自 .then 异步取 program——首次
+/// build 时 program 恒为 null（先用无透镜滤镜链），回调落地后
+/// setState 把整条滤镜链换掉，菜单这种在入场动画里被盯着看的面就
+/// 会出现「第一帧玻璃没到位、闪一下才完整」的跳变。改为 initState
+/// 同步读缓存：加载早已完成时（常态，应用启动时 Dock 已触发加载），
+/// 每个新玻璃面第一帧就是完整滤镜链，不再有中途换链。
 class RefractionSupport {
   static Future<ui.FragmentProgram?>? _future;
+  static ui.FragmentProgram? _cachedProgram;
+  static bool _settled = false;
+
+  /// 最近一次加载完成后的 program（未完成/不可用时为 null，配合
+  /// [settled] 区分「还没加载完」与「加载完但不可用」）。
+  static ui.FragmentProgram? get cachedProgram => _cachedProgram;
+
+  /// 加载是否已完成（成功或失败都算完成）。
+  static bool get settled => _settled;
 
   static Future<ui.FragmentProgram?> load() => _future ??= _load();
 
@@ -423,14 +440,20 @@ class RefractionSupport {
     try {
       final program = await ui.FragmentProgram.fromAsset(
           'assets/shaders/dock_refraction.frag');
-      final shader = program.fragmentShader()
-        ..setFloat(0, 2)
-        ..setFloat(1, 2)
-        ..setFloat(2, 2)
-        ..setFloat(3, 2)
-        ..setFloat(4, 0.2)
-        ..setFloat(5, 0.5)
-        ..setFloat(6, 0.3);
+      final shader = program.fragmentShader();
+      // uniform 布局与 glassShaderUniformValues 对齐（11 个 float）。
+      const probe = <double>[
+        2, 2, // uSize
+        2, // uBand
+        2, // uAmount
+        0.2, // uDispersion
+        0.5, // uRim
+        0.3, // uInnerShadow
+        1, 1, 1, 1, // uRadii (TL/TR/BR/BL)
+      ];
+      for (var i = 0; i < probe.length; i++) {
+        shader.setFloat(i, probe[i]);
+      }
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder);
       final paint = ui.Paint()..imageFilter = ui.ImageFilter.shader(shader);
@@ -441,8 +464,12 @@ class RefractionSupport {
       final image = await picture.toImage(2, 2);
       image.dispose();
       picture.dispose();
+      _cachedProgram = program;
+      _settled = true;
       return program;
     } catch (_) {
+      _cachedProgram = null;
+      _settled = true;
       return null;
     }
   }
@@ -456,17 +483,52 @@ const double glassRefractionBandDp = 24;
 /// miuix16 起剖面换 Kyant circleMap——边缘处即达全量，不再减半）。
 const double glassRefractionAmountDp = 24;
 
+/// 折射 shader 的 uniform 值（顺序与 dock_refraction.frag 的声明
+/// 严格对应）：[宽, 高, band, amount, dispersion, rim, innerShadow,
+/// 半径 TL, TR, BR, BL]，长度/半径类一律物理像素。单独成纯函数便于
+/// 测试钉住管线（miuix19：半径必须传玻璃面的**真实**四角半径——
+/// shader 里的 SDF 按它算，传错就会在面内画出假轮廓弧线）。
+List<double> glassShaderUniformValues({
+  required DockGlassSpec spec,
+  required Size size,
+  required double dpr,
+  required BorderRadius cornerRadii,
+  double? refractionBandDp,
+  double? refractionAmountDp,
+  double? dispersion,
+  double rimStrength = 0,
+  double innerShadow = 0,
+}) {
+  final band = refractionBandDp ?? spec.refractionBandDp;
+  final amount = refractionAmountDp ?? spec.refractionAmountDp;
+  return <double>[
+    size.width * dpr,
+    size.height * dpr,
+    band * dpr,
+    amount * dpr,
+    dispersion ?? spec.dispersion,
+    rimStrength,
+    innerShadow,
+    cornerRadii.topLeft.x * dpr,
+    cornerRadii.topRight.x * dpr,
+    cornerRadii.bottomRight.x * dpr,
+    cornerRadii.bottomLeft.x * dpr,
+  ];
+}
+
 /// 玻璃滤镜链（Kyant 顺序）：饱和提升（vibrancy）→ 模糊打底 →
 /// （shader 可用时）circleMap 剖面透镜折射。miuix16 起三档底栏本体
 /// 都走透镜（量按档拉开）；折射带宽/量、色散强度可覆写（Dock 药丸
 /// 透镜按 pressProgress 驱动，见 floating_dock_bar.dart），不传时用
 /// spec 的档位值。[rimStrength] 为 shader 边缘镜面高光强度、
-/// [innerShadow] 为底部内阴影强度（0=关）。
+/// [innerShadow] 为底部内阴影强度（0=关）。[cornerRadii] 是玻璃面
+/// 的真实圆角（miuix19 起必传，见 [glassShaderUniformValues]）。
 ui.ImageFilter glassImageFilter({
   required DockGlassSpec spec,
   required Size size,
   required double dpr,
   required ui.FragmentProgram? refractionProgram,
+  required BorderRadius cornerRadii,
   double? blurSigma,
   double? refractionBandDp,
   double? refractionAmountDp,
@@ -485,14 +547,21 @@ ui.ImageFilter glassImageFilter({
   final amount = refractionAmountDp ?? spec.refractionAmountDp;
   final program = refractionProgram;
   if (program != null && band > 0 && amount > 0) {
-    final shader = program.fragmentShader()
-      ..setFloat(0, size.width * dpr)
-      ..setFloat(1, size.height * dpr)
-      ..setFloat(2, band * dpr)
-      ..setFloat(3, amount * dpr)
-      ..setFloat(4, dispersion ?? spec.dispersion)
-      ..setFloat(5, rimStrength)
-      ..setFloat(6, innerShadow);
+    final values = glassShaderUniformValues(
+      spec: spec,
+      size: size,
+      dpr: dpr,
+      cornerRadii: cornerRadii,
+      refractionBandDp: refractionBandDp,
+      refractionAmountDp: refractionAmountDp,
+      dispersion: dispersion,
+      rimStrength: rimStrength,
+      innerShadow: innerShadow,
+    );
+    final shader = program.fragmentShader();
+    for (var i = 0; i < values.length; i++) {
+      shader.setFloat(i, values[i]);
+    }
     filter = ui.ImageFilter.compose(
         outer: ui.ImageFilter.shader(shader), inner: filter);
   }
@@ -547,11 +616,17 @@ class _GlassSurfaceState extends State<GlassSurface> {
   @override
   void initState() {
     super.initState();
-    RefractionSupport.load().then((program) {
-      if (mounted && program != null) {
-        setState(() => _refractionProgram = program);
-      }
-    });
+    // miuix19：先同步读缓存——加载已完成时第一帧就是完整滤镜链，
+    // 不再有「首帧无透镜、回调后整链换掉」的闪烁（菜单入场实测）。
+    // 只有加载尚未完成（冷启动最初几帧）才订阅完成回调补上。
+    _refractionProgram = RefractionSupport.cachedProgram;
+    if (!RefractionSupport.settled) {
+      RefractionSupport.load().then((program) {
+        if (mounted && program != null) {
+          setState(() => _refractionProgram = program);
+        }
+      });
+    }
   }
 
   @override
@@ -596,6 +671,10 @@ class _GlassSurfaceState extends State<GlassSurface> {
               size: Size(constraints.maxWidth, constraints.maxHeight),
               dpr: dpr,
               refractionProgram: _refractionProgram,
+              // miuix19：把本面的真实圆角传给 shader 的 SDF——
+              // 否则宽而矮的面（sheet/菜单）会被假胶囊弧切出
+              // 同心圆弧线（见 dock_refraction.frag 注释）。
+              cornerRadii: widget.borderRadius,
               // shader 端边缘镜面光（rim）跟随本档高光身份强度、
               // 底部内阴影固定克制值——给玻璃补轮廓光与厚度感。
               rimStrength: glassHighlightAlpha(spec, dark),

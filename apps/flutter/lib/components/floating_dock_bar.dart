@@ -8,9 +8,14 @@ import 'glass_surface.dart';
 
 export 'glass_surface.dart';
 
-/// 窄幅悬浮 Dock 底栏（miuix13 规格：宽约屏幕 58%、水平居中、高 68dp 的
-/// 大圆角胶囊，悬于内容之上；miuix14 玻璃按 Kyant 配方校准，见
-/// glass_surface.dart）。
+/// 窄幅悬浮 Dock 底栏（miuix13 规格：水平居中、高 68dp 的大圆角
+/// 胶囊，悬于内容之上；miuix14 玻璃按 Kyant 配方校准，见
+/// glass_surface.dart）。宽度口径 miuix19 改：miuix13–18 的固定
+/// 屏宽 58% 在按钮少时空、按钮多时挤——改按按钮数定宽：
+/// 总宽 = Tab 数 × [slotWidth] + 两侧 [sidePadding]，居中，封顶
+/// [maxBarWidth] 且不超过屏宽 −32dp（三家统一新口径）。单槽宽与
+/// 药丸/标签几何不变，拖动/弹簧/橡皮筋只随总宽来源受益，数值与
+/// 逻辑零改动。
 ///
 /// miuix15：药丸升级为「可拖拽的液态透镜」，复刻 legado-with-MD3 的
 /// FloatingBottomBar（Kyant LiquidBottomTabs 移植版）的交互与光学：
@@ -46,7 +51,31 @@ class FloatingDockBar extends StatefulWidget {
   /// 测试/预览覆写材质；为空时读设置盒并监听变化（即时生效）。
   final DockGlassMaterial? materialOverride;
 
+  /// miuix19 前的旧宽度口径（固定屏宽 58%），仅保留供测试对照
+  /// 「新宽 < 旧宽」；生产代码已改走 [barWidthForTabCount]。
   static const double widthFactor = 0.58;
+
+  /// 单槽宽（miuix19）：药丸与标签的几何以它为准——76dp 时药丸
+  /// 净宽 76 − 2×[_pillInset] = 64dp、静止标签（图标 24 + 竖排
+  /// 文字）不挤；旧 58% 口径下 4 Tab 时单槽仅约 60dp（贴吧真机
+  /// 反馈「太挤」），2 Tab 时却达 116dp 以上（空）。
+  static const double slotWidth = 76;
+
+  /// 底栏两侧内距（槽区之外的留白，与 [_pillInset] 同值成节奏）。
+  static const double sidePadding = 6;
+
+  /// 底栏总宽绝对上限（按钮再多也不许摊成全宽条）。
+  static const double maxBarWidth = 320;
+
+  /// 底栏总宽 = Tab 数 × 单槽宽 + 两侧内距，再以
+  /// min([maxBarWidth], 屏宽 − 32dp) 封顶（窄屏上总宽被压小、
+  /// 槽宽随之等比收缩，居中与几何关系不变）。
+  static double barWidthForTabCount(int count, double screenWidth) {
+    final desired = count * slotWidth + sidePadding * 2;
+    final capped = math.min(desired, maxBarWidth);
+    return math.min(capped, math.max(0.0, screenWidth - 32));
+  }
+
   static const double height = 68;
   static const double _pillInset = 6;
 
@@ -129,11 +158,16 @@ class _FloatingDockBarState extends State<FloatingDockBar>
     super.initState();
     _value = _Spring(1.0, 1000, widget.selectedIndex.toDouble());
     _targetValue = widget.selectedIndex.toDouble();
-    RefractionSupport.load().then((program) {
-      if (mounted && program != null) {
-        setState(() => _refractionProgram = program);
-      }
-    });
+    // miuix19：与 GlassSurface 同口径——先同步读缓存，加载未完成
+    // 时才订阅回调，避免药丸滤镜链在首次拖动中途被换掉。
+    _refractionProgram = RefractionSupport.cachedProgram;
+    if (!RefractionSupport.settled) {
+      RefractionSupport.load().then((program) {
+        if (mounted && program != null) {
+          setState(() => _refractionProgram = program);
+        }
+      });
+    }
   }
 
   @override
@@ -303,7 +337,11 @@ class _FloatingDockBarState extends State<FloatingDockBar>
         ? Colors.black.withValues(alpha: 0.22)
         : Colors.black.withValues(alpha: 0.10);
     final unselectedColor = glassIconColor(context);
-    final barWidth = screenWidth * FloatingDockBar.widthFactor;
+    final barWidth = FloatingDockBar.barWidthForTabCount(
+        FloatingDockBar.labels.length, screenWidth);
+    // 橡皮筋归一化用外壳总宽（与 miuix19 前 LayoutBuilder 实测的
+    // 整栏宽同值同义，只是来源改成公式）。
+    _barWidth = barWidth;
 
     // 整栏橡皮筋位移：4dp × sign × EaseOut(|原始拖距/栏宽| 钳 1)。
     var panelOffset = 0.0;
@@ -336,82 +374,88 @@ class _FloatingDockBarState extends State<FloatingDockBar>
               specOverride: spec,
               child: Material(
                 type: MaterialType.transparency,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    _barWidth = constraints.maxWidth;
-                    _slotWidth = constraints.maxWidth /
-                        FloatingDockBar.labels.length;
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTapDown: (_) => _engagePress(),
-                      onTapUp: _handleTapUp,
-                      onTapCancel: _releasePointer,
-                      onHorizontalDragStart: (_) {
-                        _dragging = true;
-                        _engagePress();
-                      },
-                      onHorizontalDragUpdate: _handleDragUpdate,
-                      onHorizontalDragEnd: (_) => _handleDragEnd(),
-                      onHorizontalDragCancel: () {
-                        _panelRaw.target = 0;
-                        _releasePointer();
-                      },
-                      child: Stack(
-                        children: [
-                          // 标签内容层（在药丸之下，药丸透镜采样得到它）。
-                          Row(
-                            children: [
-                              for (var i = 0;
-                                  i < FloatingDockBar.labels.length;
-                                  i++)
-                                Expanded(
-                                  child: Semantics(
-                                    button: true,
-                                    selected: widget.selectedIndex == i,
-                                    label: FloatingDockBar.labels[i],
-                                    onTap: () => _tapSlot(i),
-                                    child: _labelCell(
-                                      i,
-                                      (1 - (i - _value.value).abs())
-                                          .clamp(0.0, 1.0)
-                                          .toDouble(),
-                                      accent,
-                                      unselectedColor,
+                // 槽区两侧留 [FloatingDockBar.sidePadding] 内距：槽宽
+                // 由 (总宽 − 2×内距) / Tab 数得到，恒等于公式里的
+                // 单槽宽，拖动换算的槽宽来源不变。
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: FloatingDockBar.sidePadding),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      _slotWidth = constraints.maxWidth /
+                          FloatingDockBar.labels.length;
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown: (_) => _engagePress(),
+                        onTapUp: _handleTapUp,
+                        onTapCancel: _releasePointer,
+                        onHorizontalDragStart: (_) {
+                          _dragging = true;
+                          _engagePress();
+                        },
+                        onHorizontalDragUpdate: _handleDragUpdate,
+                        onHorizontalDragEnd: (_) => _handleDragEnd(),
+                        onHorizontalDragCancel: () {
+                          _panelRaw.target = 0;
+                          _releasePointer();
+                        },
+                        child: Stack(
+                          children: [
+                            // 标签内容层（在药丸之下，药丸透镜采样得到它）。
+                            Row(
+                              children: [
+                                for (var i = 0;
+                                    i < FloatingDockBar.labels.length;
+                                    i++)
+                                  Expanded(
+                                    child: Semantics(
+                                      button: true,
+                                      selected: widget.selectedIndex == i,
+                                      label: FloatingDockBar.labels[i],
+                                      onTap: () => _tapSlot(i),
+                                      child: _labelCell(
+                                        i,
+                                        (1 - (i - _value.value).abs())
+                                            .clamp(0.0, 1.0)
+                                            .toDouble(),
+                                        accent,
+                                        unselectedColor,
+                                      ),
                                     ),
                                   ),
-                                ),
-                            ],
-                          ),
-                          // 药丸：连续位置 + 双轴弹簧缩放 + 速度果冻。
-                          Positioned(
-                            left: FloatingDockBar._pillInset +
-                                _value.value * _slotWidth,
-                            top: FloatingDockBar._pillInset,
-                            width: _slotWidth - FloatingDockBar._pillInset * 2,
-                            height: FloatingDockBar.height -
-                                FloatingDockBar._pillInset * 2,
-                            child: IgnorePointer(
-                              child: Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.identity()
-                                  ..scaleByDouble(
-                                      effScaleX, effScaleY, 1, 1),
-                                child: _SelectionPill(
-                                  key: const Key('floatingDockPill'),
-                                  spec: spec,
-                                  color: pillColor,
-                                  pressProgress: _press.value
-                                      .clamp(0.0, 1.0)
-                                      .toDouble(),
-                                  refractionProgram: _refractionProgram,
+                              ],
+                            ),
+                            // 药丸：连续位置 + 双轴弹簧缩放 + 速度果冻。
+                            Positioned(
+                              left: FloatingDockBar._pillInset +
+                                  _value.value * _slotWidth,
+                              top: FloatingDockBar._pillInset,
+                              width: _slotWidth - FloatingDockBar._pillInset * 2,
+                              height: FloatingDockBar.height -
+                                  FloatingDockBar._pillInset * 2,
+                              child: IgnorePointer(
+                                child: Transform(
+                                  alignment: Alignment.center,
+                                  transform: Matrix4.identity()
+                                    ..scaleByDouble(
+                                        effScaleX, effScaleY, 1, 1),
+                                  child: _SelectionPill(
+                                    key: const Key('floatingDockPill'),
+                                    spec: spec,
+                                    color: pillColor,
+                                    pressProgress: _press.value
+                                        .clamp(0.0, 1.0)
+                                        .toDouble(),
+                                    refractionProgram: _refractionProgram,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -533,6 +577,8 @@ class _SelectionPill extends StatelessWidget {
                     size: Size(constraints.maxWidth, constraints.maxHeight),
                     dpr: MediaQuery.devicePixelRatioOf(context),
                     refractionProgram: program,
+                    // 药丸是真胶囊（半径 = 高度一半），半径直传。
+                    cornerRadii: BorderRadius.circular(_radius),
                     // 药丸透镜按 Legado：无模糊打底、只透镜（采样已含
                     // 底栏玻璃处理过的背景），带宽/量随 pressProgress；
                     // miuix16 剖面换 Kyant circleMap（边缘达全量）、

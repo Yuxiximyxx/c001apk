@@ -201,9 +201,11 @@ void main() {
           before.filter,
           glassImageFilter(
             spec: DockGlassMaterial.liquid.spec,
-            size: const Size(232, FloatingDockBar.height),
+            size: Size(FloatingDockBar.barWidthForTabCount(2, 400),
+                FloatingDockBar.height),
             dpr: 1,
             refractionProgram: null,
+            cornerRadii: BorderRadius.circular(FloatingDockBar.height / 2),
           ));
 
       // 拖滑杆等价写入：模糊 30、纱 0.7、色散 0.45。
@@ -221,9 +223,11 @@ void main() {
           after.filter,
           glassImageFilter(
             spec: custom,
-            size: const Size(232, FloatingDockBar.height),
+            size: Size(FloatingDockBar.barWidthForTabCount(2, 400),
+                FloatingDockBar.height),
             dpr: 1,
             refractionProgram: null,
+            cornerRadii: BorderRadius.circular(FloatingDockBar.height / 2),
           ));
       expect(after.filter, isNot(equals(before.filter)));
       expect(tester.takeException(), isNull);

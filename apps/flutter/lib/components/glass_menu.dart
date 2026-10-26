@@ -131,6 +131,16 @@ class _GlassMenuPanel<T> extends StatefulWidget {
 class _GlassMenuPanelState<T> extends State<_GlassMenuPanel<T>> {
   final _menuKey = GlobalKey();
   Size? _menuSize;
+
+  /// 滤镜就绪门（miuix19）：面板首次可见前，要求折射 shader 的
+  /// 加载已 settle——settle 后 program 同步缓存在 RefractionSupport
+  /// 里，本面 GlassSurface 第一帧拿到的就是完整滤镜链，不会再出现
+  /// 「入场先是一块没透镜的面、闪一下才完整」的跳变（真机反馈）。
+  /// 常态下应用启动时 Dock 已触发并完成加载，这里同步即 true、
+  /// 零等待；冷启动直达内页等未完成场景订阅一次完成回调，量尺寸
+  /// 的 post-frame 回调兜底放行（最多多等一帧，不把 200ms 入场
+  /// 拖成可感延迟）。
+  bool _filterReady = false;
   late final CurvedAnimation _entrance = CurvedAnimation(
     parent: widget.animation,
     curve: AppAnim.enterCurve,
@@ -140,10 +150,24 @@ class _GlassMenuPanelState<T> extends State<_GlassMenuPanel<T>> {
   @override
   void initState() {
     super.initState();
+    _filterReady = RefractionSupport.settled;
+    if (!_filterReady) {
+      RefractionSupport.load().then((_) {
+        if (mounted && !_filterReady) {
+          setState(() => _filterReady = true);
+        }
+      });
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final box = _menuKey.currentContext?.findRenderObject() as RenderBox?;
       if (mounted && box != null && box.hasSize) {
-        setState(() => _menuSize = box.size);
+        setState(() {
+          _menuSize = box.size;
+          // 一帧兜底放行：加载极慢时也不吊住面板（此时 GlassSurface
+          // 仍会在其完成回调里补齐滤镜链，与 miuix19 前的最坏情况
+          // 持平，常态路径不受影响）。
+          _filterReady = true;
+        });
       }
     });
   }
@@ -229,11 +253,13 @@ class _GlassMenuPanelState<T> extends State<_GlassMenuPanel<T>> {
           left: left,
           top: top,
           // 进出动画只动 opacity/transform：fade 用路由动画的曲线值，
-          // 量尺寸完成前额外乘 0（首帧先量尺寸再定位，避免跳位）。
+          // 量尺寸完成且滤镜就绪前额外乘 0（首帧先量尺寸/等滤镜
+          // 就绪再定位显示，避免跳位与滤镜中途换链的闪烁）。
           child: AnimatedBuilder(
             animation: _entrance,
             builder: (context, child) => Opacity(
-              opacity: _entrance.value * (size == null ? 0 : 1),
+              opacity:
+                  _entrance.value * (size == null || !_filterReady ? 0 : 1),
               child: child,
             ),
             child: SlideTransition(

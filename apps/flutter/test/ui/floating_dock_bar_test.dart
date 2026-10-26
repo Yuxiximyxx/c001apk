@@ -8,8 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 /// miuix13 窄幅悬浮 Dock 的规格断言（用户看图拍板的效果图为验收标准）：
-/// 宽 58% 居中、高 68dp 胶囊、选中项竖排图标+文字、未选中无文字；
+/// 水平居中、高 68dp 胶囊、选中项竖排图标+文字、未选中无文字；
 /// 玻璃材质三档（毛玻璃/磨砂/液态）的参数映射与设置持久化。
+/// 宽度口径 miuix19 改为按 Tab 数定宽（见 barWidthForTabCount），
+/// 取代 miuix13–18 的固定屏宽 58%。
 void main() {
   late Directory temp;
   setUpAll(() async {
@@ -51,16 +53,40 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('capsule is 58% wide, centered, 68dp high', (tester) async {
+  testWidgets('capsule width follows tab count, centered, 68dp high',
+      (tester) async {
     await pumpDock(tester, selectedIndex: 0, brightness: Brightness.dark);
     final capsule = find.byKey(const Key('floatingDockCapsule'));
     expect(capsule, findsOneWidget);
     final size = tester.getSize(capsule);
-    expect(size.width, closeTo(400 * FloatingDockBar.widthFactor, 0.5));
+    // miuix19 新口径：总宽 = Tab 数 × 单槽宽 + 两侧内距
+    // = 2×76 + 2×6 = 164，且必须小于旧固定 58% 口径（400×0.58=232，
+    // 两个按钮摊那么宽是真机反馈「空/挤不合理」的来源）。
+    expect(size.width, FloatingDockBar.barWidthForTabCount(2, 400));
+    expect(
+        size.width,
+        2 * FloatingDockBar.slotWidth +
+            2 * FloatingDockBar.sidePadding);
+    expect(size.width, lessThan(400 * FloatingDockBar.widthFactor));
     expect(size.height, FloatingDockBar.height);
     expect(tester.getCenter(capsule).dx, closeTo(200, 0.5));
     // 真毛玻璃：BackdropFilter 在场
     expect(find.byType(BackdropFilter), findsOneWidget);
+  });
+
+  group('bar width formula', () {
+    test('width grows with tab count and is capped', () {
+      expect(FloatingDockBar.barWidthForTabCount(2, 400), 164);
+      // 4 Tab：4×76+12 = 316，未触上限——旧 58% 下同屏宽仅 238，
+      // 单槽被压到约 60dp 正是贴吧「太挤」的来源。
+      expect(FloatingDockBar.barWidthForTabCount(4, 411), 316);
+      // 5 Tab 触绝对上限 320。
+      expect(FloatingDockBar.barWidthForTabCount(5, 411),
+          FloatingDockBar.maxBarWidth);
+      // 窄屏以屏宽 −32 封顶。
+      expect(FloatingDockBar.barWidthForTabCount(4, 300), 268);
+      expect(FloatingDockBar.barWidthForTabCount(2, 300), 164);
+    });
   });
 
   testWidgets('selected shows icon over label, unselected icon only',
@@ -134,7 +160,8 @@ void main() {
       await pumpDock(tester,
           selectedIndex: 0, brightness: Brightness.dark, onTap: tapped.add);
       final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
-      // 槽宽 = 232/2 = 116；指距 100px（手势检测吃掉约一个 slop 后仍过中点 58）。
+      // 槽宽 76（miuix19 公式）；指距 100px（手势检测吃掉约一个 slop
+      // 后仍约 1.1 槽，过中点）。
       final gesture = await dragBy(
           tester, Offset(rect.left + rect.width * 0.25, rect.center.dy), 100, 10);
       expect(tapped, isEmpty, reason: '拖动中不得触发切换');
@@ -163,7 +190,10 @@ void main() {
         (tester) async {
       await pumpDock(tester, selectedIndex: 0, brightness: Brightness.dark);
       final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
-      final slot1Center = rect.left + rect.width * 0.75;
+      // 槽 1 中心 = 左缘 + 内距 + 1.5 槽宽（miuix19 公式几何）。
+      final slot1Center = rect.left +
+          FloatingDockBar.sidePadding +
+          FloatingDockBar.slotWidth * 1.5;
       await tester.tapAt(Offset(slot1Center, rect.center.dy));
       final samples = <double>[];
       for (var i = 0; i < 30; i++) {
@@ -383,9 +413,11 @@ void main() {
       ui.ImageFilter expectedFilter(DockGlassMaterial material) =>
           glassImageFilter(
             spec: material.spec,
-            size: const Size(232, FloatingDockBar.height),
+            size: Size(FloatingDockBar.barWidthForTabCount(2, 400),
+                FloatingDockBar.height),
             dpr: 1,
             refractionProgram: null,
+            cornerRadii: BorderRadius.circular(FloatingDockBar.height / 2),
           );
 
       await store(0);

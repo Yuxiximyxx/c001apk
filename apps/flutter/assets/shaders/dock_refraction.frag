@@ -12,20 +12,36 @@ uniform float uDispersion; // 色散强度（0=关，单采样快路径；>0 沿
                            // 方向做 7 段光谱采样，Kyant 典型 0.2）
 uniform float uRim;        // 边缘镜面高光强度（0=关）
 uniform float uInnerShadow; // 底部内阴影强度（0=关）
+uniform vec4 uRadii;       // 玻璃面真实四角半径（物理像素，顺序
+                           // TL/TR/BR/BL，与 Dart 侧 BorderRadius 对应）
 
 out vec4 fragColor;
 
-// 胶囊（圆角 = 短边一半的 stadium）带符号距离场：内部为负、边缘为 0。
-float capsuleSdf(vec2 p, vec2 halfSize, float r) {
+// 按点所在象限选角半径（local 坐标 y 向下：y<0 为上）。
+float pickRadius(vec2 p, vec4 radii) {
+  return p.x >= 0.0
+      ? (p.y >= 0.0 ? radii.z : radii.y)
+      : (p.y >= 0.0 ? radii.w : radii.x);
+}
+
+// 圆角矩形带符号距离场（Kyant RoundedRect 的逐角半径版）：内部为负、
+// 边缘为 0。miuix19 前这里写死胶囊（半径恒 = 短边一半）——宽而矮的
+// 面（sheet 实际只有顶部 28dp 圆角）会被半径百余 dp 的假 cap 弧切过
+// 面内，rim/折射沿假弧显形为同心圆弧线。改按真实角半径后，带只贴
+// 真实轮廓；胶囊/圆（半径 = 短边一半）是其特例，数值与旧版一致。
+float roundedRectSdf(vec2 p, vec2 halfSize, vec4 radii) {
+  float r = pickRadius(p, radii);
   vec2 q = abs(p) - (halfSize - vec2(r));
   return length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - r;
 }
 
-// Kyant gradSdRoundedRect 的解析梯度（胶囊版）：圆角区沿角点径向，
-// 直边区沿近边法线。gradRadius 按 Kyant 在放大 1.5 倍半径的形状上求
-// （胶囊半径已达短边一半，gradRadius 恒等于 r，此式保留 Kyant 原式）。
-vec2 capsuleGrad(vec2 p, vec2 halfSize, float r) {
-  vec2 cornerCoord = abs(p) - (halfSize - vec2(r));
+// Kyant gradSdRoundedRect 的解析梯度（逐角半径版）：圆角区沿角点
+// 径向，直边区沿近边法线。gradRadius 按 Kyant 在放大 1.5 倍半径的
+// 形状上求（钳到短边一半），让折射方向场更平滑。
+vec2 roundedRectGrad(vec2 p, vec2 halfSize, vec4 radii) {
+  float r = pickRadius(p, radii);
+  float gradRadius = min(r * 1.5, min(halfSize.x, halfSize.y));
+  vec2 cornerCoord = abs(p) - (halfSize - vec2(gradRadius));
   if (cornerCoord.x >= 0.0 || cornerCoord.y >= 0.0) {
     return sign(p) *
         normalize(max(cornerCoord, vec2(0.0)) + vec2(1e-5));
@@ -51,8 +67,7 @@ void main() {
   vec2 uv = p / uSize;
   vec2 halfSize = uSize * 0.5;
   vec2 local = p - halfSize;
-  float r = min(halfSize.x, halfSize.y);
-  float sd = capsuleSdf(local, halfSize, r);
+  float sd = roundedRectSdf(local, halfSize, uRadii);
   float depth = -sd; // 距边缘的深度（内部 ≥ 0）
 
   // 带外（深处）与元素外不折射、也无边缘光学。
@@ -61,8 +76,7 @@ void main() {
     return;
   }
 
-  float gradRadius = min(r * 1.5, min(halfSize.x, halfSize.y));
-  vec2 grad = capsuleGrad(local, halfSize, gradRadius);
+  vec2 grad = roundedRectGrad(local, halfSize, uRadii);
   // depthEffect = 0（Kyant 默认）：梯度不混入中心向。
   // d 为负（refractionAmount 传入负值是 Kyant 的约定）：采样点沿
   // 外法线反方向（向内）偏移 |d|，边缘内容被向内拉、呈透镜弯折。
