@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:c001apk_flutter/components/app_keyboard_navigation.dart';
+import 'package:c001apk_flutter/components/glass_dialog.dart';
 import 'package:c001apk_flutter/pages/others/imageview_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
@@ -159,13 +160,13 @@ void main() {
     await tester.tapAt(tester.getCenter(find.byType(ImageViewPage)),
         kind: PointerDeviceKind.mouse, buttons: kSecondaryMouseButton);
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(GlassAlertDialog), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
     expect(find.text('1/3'), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(GlassAlertDialog), findsNothing);
     expect(find.byType(ImageViewPage), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();

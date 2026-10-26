@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:c001apk_flutter/pages/settings/device_identity_page.dart';
+import 'package:c001apk_flutter/components/glass_dialog.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
 import 'package:c001apk_flutter/utils/token_util.dart';
 import 'package:flutter/material.dart';
@@ -99,12 +100,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('酷安 OAID 界面'));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(GlassAlertDialog), findsOneWidget);
       expect(find.text('尚未安装官方酷安'), findsOneWidget);
       expect(GStorage.szlmId, isEmpty);
       await tester.tap(find.text('知道了'));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(GlassAlertDialog), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

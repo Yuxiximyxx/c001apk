@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:c001apk_flutter/logic/network/request.dart';
+import 'package:c001apk_flutter/components/glass_dialog.dart';
+import 'package:c001apk_flutter/components/glass_surface.dart';
 import 'package:c001apk_flutter/logic/accounts/account_store.dart';
 import 'package:c001apk_flutter/pages/message/message_controller.dart';
 import 'package:c001apk_flutter/pages/local_follow/local_follow_page.dart';
@@ -472,12 +474,12 @@ void main() {
       expect(find.text('退出 c001apk？'), findsOneWidget);
       await tester.sendKeyRepeatEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(GlassAlertDialog), findsOneWidget);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
       expect(closeCalls, 0);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(GlassAlertDialog), findsNothing);
       expect(miuixSelectedIndex(tester), selected);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
@@ -505,7 +507,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SettingsDetailPage), findsNothing);
     expect(find.byType(SettingsPage), findsOneWidget);
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(GlassAlertDialog), findsNothing);
     Get.to(() => const PopScope(
           canPop: false,
           child: Scaffold(body: Text('受保护页面')),
@@ -520,7 +522,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SettingsPage), findsNothing);
     expect(find.text('首页'), findsOneWidget);
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(GlassAlertDialog), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -889,14 +891,22 @@ void main() {
     final picker = find.byWidgetPredicate((widget) =>
         widget is DropDownMenuItem &&
         widget.boxKey == SettingsBoxKey.staticColor);
-    final button =
-        find.descendant(of: picker, matching: find.byType(DropdownButton<int>));
+    // miuix17：下拉触发器由 DropdownButton 换成玻璃菜单的 InkWell
+    // （箭头图标是其锚点）；禁用态等价断言 = InkWell.onTap 为 null，
+    // 选中值等价断言 = 触发器上显示的选中标签文本。
+    final trigger = find.ancestor(
+        of: find.descendant(
+            of: picker, matching: find.byIcon(Icons.arrow_drop_down)),
+        matching: find.byType(InkWell));
     final tile =
         find.descendant(of: picker, matching: find.byType(MiuixBasicComponent));
     expect(find.text('主题颜色'), findsOneWidget);
-    expect(tester.widget<DropdownButton<int>>(button).onChanged, isNull);
+    expect(tester.widget<InkWell>(trigger).onTap, isNull);
     expect(tester.widget<MiuixBasicComponent>(tile).enabled, isFalse);
-    await tester.tap(button);
+    // miuix17 起「玻璃材质」区带滑杆组、整页变长，该行需先滚入视口。
+    await tester.ensureVisible(picker);
+    await tester.pumpAndSettle();
+    await tester.tap(trigger);
     await tester.pumpAndSettle();
     expect(find.text(Constants.themeType[0]), findsNothing);
     expect(GStorage.staticColor, 4);
@@ -904,20 +914,21 @@ void main() {
     await tester.runAsync(
         () => GStorage.settings.put(SettingsBoxKey.useMaterial, false));
     await tester.pumpAndSettle();
-    expect(tester.widget<DropdownButton<int>>(button).onChanged, isNotNull);
+    expect(tester.widget<InkWell>(trigger).onTap, isNotNull);
     expect(tester.widget<MiuixBasicComponent>(tile).enabled, isTrue);
-    expect(tester.widget<DropdownButton<int>>(button).value, 4);
-    await tester.tap(button);
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text(Constants.themeType[0]), -120,
-        scrollable: find.byType(Scrollable).last);
-    expect(find.text(Constants.themeType[0]), findsOneWidget);
     expect(
-        tester
-            .widget<DropdownButton<int>>(button)
-            .items!
-            .every((item) => item.enabled),
-        isTrue);
+        find.descendant(of: picker, matching: find.text(Constants.themeType[4])),
+        findsOneWidget);
+    await tester.ensureVisible(picker);
+    await tester.pumpAndSettle();
+    await tester.tap(trigger);
+    await tester.pumpAndSettle();
+    // 玻璃菜单打开：全部主题项都在菜单里（可点选），且菜单面是玻璃。
+    expect(find.text(Constants.themeType[0]), findsOneWidget);
+    expect(find.byType(GlassSurface), findsWidgets);
+    for (final label in Constants.themeType) {
+      expect(find.text(label), findsWidgets, reason: '菜单应含主题项：$label');
+    }
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
     expect(GStorage.staticColor, 4);
@@ -925,8 +936,10 @@ void main() {
     await tester.runAsync(
         () => GStorage.settings.put(SettingsBoxKey.useMaterial, true));
     await tester.pumpAndSettle();
-    expect(tester.widget<DropdownButton<int>>(button).onChanged, isNull);
-    expect(tester.widget<DropdownButton<int>>(button).value, 4);
+    expect(tester.widget<InkWell>(trigger).onTap, isNull);
+    expect(
+        find.descendant(of: picker, matching: find.text(Constants.themeType[4])),
+        findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     // Let the settings page's cache manager finish its scheduled cleanup.
     await tester.pump(const Duration(seconds: 11));
