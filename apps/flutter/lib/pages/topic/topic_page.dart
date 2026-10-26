@@ -19,6 +19,7 @@ import '../../pages/topic/topic_order_controller.dart';
 import '../../utils/device_util.dart';
 import '../../utils/extensions.dart';
 import '../../utils/global_data.dart';
+import '../../utils/miuix_palette.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
 import '../../../components/app_anim.dart';
@@ -522,7 +523,10 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                 systemStatusBarContrastEnforced: false,
               ),
               child: Scaffold(
-                backgroundColor: MiuixTheme.of(context).colors.primary,
+                // 页面底色必须与其他页面一致（surface）：若整页用主题色，
+                // 系统会把该底色呈报到键盘区域，半透明磨砂皮肤的输入法
+                // 会被染成话题主题色。蓝色只保留在头部与 sheet 下衬层。
+                backgroundColor: miuixPageBackground(context),
                 floatingActionButton:
                     GlobalData().isLogin && !_topicController.isBlocked
                         ? GlassFab(
@@ -570,7 +574,20 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                 body: Column(
                   children: [
                     _buildHeader(context),
-                    Expanded(child: _buildSheet(context)),
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // 主题色下衬：仅在 sheet 顶部 24dp 圆角缺口处透出，
+                          // 与此前 Scaffold 整页主题色时的观感保持一致；sheet
+                          // 其余区域为不透明 surface，下衬不可见。
+                          ColoredBox(
+                            color: MiuixTheme.of(context).colors.primary,
+                          ),
+                          _buildSheet(context),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
