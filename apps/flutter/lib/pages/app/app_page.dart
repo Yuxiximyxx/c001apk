@@ -10,6 +10,7 @@ import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
 import '../../components/cards/app_info_card.dart';
 import '../../components/glass_surface.dart';
+import '../../components/glass_menu.dart';
 import '../../components/sticky_sliver_to_box_adapter.dart';
 import '../../logic/state/loading_state.dart';
 import '../../pages/app/app_content.dart';
@@ -214,7 +215,7 @@ class _AppPageState extends State<AppPage> with TickerProviderStateMixin {
                           icon: const Icon(Icons.search),
                           tooltip: '搜索',
                         ),
-                      PopupMenuButton(
+                      GlassPopupMenuButton(
                         onSelected: (AppMenuItem item) {
                           switch (item) {
                             case AppMenuItem.Copy:

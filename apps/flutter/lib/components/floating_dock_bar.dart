@@ -280,19 +280,19 @@ class _FloatingDockBarState extends State<FloatingDockBar>
   @override
   Widget build(BuildContext context) {
     final override = widget.materialOverride;
-    if (override != null) return _buildBar(context, override);
-    final listenable = dockGlassMaterialListenable();
+    if (override != null) return _buildBar(context, override.spec);
+    final listenable = dockGlassSettingsListenable();
     if (listenable == null) {
-      return _buildBar(context, currentDockGlassMaterial());
+      return _buildBar(context, currentDockGlassSpec());
     }
     return ValueListenableBuilder(
       valueListenable: listenable,
       builder: (context, _, __) =>
-          _buildBar(context, currentDockGlassMaterial()),
+          _buildBar(context, currentDockGlassSpec()),
     );
   }
 
-  Widget _buildBar(BuildContext context, DockGlassMaterial material) {
+  Widget _buildBar(BuildContext context, DockGlassSpec spec) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final accent = Theme.of(context).colorScheme.primary;
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -333,7 +333,7 @@ class _FloatingDockBarState extends State<FloatingDockBar>
               key: const Key('floatingDockCapsule'),
               borderRadius:
                   BorderRadius.circular(FloatingDockBar.height / 2),
-              materialOverride: material,
+              specOverride: spec,
               child: Material(
                 type: MaterialType.transparency,
                 child: LayoutBuilder(
@@ -398,7 +398,7 @@ class _FloatingDockBarState extends State<FloatingDockBar>
                                       effScaleX, effScaleY, 1, 1),
                                 child: _SelectionPill(
                                   key: const Key('floatingDockPill'),
-                                  material: material,
+                                  spec: spec,
                                   color: pillColor,
                                   pressProgress: _press.value
                                       .clamp(0.0, 1.0)
@@ -474,13 +474,17 @@ class _FloatingDockBarState extends State<FloatingDockBar>
 class _SelectionPill extends StatelessWidget {
   const _SelectionPill({
     super.key,
-    required this.material,
+    required this.spec,
     required this.color,
     required this.pressProgress,
     required this.refractionProgram,
   });
 
-  final DockGlassMaterial material;
+  /// 有效 spec（预设 + 自定义参数，miuix17 起与底栏本体同一来源）。
+  /// 药丸透镜的开关沿用 miuix15/16 的身份规则等价式：预设里只有液态
+  /// 档带色散，故以 dispersion > 0 判定——预设行为逐值不变，自定义
+  /// 参数把色散调大于 0 时药丸透镜随之开启。
+  final DockGlassSpec spec;
   final Color color;
   final double pressProgress;
   final ui.FragmentProgram? refractionProgram;
@@ -494,14 +498,14 @@ class _SelectionPill extends StatelessWidget {
     final borderRadius = BorderRadius.circular(_radius);
     final p = pressProgress;
     final program = refractionProgram;
-    final lens = material == DockGlassMaterial.liquid && program != null;
+    final lens = spec.dispersion > 0 && program != null;
 
     final baseColor =
         color.withValues(alpha: color.a * (1 - p));
     final surfaceTint = (dark ? Colors.white : Colors.black)
         .withValues(alpha: 0.1 * (1 - p));
     final pressShade = Colors.black.withValues(alpha: 0.03 * p);
-    final highlightAlpha = glassHighlightAlpha(material.spec, dark) * p;
+    final highlightAlpha = glassHighlightAlpha(spec, dark) * p;
 
     return Container(
       decoration: BoxDecoration(
@@ -525,7 +529,7 @@ class _SelectionPill extends StatelessWidget {
               LayoutBuilder(
                 builder: (context, constraints) => BackdropFilter(
                   filter: glassImageFilter(
-                    spec: material.spec,
+                    spec: spec,
                     size: Size(constraints.maxWidth, constraints.maxHeight),
                     dpr: MediaQuery.devicePixelRatioOf(context),
                     refractionProgram: program,
@@ -537,7 +541,7 @@ class _SelectionPill extends StatelessWidget {
                     refractionBandDp: _FloatingDockBarState._pillLensBandDp * p,
                     refractionAmountDp:
                         _FloatingDockBarState._pillLensAmountDp * p,
-                    dispersion: material.spec.dispersion,
+                    dispersion: spec.dispersion,
                     rimStrength: 0.3 * p,
                     innerShadow: 0.25 * p,
                   ),

@@ -1,4 +1,5 @@
 import '../../components/expressive_refresh_indicator.dart';
+import '../../components/glass_sheet.dart';
 import 'package:flutter/material.dart';
 
 import '../../utils/miuix_palette.dart';
@@ -99,7 +100,7 @@ class _MessagePageState extends State<MessagePage>
 
   /// 点"消息通知"弹出 5 类消息列表；游客仅可进入"私信与信息"（公告收件箱）
   void _showNotificationSheet() {
-    showModalBottomSheet(
+    showGlassBottomSheet(
       context: context,
       builder: (context) => SafeArea(
         child: Padding(

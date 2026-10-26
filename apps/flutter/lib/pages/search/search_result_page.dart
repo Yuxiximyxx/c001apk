@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../components/glass_menu.dart';
 import 'package:get/get.dart';
 
 import '../../pages/home/return_top_controller.dart';
@@ -168,7 +169,7 @@ class _SearchResultPageState extends State<SearchResultPage>
             initialData: true,
             stream: _shouldShowActionsStream.stream,
             builder: (_, snapshot) => snapshot.data == true
-                ? PopupMenuButton(
+                ? GlassPopupMenuButton(
                     onSelected: (SearchMenuType item) {
                       switch (item) {
                         case SearchMenuType.Type:
@@ -252,7 +253,7 @@ class _SearchResultPageState extends State<SearchResultPage>
     bool isSearchSortType = false,
   }) async {
     final screenSize = MediaQuery.of(context).size;
-    await showMenu(
+    await showGlassMenu(
       initialValue: isSearchType
           ? _searchOrderController.searchType.value
           : isSearchSortType
@@ -276,7 +277,6 @@ class _SearchResultPageState extends State<SearchResultPage>
                   value: type,
                   child: Text(type.label)))
               .toList(),
-      elevation: 8.0,
     ).then((value) {
       if (value != null) {
         if (value is SearchType) {

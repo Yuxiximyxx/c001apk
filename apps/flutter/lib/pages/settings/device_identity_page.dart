@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../components/glass_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -139,7 +140,7 @@ class _DeviceIdentityPageState extends State<DeviceIdentityPage> {
     if (!mounted) return;
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => GlassAlertDialog(
         title: Text(notInstalled ? '尚未安装官方酷安' : '无法打开酷安 OAID 界面'),
         content: Text(notInstalled
             ? '请先安装官方酷安，再点击“酷安 OAID 界面”复制设备标识。'

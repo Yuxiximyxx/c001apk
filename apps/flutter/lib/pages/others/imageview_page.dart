@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../components/glass_dialog.dart';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -170,7 +171,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
     try {
       await showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => GlassAlertDialog(
           clipBehavior: Clip.hardEdge,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
           content: Column(
@@ -281,11 +282,48 @@ class _ImageViewPageState extends State<ImageViewPage> {
                       ),
                     ),
                     if (Utils.isDesktop && _imgList.length > 1) ...[
+                      // miuix17：翻页箭头浮在媒体内容上，按苹果规范用
+                      // Clear 变体玻璃，其下补左右渐变压暗层保证可读。
+                      const Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 72,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [Color(0x47000000), Color(0x00000000)],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Positioned(
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 72,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerRight,
+                                end: Alignment.centerLeft,
+                                colors: [Color(0x47000000), Color(0x00000000)],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                       Positioned(
                         left: 0,
                         child: GlassFab(
                           size: 40,
                           circular: true,
+                          variant: GlassVariant.clear,
                           tooltip: '上一张',
                           onPressed:
                               _currentPage > 0 ? () => _changePage(-1) : null,
@@ -297,6 +335,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
                         child: GlassFab(
                           size: 40,
                           circular: true,
+                          variant: GlassVariant.clear,
                           tooltip: '下一张',
                           onPressed: _currentPage < _imgList.length - 1
                               ? () => _changePage(1)

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../components/glass_dialog.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -123,7 +124,7 @@ class _SearchPageState extends State<SearchPage> {
                       tooltip: '清除全部',
                       onPressed: () => showDialog(
                           context: context,
-                          builder: (context) => AlertDialog(
+                          builder: (context) => GlassAlertDialog(
                                 title: const Text('确定清除全部搜索历史？'),
                                 actions: [
                                   TextButton(

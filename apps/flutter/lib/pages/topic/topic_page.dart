@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
 import '../../components/glass_surface.dart';
+import '../../components/glass_menu.dart';
 import '../../components/network_image.dart';
 import '../../logic/state/loading_state.dart';
 import '../../pages/home/return_top_controller.dart';
@@ -223,7 +224,7 @@ class _TopicPageState extends State<TopicPage> with TickerProviderStateMixin {
                   icon: const Icon(Icons.search, color: Colors.white),
                   tooltip: '搜索',
                 ),
-              PopupMenuButton<TopicMenuItem>(
+              GlassPopupMenuButton<TopicMenuItem>(
                 icon: const Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (TopicMenuItem item) {
                   switch (item) {

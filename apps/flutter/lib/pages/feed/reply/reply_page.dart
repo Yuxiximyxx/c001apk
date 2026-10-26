@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../components/glass_dialog.dart';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -16,6 +17,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../components/glass_surface.dart';
 import '../../../components/no_splash_factory.dart';
 import '../../../logic/model/feed/data_model.dart';
 import '../../../logic/model/login/login_response.dart';
@@ -339,19 +341,13 @@ class _ReplyPageState extends State<ReplyPage>
         // 其余状态保持 12dp 悬浮卡样式。见 _keyboardCardDownShift。
         bottom: keyboardUp ? 0 : 12,
       ),
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
+      // miuix17：悬浮输入卡按苹果规范属于悬浮控制层，面换液态玻璃
+      // （Regular/medium；卡内控件不再套玻璃）。原实色卡的投影由
+      // GlassSurface 自带的柔和投影替代。
+      child: GlassSurface(
         borderRadius: const BorderRadius.all(Radius.circular(24)),
-        color: MiuixTheme.of(context).colors.surfaceContainer,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+        sizeClass: GlassSizeClass.medium,
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
@@ -569,7 +565,8 @@ class _ReplyPageState extends State<ReplyPage>
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -749,7 +746,7 @@ class _ReplyPageState extends State<ReplyPage>
         _captchaController.clear();
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (context) => GlassAlertDialog(
             title: const Text('验证码'),
             content: IntrinsicHeight(
               child: Row(

@@ -17,6 +17,7 @@ import '../../logic/announcements/app_announcements.dart';
 import '../../logic/app_update/update_preferences.dart';
 import '../../logic/accounts/account_store.dart';
 import '../../components/settings/drop_down_menu_item.dart';
+import '../../components/settings/glass_settings_item.dart';
 import '../../components/settings/item_title.dart';
 import '../../components/settings/switch_item.dart';
 import '../../constants/constants.dart';
@@ -167,18 +168,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                 DropdownMenuItem(value: 2, child: Text('关闭')),
               ],
             ),
-            const DropDownMenuItem(
-              icon: Icons.blur_on_outlined,
-              title: '玻璃材质',
-              subtitle: '切换悬浮底栏与悬浮按钮的玻璃质感，立即生效',
-              boxKey: SettingsBoxKey.dockGlassMaterial,
-              defaultValue: 1,
-              items: [
-                DropdownMenuItem(value: 0, child: Text('毛玻璃')),
-                DropdownMenuItem(value: 1, child: Text('磨砂玻璃')),
-                DropdownMenuItem(value: 2, child: Text('液态玻璃')),
-              ],
-            ),
+            const GlassSettingsItem(),
             const SwitchItem(
               icon: Icons.palette_outlined,
               title: '动态取色',

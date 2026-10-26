@@ -75,7 +75,117 @@ class DockGlassSpec {
 
   /// 是否带透镜折射（三档恒 true，量不同；保留此派生量供旧断言语义）。
   bool get refraction => refractionAmountDp > 0;
+
+  DockGlassSpec copyWith({
+    double? sigma,
+    double? saturate,
+    double? tintAlphaDark,
+    double? tintAlphaLight,
+    double? highlightAlphaDark,
+    double? highlightAlphaLight,
+    double? borderAlphaDark,
+    double? borderAlphaLight,
+    double? refractionBandDp,
+    double? refractionAmountDp,
+    double? dispersion,
+  }) =>
+      DockGlassSpec(
+        sigma: sigma ?? this.sigma,
+        saturate: saturate ?? this.saturate,
+        tintAlphaDark: tintAlphaDark ?? this.tintAlphaDark,
+        tintAlphaLight: tintAlphaLight ?? this.tintAlphaLight,
+        highlightAlphaDark: highlightAlphaDark ?? this.highlightAlphaDark,
+        highlightAlphaLight: highlightAlphaLight ?? this.highlightAlphaLight,
+        borderAlphaDark: borderAlphaDark ?? this.borderAlphaDark,
+        borderAlphaLight: borderAlphaLight ?? this.borderAlphaLight,
+        refractionBandDp: refractionBandDp ?? this.refractionBandDp,
+        refractionAmountDp: refractionAmountDp ?? this.refractionAmountDp,
+        dispersion: dispersion ?? this.dispersion,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is DockGlassSpec &&
+      other.sigma == sigma &&
+      other.saturate == saturate &&
+      other.tintAlphaDark == tintAlphaDark &&
+      other.tintAlphaLight == tintAlphaLight &&
+      other.highlightAlphaDark == highlightAlphaDark &&
+      other.highlightAlphaLight == highlightAlphaLight &&
+      other.borderAlphaDark == borderAlphaDark &&
+      other.borderAlphaLight == borderAlphaLight &&
+      other.refractionBandDp == refractionBandDp &&
+      other.refractionAmountDp == refractionAmountDp &&
+      other.dispersion == dispersion;
+
+  @override
+  int get hashCode => Object.hash(
+      sigma,
+      saturate,
+      tintAlphaDark,
+      tintAlphaLight,
+      highlightAlphaDark,
+      highlightAlphaLight,
+      borderAlphaDark,
+      borderAlphaLight,
+      refractionBandDp,
+      refractionAmountDp,
+      dispersion);
+
+  /// 按苹果 Liquid Glass 规范的变体/面积规则派生某个具体玻璃面实际
+  /// 使用的参数（miuix17）：玻璃只长在悬浮控制层上，面积越大、离
+  /// 「小控件」越远，透镜越要收敛——大面全量折射会把整页内容弯得
+  /// 没法读。系数（相对有效 spec 的全量值）：
+  /// - small（FAB/底栏/药丸等小控件）：amount ×1.0、band ×1.0；
+  /// - medium（弹出菜单/回复输入卡）：amount ×0.6、band ×0.6（band
+  ///   封顶 20dp）；
+  /// - large（底部 sheet/对话框）：amount ×0.35、band ×0.35（band
+  ///   封顶 14dp）；
+  /// - clear 变体（只用于媒体内容之上的控制层，其下另有压暗层）：
+  ///   透镜同 large，纱 alpha ×0.5、模糊 sigma ×0.85（更透）。
+  DockGlassSpec adjustedForSurface({
+    required GlassVariant variant,
+    required GlassSizeClass sizeClass,
+  }) {
+    if (variant == GlassVariant.clear) {
+      return copyWith(
+        sigma: sigma * 0.85,
+        tintAlphaDark: tintAlphaDark * 0.5,
+        tintAlphaLight: tintAlphaLight * 0.5,
+        refractionBandDp: _cappedBand(0.35, 14),
+        refractionAmountDp: refractionAmountDp * 0.35,
+      );
+    }
+    switch (sizeClass) {
+      case GlassSizeClass.small:
+        return this;
+      case GlassSizeClass.medium:
+        return copyWith(
+          refractionBandDp: _cappedBand(0.6, 20),
+          refractionAmountDp: refractionAmountDp * 0.6,
+        );
+      case GlassSizeClass.large:
+        return copyWith(
+          refractionBandDp: _cappedBand(0.35, 14),
+          refractionAmountDp: refractionAmountDp * 0.35,
+        );
+    }
+  }
+
+  double _cappedBand(double scale, double cap) {
+    final scaled = refractionBandDp * scale;
+    return scaled < cap ? scaled : cap;
+  }
 }
+
+/// 玻璃变体（苹果 Liquid Glass 的 Regular / Clear）：
+/// regular 自适应保可读性，绝大多数悬浮面用它；clear 更透明，只用在
+/// 媒体内容之上的元素（图片查看器控制层），且其下须有压暗层。
+enum GlassVariant { regular, clear }
+
+/// 玻璃面的面积档，决定透镜折射的收敛系数（见
+/// [DockGlassSpec.adjustedForSurface]）。
+enum GlassSizeClass { small, medium, large }
 
 extension DockGlassMaterialSpec on DockGlassMaterial {
   DockGlassSpec get spec => switch (this) {
@@ -153,6 +263,128 @@ ValueListenable<Box<dynamic>>? dockGlassMaterialListenable() {
   } catch (_) {
     return null;
   }
+}
+
+/// 玻璃全部设置（预设 + 自定义参数）的可监听对象：任一处改动都经它
+/// 触发所有玻璃面重建，滑杆拖动即时全局生效（miuix17）。
+ValueListenable<Box<dynamic>>? dockGlassSettingsListenable() {
+  try {
+    return GStorage.settings.listenable(keys: [
+      SettingsBoxKey.dockGlassMaterial,
+      SettingsBoxKey.dockGlassCustom,
+    ]);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 自定义玻璃参数（设置页滑杆组）在设置盒 [SettingsBoxKey.dockGlassCustom]
+/// 里存的字段名。滑杆一律存**绝对值**（即该字段就是 spec 的对应分量），
+/// 全应用只有这一份事实源；字段缺失时逐项回退到当前预设的分量。
+class DockGlassCustomField {
+  static const sigma = 'sigma';
+  static const saturate = 'saturate';
+  static const tintDark = 'tintDark';
+  static const tintLight = 'tintLight';
+  static const highlightDark = 'highlightDark';
+  static const highlightLight = 'highlightLight';
+  static const borderDark = 'borderDark';
+  static const borderLight = 'borderLight';
+  static const band = 'band';
+  static const amount = 'amount';
+  static const dispersion = 'dispersion';
+}
+
+/// 把一份 spec 全字段写成自定义参数（选中预设、拖动滑杆、恢复预设
+/// 都走这里，保证存储里的自定义值永远是完整的一份 spec）。
+Map<String, double> dockGlassCustomFromSpec(DockGlassSpec spec) => {
+      DockGlassCustomField.sigma: spec.sigma,
+      DockGlassCustomField.saturate: spec.saturate,
+      DockGlassCustomField.tintDark: spec.tintAlphaDark,
+      DockGlassCustomField.tintLight: spec.tintAlphaLight,
+      DockGlassCustomField.highlightDark: spec.highlightAlphaDark,
+      DockGlassCustomField.highlightLight: spec.highlightAlphaLight,
+      DockGlassCustomField.borderDark: spec.borderAlphaDark,
+      DockGlassCustomField.borderLight: spec.borderAlphaLight,
+      DockGlassCustomField.band: spec.refractionBandDp,
+      DockGlassCustomField.amount: spec.refractionAmountDp,
+      DockGlassCustomField.dispersion: spec.dispersion,
+    };
+
+/// 读取存储里的自定义玻璃参数；未存过（老用户/未动过滑杆）返回 null。
+Map<String, double>? readDockGlassCustom() {
+  try {
+    final raw = GStorage.settings.get(SettingsBoxKey.dockGlassCustom);
+    if (raw is! Map || raw.isEmpty) return null;
+    final result = <String, double>{};
+    raw.forEach((key, value) {
+      if (key is String && value is num) result[key] = value.toDouble();
+    });
+    return result.isEmpty ? null : result;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 有效 spec 的唯一解析点：有自定义参数就以它为准（逐字段缺失回退
+/// 预设分量），没有就原样返回预设 spec——所以老用户升级后、以及从未
+/// 动过滑杆时，玻璃观感与 miuix16 逐值一致。
+DockGlassSpec resolveDockGlassSpec({
+  DockGlassMaterial? material,
+  Map<String, double>? custom,
+}) {
+  final preset = (material ?? currentDockGlassMaterial()).spec;
+  final values = custom ?? readDockGlassCustom();
+  if (values == null) return preset;
+  double pick(String key, double fallback) => values[key] ?? fallback;
+  return DockGlassSpec(
+    sigma: pick(DockGlassCustomField.sigma, preset.sigma),
+    saturate: pick(DockGlassCustomField.saturate, preset.saturate),
+    tintAlphaDark: pick(DockGlassCustomField.tintDark, preset.tintAlphaDark),
+    tintAlphaLight:
+        pick(DockGlassCustomField.tintLight, preset.tintAlphaLight),
+    highlightAlphaDark:
+        pick(DockGlassCustomField.highlightDark, preset.highlightAlphaDark),
+    highlightAlphaLight:
+        pick(DockGlassCustomField.highlightLight, preset.highlightAlphaLight),
+    borderAlphaDark:
+        pick(DockGlassCustomField.borderDark, preset.borderAlphaDark),
+    borderAlphaLight:
+        pick(DockGlassCustomField.borderLight, preset.borderAlphaLight),
+    refractionBandDp: pick(DockGlassCustomField.band, preset.refractionBandDp),
+    refractionAmountDp:
+        pick(DockGlassCustomField.amount, preset.refractionAmountDp),
+    dispersion: pick(DockGlassCustomField.dispersion, preset.dispersion),
+  );
+}
+
+/// 当前有效 spec（预设 + 自定义覆盖，存储不可用时回退默认预设）。
+DockGlassSpec currentDockGlassSpec() {
+  try {
+    return resolveDockGlassSpec();
+  } catch (_) {
+    return DockGlassMaterial.frosted.spec;
+  }
+}
+
+/// 是否处于「自定义」态：存有自定义参数且与上次选中的预设数值不一致
+/// （用户拖过滑杆）。设置页据此决定预设 chips 显示选中还是「自定义」。
+bool dockGlassIsCustomized() {
+  final custom = readDockGlassCustom();
+  if (custom == null) return false;
+  return resolveDockGlassSpec(custom: custom) != currentDockGlassMaterial().spec;
+}
+
+/// 把一份 spec 作为自定义参数写入设置盒（滑杆拖动的落盘点）。
+Future<void> writeDockGlassCustom(DockGlassSpec spec) =>
+    GStorage.settings.put(
+        SettingsBoxKey.dockGlassCustom, dockGlassCustomFromSpec(spec));
+
+/// 选中预设：预设索引与「把该预设数值写入滑杆组」同时落盘，此后有效
+/// spec 由滑杆值（=预设值）决定，chips 回到该预设的选中态。
+Future<void> selectDockGlassPreset(DockGlassMaterial material) async {
+  await GStorage.settings.put(SettingsBoxKey.dockGlassMaterial, material.index);
+  await writeDockGlassCustom(material.spec);
 }
 
 /// 材质对应的纱颜色：Kyant 配方——深色走近透明黑 #121212、浅色走
@@ -267,23 +499,39 @@ ui.ImageFilter glassImageFilter({
 }
 
 /// 共享玻璃面：柔和投影 + 真毛玻璃（BackdropFilter 模糊/折射/饱和）+
-/// 乳纱 + 描边 + 顶缘 inset 高光，[child] 叠在玻璃之上。悬浮 Dock 与
-/// [GlassFab] 共用同一套参数与滤镜链，材质只此一份来源：未传
-/// [materialOverride] 时读设置盒并监听，切换即时全局生效。
+/// 乳纱 + 描边 + 顶缘 inset 高光，[child] 叠在玻璃之上。悬浮 Dock、
+/// [GlassFab] 与 miuix17 起的菜单/sheet/对话框/回复输入卡共用同一套
+/// 参数与滤镜链，参数只此一份来源：有效 spec（预设 + 用户自定义滑杆
+/// 值，见 [resolveDockGlassSpec]），再按本面的 [variant]/[sizeClass]
+/// 派生透镜收敛系数。未传覆写时读设置盒并监听，改动即时全局生效。
+/// 按苹果规范，玻璃面上不要再套一层玻璃（子元素用填充/透明度表现）。
 class GlassSurface extends StatefulWidget {
   const GlassSurface({
     super.key,
     required this.borderRadius,
     required this.child,
     this.materialOverride,
+    this.specOverride,
+    this.variant = GlassVariant.regular,
+    this.sizeClass = GlassSizeClass.small,
     this.highlightHeight = 16,
   });
 
   final BorderRadius borderRadius;
   final Widget child;
 
-  /// 测试/预览覆写材质；为空时读设置盒并监听变化。
+  /// 测试/预览覆写材质（直接用该预设的数值，忽略自定义参数）；
+  /// 为空时读设置盒的有效 spec 并监听变化。
   final DockGlassMaterial? materialOverride;
+
+  /// 测试/预览直接覆写有效 spec（优先于 [materialOverride]）。
+  final DockGlassSpec? specOverride;
+
+  /// 玻璃变体：regular 默认；clear 只给媒体之上的控制层用。
+  final GlassVariant variant;
+
+  /// 面积档，决定透镜收敛系数（small 为全量，底栏/FAB 用它）。
+  final GlassSizeClass sizeClass;
 
   /// 顶部高光带的高度（自顶缘向下渐隐）。
   final double highlightHeight;
@@ -307,21 +555,24 @@ class _GlassSurfaceState extends State<GlassSurface> {
 
   @override
   Widget build(BuildContext context) {
+    final specOverride = widget.specOverride;
+    if (specOverride != null) return _buildSurface(context, specOverride);
     final override = widget.materialOverride;
-    if (override != null) return _buildSurface(context, override);
-    final listenable = dockGlassMaterialListenable();
+    if (override != null) return _buildSurface(context, override.spec);
+    final listenable = dockGlassSettingsListenable();
     if (listenable == null) {
-      return _buildSurface(context, currentDockGlassMaterial());
+      return _buildSurface(context, currentDockGlassSpec());
     }
     return ValueListenableBuilder(
       valueListenable: listenable,
       builder: (context, _, __) =>
-          _buildSurface(context, currentDockGlassMaterial()),
+          _buildSurface(context, currentDockGlassSpec()),
     );
   }
 
-  Widget _buildSurface(BuildContext context, DockGlassMaterial material) {
-    final spec = material.spec;
+  Widget _buildSurface(BuildContext context, DockGlassSpec rawSpec) {
+    final spec = rawSpec.adjustedForSurface(
+        variant: widget.variant, sizeClass: widget.sizeClass);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final dpr = MediaQuery.devicePixelRatioOf(context);
     return Container(
@@ -388,11 +639,13 @@ class _GlassSurfaceState extends State<GlassSurface> {
   }
 }
 
-/// 玻璃悬浮按钮：与悬浮 Dock 同一套玻璃材质（跟随设置切换），替代各页
-/// 的 FloatingActionButton。形状保持原有形态——默认与 FAB 相同的
-/// 16dp 圆角方形，[circular] 时为正圆；尺寸默认与 FAB 相同的 56dp。
-/// [onPressed] 为空时呈禁用态（图标变淡、无点击）。
-class GlassFab extends StatelessWidget {
+/// 玻璃悬浮按钮：与悬浮 Dock 同一套玻璃材质（跟随设置切换与自定义
+/// 参数），替代各页的 FloatingActionButton。形状保持原有形态——默认
+/// 与 FAB 相同的 16dp 圆角方形，[circular] 时为正圆；尺寸默认与 FAB
+/// 相同的 56dp。[onPressed] 为空时呈禁用态（图标变淡、无点击）。
+/// 按苹果 Liquid Glass 的交互规范，可交互玻璃被按下时有轻微缩放
+/// 反馈（0.94，150ms），miuix17 起补上（仅视觉，不改回调语义）。
+class GlassFab extends StatefulWidget {
   const GlassFab({
     super.key,
     required this.onPressed,
@@ -402,6 +655,7 @@ class GlassFab extends StatelessWidget {
     this.circular = false,
     this.iconSize = 24,
     this.materialOverride,
+    this.variant = GlassVariant.regular,
   });
 
   final VoidCallback? onPressed;
@@ -414,42 +668,70 @@ class GlassFab extends StatelessWidget {
   /// 测试/预览覆写材质；为空时跟随设置。
   final DockGlassMaterial? materialOverride;
 
+  /// 玻璃变体：浮在媒体内容上时（如图片查看器翻页箭头）用 clear。
+  final GlassVariant variant;
+
+  @override
+  State<GlassFab> createState() => _GlassFabState();
+}
+
+class _GlassFabState extends State<GlassFab> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (widget.onPressed == null || _pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final borderRadius =
-        circular ? BorderRadius.circular(size / 2) : BorderRadius.circular(16);
-    final enabled = onPressed != null;
+    final size = widget.size;
+    final borderRadius = widget.circular
+        ? BorderRadius.circular(size / 2)
+        : BorderRadius.circular(16);
+    final enabled = widget.onPressed != null;
     final baseColor = glassIconColor(context);
     final button = SizedBox(
       width: size,
       height: size,
-      child: GlassSurface(
-        borderRadius: borderRadius,
-        materialOverride: materialOverride,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: onPressed,
-            customBorder: circular
-                ? const CircleBorder()
-                : RoundedRectangleBorder(borderRadius: borderRadius),
-            // 图标盒撑满按钮面：否则 InkWell 只缩在图标大小、点不中。
-            child: SizedBox(
-              width: size,
-              height: size,
-              child: Icon(
-                icon,
-                size: iconSize,
-                color: enabled
-                    ? baseColor
-                    : baseColor.withValues(alpha: 0.38),
+      child: Listener(
+        onPointerDown: (_) => _setPressed(true),
+        onPointerUp: (_) => _setPressed(false),
+        onPointerCancel: (_) => _setPressed(false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.94 : 1,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          child: GlassSurface(
+            borderRadius: borderRadius,
+            materialOverride: widget.materialOverride,
+            variant: widget.variant,
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: widget.onPressed,
+                customBorder: widget.circular
+                    ? const CircleBorder()
+                    : RoundedRectangleBorder(borderRadius: borderRadius),
+                // 图标盒撑满按钮面：否则 InkWell 只缩在图标大小、点不中。
+                child: SizedBox(
+                  width: size,
+                  height: size,
+                  child: Icon(
+                    widget.icon,
+                    size: widget.iconSize,
+                    color: enabled
+                        ? baseColor
+                        : baseColor.withValues(alpha: 0.38),
+                  ),
+                ),
               ),
             ),
           ),
         ),
       ),
     );
-    final message = tooltip;
+    final message = widget.tooltip;
     return message == null
         ? button
         : Tooltip(message: message, child: button);

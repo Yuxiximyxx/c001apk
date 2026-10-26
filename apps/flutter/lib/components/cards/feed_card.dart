@@ -1,4 +1,5 @@
 import 'package:c001apk_flutter/components/network_image.dart';
+import '../glass_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
@@ -533,7 +534,7 @@ Widget header(
         ),
       if (!isFeedContent)
         IconButton(
-          onPressed: () => showModalBottomSheet(
+          onPressed: () => showGlassBottomSheet(
             context: context,
             useRootNavigator: true,
             isScrollControlled: true,

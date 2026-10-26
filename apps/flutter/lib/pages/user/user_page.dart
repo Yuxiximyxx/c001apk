@@ -1,4 +1,5 @@
 import '../../components/expressive_refresh_indicator.dart';
+import '../../components/glass_dialog.dart';
 import '../../components/expressive_loading_indicator.dart';
 // ignore_for_file: constant_identifier_names
 
@@ -6,6 +7,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import '../../components/glass_menu.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:indent/indent.dart';
@@ -258,7 +260,7 @@ class _UserPageState extends State<UserPage> {
                       icon: const Icon(Icons.search),
                       tooltip: '搜索',
                     ),
-                  PopupMenuButton(
+                  GlassPopupMenuButton(
                     onSelected: (UserMenuItem item) {
                       switch (item) {
                         case UserMenuItem.Copy:
@@ -295,7 +297,7 @@ class _UserPageState extends State<UserPage> {
                               Datum user =
                                   (_userController.userState.value as Success)
                                       .response;
-                              return AlertDialog(
+                              return GlassAlertDialog(
                                 title: Text(
                                   user.username ?? '',
                                   maxLines: 1,

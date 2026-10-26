@@ -1,4 +1,5 @@
 import 'package:c001apk_flutter/components/network_image.dart';
+import '../glass_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:html/dom.dart' as dom;
@@ -80,7 +81,7 @@ class NotificationCard extends StatelessWidget {
             Align(
               alignment: Alignment.topRight,
               child: IconButton(
-                  onPressed: () => showModalBottomSheet(
+                  onPressed: () => showGlassBottomSheet(
                         context: context,
                         useRootNavigator: true,
                         isScrollControlled: true,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'glass_dialog.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -37,7 +38,7 @@ class _AppKeyboardNavigationState extends State<AppKeyboardNavigation> {
     try {
       final exit = await showDialog<bool>(
         context: navigator.context,
-        builder: (context) => AlertDialog(
+        builder: (context) => GlassAlertDialog(
           title: const Text('退出 c001apk？'),
           actions: [
             TextButton(

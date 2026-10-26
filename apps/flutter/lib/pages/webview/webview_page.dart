@@ -1,9 +1,11 @@
 import '../../components/expressive_loading_indicator.dart';
+import '../../components/glass_dialog.dart';
 // ignore_for_file: constant_identifier_names
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../components/glass_menu.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -170,7 +172,7 @@ class _WebviewPageState extends State<WebviewPage> {
           ),
         ),
         actions: [
-          PopupMenuButton(
+          GlassPopupMenuButton(
             onSelected: (item) async {
               switch (item) {
                 case WebviewMenuItem.Refresh:
@@ -306,7 +308,7 @@ class _WebviewPageState extends State<WebviewPage> {
                       } catch (e) {
                         debugPrint(e.toString());
                       }
-                      return AlertDialog(
+                      return GlassAlertDialog(
                         title: Text(
                           '下载文件 $suggestedFilename？',
                           style: const TextStyle(fontSize: 18),

@@ -1,4 +1,5 @@
 import '../../components/expressive_refresh_indicator.dart';
+import '../../components/glass_dialog.dart';
 import '../../components/expressive_loading_indicator.dart';
 // ignore_for_file: constant_identifier_names
 
@@ -15,6 +16,7 @@ import 'package:get/get_navigation/src/dialog/dialog_route.dart';
 
 import '../../components/cards/feed_reply_card.dart';
 import '../../components/glass_surface.dart';
+import '../../components/glass_menu.dart';
 import '../../components/feed_article_body.dart';
 import '../../components/footer.dart';
 import '../../components/sliver_pinned_box_adapter.dart';
@@ -257,7 +259,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
   Future<void> _showAccountDetailStatus() async {
     final retry = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => GlassAlertDialog(
         title: const Text('账号信息暂不可用'),
         content: Text(_feedController.accountDetailNotice.value),
         actions: [
@@ -639,7 +641,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                           .response as Datum,
                       articles: _feedController.articleList ?? const [],
                     ),
-                    PopupMenuButton(
+                    GlassPopupMenuButton(
                       onSelected: (FeedMenuItem item) {
                         switch (item) {
                           case FeedMenuItem.Copy:

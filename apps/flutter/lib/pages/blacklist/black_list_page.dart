@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../components/glass_dialog.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -105,7 +106,7 @@ class _BlackListPageState extends State<BlackListPage> {
               IconButton(
                 onPressed: () => showDialog(
                   context: context,
-                  builder: (context) => AlertDialog(
+                  builder: (context) => GlassAlertDialog(
                     title: Text(
                         '确定清除全部${_type == BlackListType.user ? '用户' : '话题'}黑名单？'),
                     actions: [

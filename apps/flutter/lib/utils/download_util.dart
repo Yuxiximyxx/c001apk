@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../components/glass_dialog.dart';
 import 'dart:typed_data';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -20,7 +21,7 @@ class DownloadUtils {
         useSystem: true,
         animationType: SmartAnimationType.centerFade_otherSlide,
         builder: (BuildContext context) {
-          return AlertDialog(
+          return GlassAlertDialog(
             title: const Text('提示'),
             content: const Text('存储权限未授权'),
             actions: [
@@ -50,7 +51,7 @@ class DownloadUtils {
         useSystem: true,
         animationType: SmartAnimationType.centerFade_otherSlide,
         builder: (BuildContext context) {
-          return AlertDialog(
+          return GlassAlertDialog(
             title: const Text('提示'),
             content: const Text('相册权限未授权'),
             actions: [

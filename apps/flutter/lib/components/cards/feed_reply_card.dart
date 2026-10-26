@@ -1,4 +1,5 @@
 import 'package:c001apk_flutter/components/network_image.dart';
+import '../glass_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
@@ -61,7 +62,7 @@ class FeedReplyCard extends StatelessWidget {
             Align(
               alignment: Alignment.topRight,
               child: IconButton(
-                  onPressed: () => showModalBottomSheet(
+                  onPressed: () => showGlassBottomSheet(
                         context: context,
                         useRootNavigator: true,
                         isScrollControlled: true,
@@ -333,7 +334,7 @@ class FeedReplyCard extends StatelessWidget {
         }
       },
       onLongPress: () {
-        showModalBottomSheet(
+        showGlassBottomSheet(
           context: context,
           useRootNavigator: true,
           isScrollControlled: true,

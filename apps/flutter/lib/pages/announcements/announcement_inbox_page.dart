@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../components/glass_menu.dart';
 
 import '../../components/announcement_dialog.dart';
 import '../../components/expressive_refresh_indicator.dart';
@@ -40,7 +41,7 @@ class _AnnouncementInboxPageState extends State<AnnouncementInboxPage> {
             tooltip: '刷新公告',
             onPressed: () => _refresh(SyncReason.manual),
             icon: const Icon(Icons.refresh)),
-        PopupMenuButton<String>(
+        GlassPopupMenuButton<String>(
             tooltip: '公告设置',
             onSelected: (_) async {
               await widget.service.clearBodyCache();

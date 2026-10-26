@@ -543,6 +543,7 @@ class SettingsBoxKey {
       fontScale = 'fontScale',
       useSystemFont = 'useSystemFont',
       dockGlassMaterial = 'dockGlassMaterial',
+      dockGlassCustom = 'dockGlassCustom',
       readingMode = 'readingMode',
       followType = 'followType',
       imageQuality = 'imageQuality',

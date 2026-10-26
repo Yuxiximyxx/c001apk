@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'glass_dialog.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 import '../logic/model/feed/datum.dart';
@@ -70,7 +71,7 @@ class _ContentExportButtonState extends State<ContentExportButton> {
       if (prepared.warnings.isNotEmpty) {
         final proceed = await showDialog<bool>(
             context: context,
-            builder: (context) => AlertDialog(
+            builder: (context) => GlassAlertDialog(
                     title: const Text('部分内容未能保存'),
                     content: Text(
                         '${prepared.warnings.join('\n\n')}\n\n继续保存已取得的内容？'),

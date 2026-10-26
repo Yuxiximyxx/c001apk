@@ -1,4 +1,5 @@
 import '../../components/expressive_loading_indicator.dart';
+import '../../components/glass_dialog.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -94,7 +95,7 @@ window.addEventListener('flutterInAppWebViewPlatformReady',startCaptcha);
             icon: const Icon(Icons.help_outline),
             onPressed: () => showDialog<void>(
               context: context,
-              builder: (dialogContext) => AlertDialog(
+              builder: (dialogContext) => GlassAlertDialog(
                 title: const Text('反复出现人机验证？'),
                 content: const Text('可在“我的 → 设置 → 协议与设备 → 设备标识”里重新自动获取，'
                     '或从官方酷安同一页面点击“复制 OAID”5次后粘贴完整内容手动导入。'

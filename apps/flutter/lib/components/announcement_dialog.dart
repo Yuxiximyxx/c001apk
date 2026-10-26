@@ -7,6 +7,7 @@ import '../logic/announcements/announcement.dart';
 import '../logic/announcements/announcement_service.dart';
 import '../utils/markdown_content.dart';
 import 'announcement_avatar.dart';
+import 'glass_surface.dart';
 import 'markdown_body.dart';
 
 String announcementDate(DateTime date) {
@@ -140,7 +141,15 @@ class _AnnouncementDialogState extends State<AnnouncementDialog>
                 return Dialog(
                     insetPadding: const EdgeInsets.all(24),
                     clipBehavior: Clip.antiAlias,
-                    child: ConstrainedBox(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    // miuix17：公告弹窗也是悬浮控制层，面换液态玻璃
+                    // （Regular/large），内容结构不动。
+                    child: GlassSurface(
+                        borderRadius: BorderRadius.circular(28),
+                        sizeClass: GlassSizeClass.large,
+                        child: ConstrainedBox(
                         constraints: BoxConstraints(
                             maxWidth: 520,
                             maxHeight: MediaQuery.sizeOf(context).height * .82),
@@ -288,7 +297,7 @@ class _AnnouncementDialogState extends State<AnnouncementDialog>
                                       onPressed: () =>
                                           Navigator.of(context).pop(),
                                       child: const Text('知道了')))),
-                        ])));
+                        ]))));
               })));
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'glass_dialog.dart';
 
 import '../logic/app_update/app_release.dart';
 import '../utils/markdown_content.dart';
@@ -24,7 +25,7 @@ class AppUpdateDialog extends StatelessWidget {
       UpdateAction.skip: '跳过',
       UpdateAction.download: '更新',
     };
-    return AlertDialog(
+    return GlassAlertDialog(
       title: const Text('发现新版本'),
       content: SizedBox(
         width: 420,

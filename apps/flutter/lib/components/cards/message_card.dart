@@ -1,4 +1,6 @@
 import 'package:c001apk_flutter/components/network_image.dart';
+import '../glass_dialog.dart';
+import '../glass_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -31,7 +33,7 @@ class MessageCard extends StatelessWidget {
       onLongPress: busy || (onPin == null && onDelete == null)
           ? null
           : () {
-              showModalBottomSheet<void>(
+              showGlassBottomSheet<void>(
                   context: context,
                   builder: (context) => SafeArea(
                           child:
@@ -50,7 +52,7 @@ class MessageCard extends StatelessWidget {
                               Navigator.pop(context);
                               final confirmed = await showDialog<bool>(
                                   context: thisContext,
-                                  builder: (context) => AlertDialog(
+                                  builder: (context) => GlassAlertDialog(
                                           title: const Text('删除此会话？'),
                                           content: const Text(
                                               '会话将从私信列表中删除，此操作无法撤销。'),

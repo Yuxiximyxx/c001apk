@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../components/glass_menu.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -72,7 +73,7 @@ class _FollowFeedPageState extends State<FollowFeedPage>
           automaticallyImplyLeading: false,
           titleSpacing: 8,
           title: GlobalData().isLogin
-              ? PopupMenuButton<FollowFeedSelection>(
+              ? GlassPopupMenuButton<FollowFeedSelection>(
                   tooltip: '切换关注内容',
                   initialValue: _selection,
                   position: PopupMenuPosition.under,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'glass_dialog.dart';
 import 'package:get/get.dart';
 
 import '../constants/constants.dart';
@@ -28,7 +29,7 @@ class _SliderDialogState extends State<SliderDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return GlassAlertDialog(
       title: const Center(child: Text('字体大小')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -90,7 +91,7 @@ class EditTextDialog extends StatelessWidget {
         ),
       ),
     );
-    return AlertDialog(
+    return GlassAlertDialog(
       title: Center(child: Text(title)),
       content: TextField(
         autofocus: true,
@@ -131,7 +132,7 @@ class MAboutDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return GlassAlertDialog(
       content: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -191,7 +192,7 @@ class ClearDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return GlassAlertDialog(
       title: const Center(child: Text('清理缓存')),
       content: Text('当前缓存大小：$cacheSize'),
       actions: [

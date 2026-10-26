@@ -1,4 +1,5 @@
 import '../../components/expressive_loading_indicator.dart';
+import '../../components/glass_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../logic/model/fav_history/fav_history.dart';
@@ -41,7 +42,7 @@ class _ChatFeedPickerState extends State<ChatFeedPicker> {
   void _choose(String id) async {
     final yes = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => GlassAlertDialog(
                 title: const Text('发送动态？'),
                 content: Text('https://www.coolapk.com/feed/$id'),
                 actions: [

@@ -1,9 +1,11 @@
 import 'dart:async';
+import '../../components/glass_dialog.dart';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:chat_bottom_container/chat_bottom_container.dart';
 import 'package:flutter/material.dart';
+import '../../components/glass_menu.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -84,7 +86,7 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(title: Text(_username), actions: [
-        PopupMenuButton<ChatMenuType>(
+        GlassPopupMenuButton<ChatMenuType>(
           onOpened: _focusNode.unfocus,
           onSelected: (value) {
             switch (value) {
@@ -238,7 +240,7 @@ class _ChatPageState extends State<ChatPage> {
                                   Navigator.pop(context);
                                   final confirmed = await showDialog<bool>(
                                       context: this.context,
-                                      builder: (context) => AlertDialog(
+                                      builder: (context) => GlassAlertDialog(
                                               title: const Text('删除消息？'),
                                               content: const Text('删除后无法恢复。'),
                                               actions: [
@@ -268,7 +270,7 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _showFailure(ChatDelivery delivery) async {
     final result = await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => GlassAlertDialog(
               title: Text(delivery.unconfirmed ? '发送结果未确认' : '消息发送失败'),
               content: Text(
                   '${delivery.error ?? '请稍后重试'}${delivery.unconfirmed ? '\n请先检查聊天记录，再次发送可能产生重复消息。' : ''}'),

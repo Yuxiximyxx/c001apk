@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../components/glass_dialog.dart';
 import 'package:get/get.dart';
 
 import '../../components/cards/feed_card.dart';
@@ -61,7 +62,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   IconButton(
                     onPressed: () => showDialog(
                       context: context,
-                      builder: (context) => AlertDialog(
+                      builder: (context) => GlassAlertDialog(
                         title: Text(
                             '确定清除全部${_type == HistoryType.Favorite ? '收藏' : '浏览历史'}？'),
                         actions: [

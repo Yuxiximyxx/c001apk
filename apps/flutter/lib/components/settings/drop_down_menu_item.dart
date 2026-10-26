@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
+import '../../components/glass_menu.dart';
 import '../../utils/storage_util.dart';
 
 class DropDownMenuItem extends StatefulWidget {
@@ -39,8 +40,53 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
     value = GStorage.settings.get(widget.boxKey, defaultValue: widget.defaultValue);
   }
 
+  String _labelOf(DropdownMenuItem<int> item) =>
+      item.child is Text ? (item.child as Text).data ?? '' : '';
+
+  Future<void> _openMenu(BuildContext context) async {
+    final button = context.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null || !button.hasSize) return;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero),
+            ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+    // miuix17：下拉菜单面换液态玻璃（Regular/medium），菜单项与选中
+    // 回写逻辑与原 DropdownButton 一致。
+    final newValue = await showGlassMenu<int>(
+      context: context,
+      position: position,
+      items: widget.items
+          .map((item) => PopupMenuItem<int>(
+                value: item.value,
+                onTap: item.onTap,
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(_labelOf(item),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ))
+          .toList(),
+    );
+    if (newValue != null && mounted) {
+      GStorage.settings.put(widget.boxKey, newValue);
+      setState(() => value = newValue);
+      if (widget.forceAppUpdate) {
+        Get.forceAppUpdate();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final selected = widget.items.firstWhere(
+      (item) => item.value == value,
+      orElse: () => widget.items.first,
+    );
     return MiuixBasicComponent(
       enabled: widget.enabled,
       title: widget.title,
@@ -53,36 +99,35 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
         // always fits the slot.
         MediaQuery.withClampedTextScaling(
           maxScaleFactor: 1.75,
-          child: DropdownButton<int>(
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: widget.enabled
-                ? Theme.of(context).colorScheme.onSurface
-                : Theme.of(context).disabledColor),
-        value: value,
-        onChanged: !widget.enabled
-            ? null
-            : (int? newValue) {
-                if (newValue != null) {
-                  GStorage.settings.put(widget.boxKey, newValue);
-                  setState(() => value = newValue);
-                  if (widget.forceAppUpdate) {
-                    Get.forceAppUpdate();
-                  }
-                }
-              },
-          items: widget.items
-              .map((item) => DropdownMenuItem<int>(
-                    value: item.value,
-                    onTap: item.onTap,
-                    child: Text(
-                      item.child is Text
-                          ? (item.child as Text).data ?? ''
-                          : '',
+          child: Builder(
+            builder: (context) => InkWell(
+              onTap: widget.enabled ? () => _openMenu(context) : null,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _labelOf(selected),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: widget.enabled
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).disabledColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ))
-              .toList(),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      color: widget.enabled
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).disabledColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ],

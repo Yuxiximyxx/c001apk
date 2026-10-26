@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../../../components/glass_dialog.dart';
+import '../../../components/glass_surface.dart';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -224,7 +226,7 @@ class _ReplyDialogState extends State<ReplyDialog> with WidgetsBindingObserver {
         _captchaController.clear();
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (context) => GlassAlertDialog(
             title: const Text('验证码'),
             content: IntrinsicHeight(
               child: Row(
@@ -360,15 +362,14 @@ class _ReplyDialogState extends State<ReplyDialog> with WidgetsBindingObserver {
     // double keyboardHeight = EdgeInsets.fromViewPadding(
     //         View.of(context).viewInsets, View.of(context).devicePixelRatio)
     //     .bottom;
-    return Container(
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-        color: Theme.of(context).colorScheme.surface,
+    // miuix17：编辑器根面是悬浮控制层，换液态玻璃（Regular/medium，
+    // 顶部圆角 12 沿用原形状）；内部控件不再套玻璃。
+    return GlassSurface(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(12),
+        topRight: Radius.circular(12),
       ),
+      sizeClass: GlassSizeClass.medium,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -613,6 +614,7 @@ class _ReplyDialogState extends State<ReplyDialog> with WidgetsBindingObserver {
             duration: const Duration(milliseconds: 300),
             child: Container(
               width: double.infinity,
+
               // height: _keyBoardKey.currentState?.selected == true
               //     ? (keyboardHeight > _keyboardHeight
               //         ? keyboardHeight

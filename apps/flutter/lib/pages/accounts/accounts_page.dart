@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../components/glass_dialog.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -35,7 +36,7 @@ class _AccountsPageState extends State<AccountsPage> {
   Future<void> _remove(SavedAccount account) async {
     final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => GlassAlertDialog(
               title: const Text('移除本机登录？'),
               content: Text('将移除“${account.displayName}”在本机保存的登录。再次使用需要重新登录。'
                   '${GStorage.uid == account.uid ? '\n当前账号将切换为游客。' : ''}'),
