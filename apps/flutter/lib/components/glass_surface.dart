@@ -7,6 +7,7 @@ import 'dart:ui' as ui
         Paint,
         PictureRecorder;
 
+import 'package:fluid_glass/fluid_glass.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -423,11 +424,108 @@ Color glassIconColor(BuildContext context) =>
         ? Colors.white.withValues(alpha: 0.95)
         : const Color(0xFF3F4145);
 
+/// 全应用玻璃面与 fluid_glass 组件之间的**唯一颜色映射点**（miuix22
+/// 自 floating_dock_bar.dart 迁来此处，成为所有玻璃面共用的映射）：
+/// fluid 的组件/原语只开放颜色入口，光学（blur 8 / vibrancy 1.5 /
+/// lens 24·24 一系）在库内写死为 Kyant 原方——能经 [LiquidGlassColors]
+/// 进引擎的只有颜色：
+/// - accent ← 应用强调色（选中标记、药丸内标签副本的染色）；
+/// - container ← [glassTintColor]（spec 的纱基色 #121212/#FAFAFA
+///   + tintAlpha，即三预设身份与「透明度」滑杆经此生效）。
+/// 其余 spec 字段在 fluid 侧的去向：refractionBandDp /
+/// refractionAmountDp / dispersion 经 [GlassSurface] 的效果链以
+/// lens 参数进入（见 _buildSurface）；highlightAlpha /
+/// borderAlpha 分别经 Highlight 与描边进入；sigma / saturate 无入口
+/// （fluid 写死 blur 半径 8 与 vibrancy 1.5），不要在此静默吞掉别的
+/// 字段——新增映射先过这里。
+LiquidGlassColors dockGlassColorsForSpec(
+  DockGlassSpec spec, {
+  required bool dark,
+  required Color accent,
+}) {
+  final base = LiquidGlassColors.forBrightness(
+      dark ? Brightness.dark : Brightness.light);
+  return base.copyWith(
+    accent: accent,
+    container: glassTintColor(spec, dark),
+  );
+}
+
+/// 把 Flutter 的 [BorderRadius] 换算成 fluid 的形状：四角半径原样
+/// 传入（fluid 的 lens 按形状的真实角算 SDF——miuix19 的同心圆弧
+/// bug 类在新引擎里由构造消除）；统一半径走 [RoundedRectangle]，
+/// 非统一走 [UnevenRoundedRectangle] 并按文字方向把物理左右角映射
+/// 到 start/end。角样式用 fluid 原生的 continuous（与 Dock 的
+/// LiquidBottomTabs 同款轮廓）。
+RoundedRectangularShape glassShapeForBorderRadius(
+  BorderRadius radius,
+  TextDirection direction,
+) {
+  final tl = radius.topLeft.x;
+  final tr = radius.topRight.x;
+  final br = radius.bottomRight.x;
+  final bl = radius.bottomLeft.x;
+  if (tl == tr && tr == br && br == bl) return RoundedRectangle(tl);
+  final ltr = direction == TextDirection.ltr;
+  return UnevenRoundedRectangle(RectangleCornerRadii(
+    topStart: ltr ? tl : tr,
+    topEnd: ltr ? tr : tl,
+    bottomEnd: ltr ? br : bl,
+    bottomStart: ltr ? bl : br,
+  ));
+}
+
+/// 向子树提供一块可采样录制的注入点：只有「消费者在录制子树之外」
+/// 的面才许提供（Kyant 采样硬规则，消费者在被录子树内自采样会
+/// 形成反馈）。当前只有图片查看器提供（录制 pager、箭头在录制
+/// 之外采样）；其余面不提供、走 [nativeBackdrop] 的合成器路径。
+class GlassBackdropScope extends InheritedWidget {
+  const GlassBackdropScope({
+    super.key,
+    required this.backdrop,
+    required super.child,
+  });
+
+  final LayerBackdrop backdrop;
+
+  static LayerBackdrop? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<GlassBackdropScope>()
+      ?.backdrop;
+
+  @override
+  bool updateShouldNotify(GlassBackdropScope oldWidget) =>
+      !identical(backdrop, oldWidget.backdrop);
+}
+
+/// 玻璃面实际采样的 backdrop 解析（miuix22）：
+/// - 运行时 shader 不可用（Skia 回退/测试环境）→ 一律 [nativeBackdrop]
+///   （合成器 BackdropFilter 路径：模糊+纱色+ rim，无折射的等价呈现，
+///   功能不受影响）；
+/// - 子树有 [GlassBackdropScope] 注入的录制 → 用录制（真折射）；
+/// - 否则 [nativeBackdrop]——菜单/对话框/sheet/toast 等模态面浮在
+///   内容之上，合成器路径自带 barrier 变暗、无冻结帧、零录制成本，
+///   也是 fluid 官方对这类面的推荐（LiquidSheet/LiquidDialog 文档）。
+Backdrop fluidGlassBackdropOf(BuildContext context) {
+  if (!isRuntimeShaderSupported()) return nativeBackdrop;
+  return GlassBackdropScope.maybeOf(context) ?? nativeBackdrop;
+}
+
+/// fluid 面板的模糊半径（Kyant 原方，与 LiquidPanel 默认值、
+/// LiquidBottomTabs 面板同值；fluid 的 blur() 吃 Android 式半径，
+/// 内部换算 sigma）。
+const double fluidGlassBlurRadius = 8;
+
 /// 折射 shader 的一次性加载+能力探测：ImageFilter.shader 仅 Impeller
 /// 可用，Skia 后端（测试环境、无 Vulkan 的老设备回退）在绘制时会抛
 /// UnsupportedError 且无法在使用点 catch，所以先用 2x2 离屏绘制探一遍，
 /// 不可用就返回 null，三档一律退回无透镜的滤镜链（饱和+模糊不变）。
 /// 全应用共享同一次加载。
+///
+/// miuix22 注记：本管线（[RefractionSupport] / [glassImageFilter] /
+/// [glassShaderUniformValues] 与 assets/shaders/dock_refraction.frag）
+/// 已冻结——全应用玻璃面迁 fluid_glass 后，只剩冻结不改的 Dock
+/// 回落路（floating_dock_bar.dart 的选中药丸）在用它，故不删除、
+/// 也不再往新面扩散。
 ///
 /// miuix19：加载结果同步缓存（[cachedProgram]/[settled]）。此前每个
 /// GlassSurface 都在 initState 里各自 .then 异步取 program——首次
@@ -582,14 +680,31 @@ ui.ImageFilter glassImageFilter({
   return filter;
 }
 
-/// 共享玻璃面：柔和投影 + 真毛玻璃（BackdropFilter 模糊/折射/饱和）+
-/// 乳纱 + 描边 + 顶缘 inset 高光，[child] 叠在玻璃之上。悬浮 Dock、
-/// [GlassFab] 与 miuix17 起的菜单/sheet/对话框/回复输入卡共用同一套
-/// 参数与滤镜链，参数只此一份来源：有效 spec（预设 + 用户自定义滑杆
-/// 值，见 [resolveDockGlassSpec]），再按本面的 [variant]/[sizeClass]
-/// 派生透镜收敛系数。未传覆写时读设置盒并监听，改动即时全局生效。
-/// 按苹果规范，玻璃面上不要再套一层玻璃（子元素用填充/透明度表现）。
-class GlassSurface extends StatefulWidget {
+/// 共享玻璃面（miuix22 起出图引擎换 fluid_glass）：柔和投影 +
+/// fluid 的 [DrawBackdrop] 效果链（vibrancy → blur → lens，与 Dock
+/// 的 LiquidBottomTabs 同引擎同口径）+ spec 纱色 + 描边 + fluid
+/// rim 高光，[child] 叠在玻璃之上。悬浮 Dock 回落路、[GlassFab] 与
+/// miuix17 起的菜单/sheet/对话框/回复输入卡共用同一套参数，参数
+/// 只此一份来源：有效 spec（预设 + 用户自定义滑杆值，见
+/// [resolveDockGlassSpec]），再按本面的 [variant]/[sizeClass] 派生
+/// 透镜收敛系数（[DockGlassSpec.adjustedForSurface]）。
+///
+/// 与旧自研引擎（BackdropFilter + dock_refraction.frag）的口径差：
+/// - 采样源经 [fluidGlassBackdropOf] 解析：有录制注入（查看器
+///   箭头）走真折射，其余走合成器 native 路径（模糊+纱色+rim，
+///   无折射）；shader 不可用时一律 native，等价呈现保功能；
+/// - 光学以 fluid 写死值为准：blur 半径 [fluidGlassBlurRadius]、
+///   vibrancy 饱和 1.5——spec 的 sigma/saturate 不再有入口（与
+///   Dock 组件版同一代价，miuix21 已随底栏转正接受）；spec 的
+///   band/amount/dispersion 经 lens 进入（按面积档收敛后的值），
+///   tint/highlight/border 三个颜色分量经 [dockGlassColorsForSpec]
+///   与描边/rim 进入；
+/// - 旧版的顶部渐变高光带换成 fluid 的 rim 高光（强度仍由 spec 的
+///   highlightAlpha 驱动）；[highlightHeight] 只保留作 rim 的开关
+///   （>0 开），高度语义在新引擎无对应。
+/// 未传覆写时读设置盒并监听，改动即时全局生效。按苹果规范，
+/// 玻璃面上不要再套一层玻璃（子元素用填充/透明度表现）。
+class GlassSurface extends StatelessWidget {
   const GlassSurface({
     super.key,
     required this.borderRadius,
@@ -617,37 +732,15 @@ class GlassSurface extends StatefulWidget {
   /// 面积档，决定透镜收敛系数（small 为全量，底栏/FAB 用它）。
   final GlassSizeClass sizeClass;
 
-  /// 顶部高光带的高度（自顶缘向下渐隐）。
+  /// rim 高光开关（旧自研引擎里是顶部高光带高度，miuix22 起高度
+  /// 语义无对应，仅 >0 时启用 fluid rim 高光）。
   final double highlightHeight;
 
   @override
-  State<GlassSurface> createState() => _GlassSurfaceState();
-}
-
-class _GlassSurfaceState extends State<GlassSurface> {
-  ui.FragmentProgram? _refractionProgram;
-
-  @override
-  void initState() {
-    super.initState();
-    // miuix19：先同步读缓存——加载已完成时第一帧就是完整滤镜链，
-    // 不再有「首帧无透镜、回调后整链换掉」的闪烁（菜单入场实测）。
-    // 只有加载尚未完成（冷启动最初几帧）才订阅完成回调补上。
-    _refractionProgram = RefractionSupport.cachedProgram;
-    if (!RefractionSupport.settled) {
-      RefractionSupport.load().then((program) {
-        if (mounted && program != null) {
-          setState(() => _refractionProgram = program);
-        }
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final specOverride = widget.specOverride;
+    final specOverride = this.specOverride;
     if (specOverride != null) return _buildSurface(context, specOverride);
-    final override = widget.materialOverride;
+    final override = materialOverride;
     if (override != null) return _buildSurface(context, override.spec);
     final listenable = dockGlassSettingsListenable();
     if (listenable == null) {
@@ -661,71 +754,65 @@ class _GlassSurfaceState extends State<GlassSurface> {
   }
 
   Widget _buildSurface(BuildContext context, DockGlassSpec rawSpec) {
-    final spec = rawSpec.adjustedForSurface(
-        variant: widget.variant, sizeClass: widget.sizeClass);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: widget.borderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: dark ? 0.35 : 0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+    final spec =
+        rawSpec.adjustedForSurface(variant: variant, sizeClass: sizeClass);
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    // 颜色统一走唯一映射点：container=纱色（onDrawSurface 铺）、
+    // 其余字段供子树里的 fluid 组件（与 Dock 同一份调色）。
+    final colors = dockGlassColorsForSpec(spec,
+        dark: dark, accent: theme.colorScheme.primary);
+    final shape =
+        glassShapeForBorderRadius(borderRadius, Directionality.of(context));
+    final borderColor = glassBorderColor(spec, dark);
+    final highlightAlpha = glassHighlightAlpha(spec, dark);
+    return LiquidGlassTheme(
+      colors: colors,
+      child: DrawBackdrop(
+        backdrop: fluidGlassBackdropOf(context),
+        shape: () => shape,
+        effects: (scope) => scope
+          ..vibrancy()
+          ..blur(fluidGlassBlurRadius)
+          ..lens(
+            spec.refractionBandDp,
+            spec.refractionAmountDp,
+            chromaticAberration: spec.dispersion > 0,
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: widget.borderRadius,
-        child: LayoutBuilder(
-          builder: (context, constraints) => BackdropFilter(
-            filter: glassImageFilter(
-              spec: spec,
-              size: Size(constraints.maxWidth, constraints.maxHeight),
-              dpr: dpr,
-              refractionProgram: _refractionProgram,
-              // miuix19：把本面的真实圆角传给 shader 的 SDF——
-              // 否则宽而矮的面（sheet/菜单）会被假胶囊弧切出
-              // 同心圆弧线（见 dock_refraction.frag 注释）。
-              cornerRadii: widget.borderRadius,
-              // shader 端边缘镜面光（rim）跟随本档高光身份强度、
-              // 底部内阴影固定克制值——给玻璃补轮廓光与厚度感。
-              rimStrength: glassHighlightAlpha(spec, dark),
-              innerShadow: 0.3,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: glassTintColor(spec, dark),
-                borderRadius: widget.borderRadius,
-                border: Border.all(color: glassBorderColor(spec, dark)),
-              ),
-              child: Stack(
-                children: [
-                  // 顶缘 inset 高光：顶部 1px 起的渐变亮线。
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: widget.highlightHeight,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white.withValues(
-                                alpha: glassHighlightAlpha(spec, dark)),
-                            Colors.white.withValues(alpha: 0),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  widget.child,
-                ],
-              ),
-            ),
+        highlight: highlightHeight > 0
+            ? () => Highlight.standard.copyWith(alpha: highlightAlpha)
+            : null,
+        shadow: () => GlassShadow(
+          radius: 18,
+          offset: const Offset(0, 6),
+          color: Colors.black.withValues(alpha: dark ? 0.35 : 0.18),
+        ),
+        // 底部内阴影：给玻璃补厚度感（旧 shader innerShadow 0.3 的
+        // 等效近似——fluid 的内阴影是整圈向内的柔影，强度克制）。
+        innerShadow: () => GlassInnerShadow(
+          radius: 24,
+          offset: const Offset(0, 24),
+          color: const Color(0x26000000),
+          alpha: 0.3,
+        ),
+        // onDrawSurface 只铺一层纯色纱（srcOver），不需要隔离层。
+        isolateSurface: false,
+        onDrawSurface: (canvas, size) {
+          canvas.drawRect(
+              Offset.zero & size, Paint()..color = colors.container);
+        },
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor),
+          ),
+          // 描边的内容内缩：旧自研面里描边由 Container 的
+          // decoration.padding 承担（四边各 1dp），菜单定宽等布局
+          // 契约按这个几何校准——新面用等量 Padding 补回，保证
+          // 所有面的总尺寸与内容位置与旧引擎逐值一致。
+          child: Padding(
+            padding: const EdgeInsets.all(1),
+            child: child,
           ),
         ),
       ),

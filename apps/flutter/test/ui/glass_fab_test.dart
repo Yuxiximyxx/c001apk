@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:c001apk_flutter/components/glass_surface.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
+import 'package:fluid_glass/fluid_glass.dart' show DrawBackdrop;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -57,8 +58,8 @@ void main() {
     await pumpFab(tester, material: DockGlassMaterial.frosted);
     expect(find.byType(GlassFab), findsOneWidget);
     expect(tester.getSize(find.byType(GlassFab)), const Size(56, 56));
-    // 与 Dock 同一套真毛玻璃链
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    // 与 Dock 同一套真玻璃链（miuix22 起为 fluid DrawBackdrop）
+    expect(find.byType(DrawBackdrop), findsOneWidget);
     expect(find.byIcon(Icons.add), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -69,7 +70,7 @@ void main() {
       for (final brightness in Brightness.values) {
         await pumpFab(tester, material: material, brightness: brightness);
         await tester.pump(const Duration(milliseconds: 300));
-        expect(find.byType(BackdropFilter), findsOneWidget,
+        expect(find.byType(DrawBackdrop), findsOneWidget,
             reason: '$material/$brightness 应有玻璃层');
         expect(tester.takeException(), isNull,
             reason: '$material/$brightness 不应抛异常');
@@ -82,7 +83,7 @@ void main() {
     await pumpFab(tester,
         material: DockGlassMaterial.clear, circular: true, size: 40);
     expect(tester.getSize(find.byType(GlassFab)), const Size(40, 40));
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.byType(DrawBackdrop), findsOneWidget);
   });
 
   testWidgets('tap fires onPressed, tooltip is exposed', (tester) async {
@@ -99,8 +100,7 @@ void main() {
 
   testWidgets('disabled button dims the icon and swallows taps',
       (tester) async {
-    await pumpFab(tester,
-        material: DockGlassMaterial.frosted, onPressed: null);
+    await pumpFab(tester, material: DockGlassMaterial.frosted, onPressed: null);
     final disabledIcon = tester.widget<Icon>(find.byIcon(Icons.add));
     expect(disabledIcon.color!.a, lessThan(0.5));
     await tester.tap(find.byType(GlassFab));
@@ -126,12 +126,12 @@ void main() {
     await tester.runAsync(
         () => GStorage.settings.put(SettingsBoxKey.dockGlassMaterial, 0));
     await pumpFab(tester);
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.byType(DrawBackdrop), findsOneWidget);
     // 切换材质后 listenable 触发重建，不重启即生效、不抛异常
     await tester.runAsync(
         () => GStorage.settings.put(SettingsBoxKey.dockGlassMaterial, 2));
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.byType(DrawBackdrop), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

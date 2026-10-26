@@ -3,6 +3,7 @@ import '../../components/glass_dialog.dart';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fluid_glass/fluid_glass.dart' show BackdropLayer, LayerBackdrop;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,6 +33,12 @@ class _ImageViewPageState extends State<ImageViewPage> {
   late final List<String> _imgList;
   late final PageController _pageController;
   final _galleryKey = GlobalKey();
+
+  /// miuix22：查看器录制句柄——pager（连同页面底色）外包
+  /// BackdropLayer 录制，翻页箭头在录制子树之外经
+  /// [GlassBackdropScope] 采样出真折射（Clear 变体）。箭头绝不能
+  /// 进录制子树内部（消费者自采样是 Kyant 硬规则禁区）。
+  final _viewerBackdrop = LayerBackdrop();
   final _controllers = <int, PhotoViewController>{};
   final _scaleStates = <int, PhotoViewScaleStateController>{};
   final _providers = <int, CachedNetworkImageProvider>{};
@@ -67,6 +74,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
       state.dispose();
     }
     _pageController.dispose();
+    _viewerBackdrop.dispose();
     super.dispose();
   }
 
@@ -240,46 +248,62 @@ class _ImageViewPageState extends State<ImageViewPage> {
               : Stack(
                   alignment: Alignment.center,
                   children: [
-                    Listener(
-                      key: _galleryKey,
-                      onPointerSignal: _onPointerSignal,
-                      child: GestureDetector(
-                        onLongPress: _showImageMenu,
-                        onSecondaryTap: _showImageMenu,
-                        child: PhotoViewGallery.builder(
-                          backgroundDecoration:
-                              const BoxDecoration(color: Colors.transparent),
-                          scrollPhysics: const BouncingScrollPhysics(),
-                          builder: (context, index) =>
-                              PhotoViewGalleryPageOptions(
-                            imageProvider: _providerFor(index),
-                            controller: _controllers.putIfAbsent(
-                                index, PhotoViewController.new),
-                            scaleStateController: _scaleStates.putIfAbsent(
-                                index, PhotoViewScaleStateController.new),
-                            initialScale: PhotoViewComputedScale.contained,
-                            minScale: PhotoViewComputedScale.contained,
-                            maxScale: PhotoViewComputedScale.covered * 8,
-                            heroAttributes:
-                                PhotoViewHeroAttributes(tag: _imgList[index]),
+                    // miuix22：录制层 = 页面底色 + pager（与屏幕上看到
+                    // 的合成一致），只供翻页箭头采样；录制本身不改
+                    // 观感（照片与底色照常绘制）。
+                    BackdropLayer(
+                      backdrop: _viewerBackdrop,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ColoredBox(
+                            color: Theme.of(context).scaffoldBackgroundColor,
                           ),
-                          itemCount: _imgList.length,
-                          loadingBuilder: (context, event) => Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                value: event?.expectedTotalBytes == null
-                                    ? null
-                                    : event!.cumulativeBytesLoaded /
-                                        event.expectedTotalBytes!,
+                          Listener(
+                            key: _galleryKey,
+                            onPointerSignal: _onPointerSignal,
+                            child: GestureDetector(
+                              onLongPress: _showImageMenu,
+                              onSecondaryTap: _showImageMenu,
+                              child: PhotoViewGallery.builder(
+                                backgroundDecoration: const BoxDecoration(
+                                    color: Colors.transparent),
+                                scrollPhysics: const BouncingScrollPhysics(),
+                                builder: (context, index) =>
+                                    PhotoViewGalleryPageOptions(
+                                  imageProvider: _providerFor(index),
+                                  controller: _controllers.putIfAbsent(
+                                      index, PhotoViewController.new),
+                                  scaleStateController:
+                                      _scaleStates.putIfAbsent(index,
+                                          PhotoViewScaleStateController.new),
+                                  initialScale:
+                                      PhotoViewComputedScale.contained,
+                                  minScale: PhotoViewComputedScale.contained,
+                                  maxScale: PhotoViewComputedScale.covered * 8,
+                                  heroAttributes: PhotoViewHeroAttributes(
+                                      tag: _imgList[index]),
+                                ),
+                                itemCount: _imgList.length,
+                                loadingBuilder: (context, event) => Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      value: event?.expectedTotalBytes == null
+                                          ? null
+                                          : event!.cumulativeBytesLoaded /
+                                              event.expectedTotalBytes!,
+                                    ),
+                                  ),
+                                ),
+                                pageController: _pageController,
+                                onPageChanged: (index) =>
+                                    setState(() => _currentPage = index),
                               ),
                             ),
                           ),
-                          pageController: _pageController,
-                          onPageChanged: (index) =>
-                              setState(() => _currentPage = index),
-                        ),
+                        ],
                       ),
                     ),
                     if (Utils.isDesktop && _imgList.length > 1) ...[
@@ -321,27 +345,33 @@ class _ImageViewPageState extends State<ImageViewPage> {
                       ),
                       Positioned(
                         left: 0,
-                        child: GlassFab(
-                          size: 40,
-                          circular: true,
-                          variant: GlassVariant.clear,
-                          tooltip: '上一张',
-                          onPressed:
-                              _currentPage > 0 ? () => _changePage(-1) : null,
-                          icon: Icons.arrow_back,
+                        child: GlassBackdropScope(
+                          backdrop: _viewerBackdrop,
+                          child: GlassFab(
+                            size: 40,
+                            circular: true,
+                            variant: GlassVariant.clear,
+                            tooltip: '上一张',
+                            onPressed:
+                                _currentPage > 0 ? () => _changePage(-1) : null,
+                            icon: Icons.arrow_back,
+                          ),
                         ),
                       ),
                       Positioned(
                         right: 0,
-                        child: GlassFab(
-                          size: 40,
-                          circular: true,
-                          variant: GlassVariant.clear,
-                          tooltip: '下一张',
-                          onPressed: _currentPage < _imgList.length - 1
-                              ? () => _changePage(1)
-                              : null,
-                          icon: Icons.arrow_forward,
+                        child: GlassBackdropScope(
+                          backdrop: _viewerBackdrop,
+                          child: GlassFab(
+                            size: 40,
+                            circular: true,
+                            variant: GlassVariant.clear,
+                            tooltip: '下一张',
+                            onPressed: _currentPage < _imgList.length - 1
+                                ? () => _changePage(1)
+                                : null,
+                            icon: Icons.arrow_forward,
+                          ),
                         ),
                       ),
                     ],
@@ -349,5 +379,4 @@ class _ImageViewPageState extends State<ImageViewPage> {
                 ),
         ),
       );
-
 }

@@ -5,6 +5,7 @@ import 'package:c001apk_flutter/components/glass_dialog.dart';
 import 'package:c001apk_flutter/components/glass_snackbar.dart';
 import 'package:c001apk_flutter/components/glass_surface.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
+import 'package:fluid_glass/fluid_glass.dart' show DrawBackdrop;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -12,8 +13,8 @@ import 'package:hive/hive.dart';
 /// miuix20 补漏回归测试：审计漏网的悬浮面换玻璃——
 /// 通用对话框面 [GlassDialogSurface]、SnackBar 体系 [showGlassSnackBar]、
 /// SmartDialog loading [CustomLoading]。断言钉住：面是 GlassSurface、
-/// 文案/动作语义不变、滤镜首帧即在（BackdropFilter 构建期同步挂上，
-/// 不重犯 miuix19 修掉的入场闪烁）。
+/// 文案/动作语义不变、玻璃首帧即在（miuix22 起断言对象为 fluid 的
+/// DrawBackdrop——构建期同步在树上，不重犯 miuix19 修掉的入场闪烁）。
 void main() {
   late Directory temp;
   setUpAll(() async {
@@ -29,8 +30,7 @@ void main() {
     await temp.delete(recursive: true);
   });
 
-  testWidgets('GlassDialogSurface 是透明 Dialog 壳 + 玻璃面，内容原样',
-      (tester) async {
+  testWidgets('GlassDialogSurface 是透明 Dialog 壳 + 玻璃面，内容原样', (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(
         body: GlassDialogSurface(child: Text('选择内容')),
@@ -44,8 +44,7 @@ void main() {
     expect(dialog.elevation, 0);
   });
 
-  testWidgets('showGlassSnackBar 首帧即带玻璃滤镜，动作回调与文案不变',
-      (tester) async {
+  testWidgets('showGlassSnackBar 首帧即带玻璃滤镜，动作回调与文案不变', (tester) async {
     var actionTaps = 0;
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -67,7 +66,7 @@ void main() {
     // 只 pump 一帧（不 settle）：玻璃面与滤镜必须已经在场。
     await tester.pump();
     expect(find.byType(GlassSurface), findsOneWidget);
-    expect(find.byType(BackdropFilter), findsWidgets);
+    expect(find.byType(DrawBackdrop), findsOneWidget);
     expect(find.text('当前网页将要打开外部链接，是否打开'), findsOneWidget);
     // 入场动画走完再点动作（动画只动面板位移、滤镜不动，miuix19 口径）。
     await tester.pumpAndSettle();

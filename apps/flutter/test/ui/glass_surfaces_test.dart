@@ -11,6 +11,7 @@ import 'package:c001apk_flutter/pages/others/imageview_page.dart';
 import 'package:c001apk_flutter/utils/app_theme.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fluid_glass/fluid_glass.dart' show DrawBackdrop;
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart' as miuix;
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +19,9 @@ import 'package:hive/hive.dart';
 
 /// miuix17 新玻璃面的 widget 断言：对话框、弹出菜单、底部 sheet、
 /// 回复输入悬浮卡、图片查看器 Clear 控制层、设置页滑杆组——每个面
-/// 都必须由 GlassSurface/BackdropFilter 构成（真玻璃，不是实色仿造）。
+/// 都必须由 GlassSurface 构成（真玻璃，不是实色仿造）。
+/// miuix22：GlassSurface 的出图引擎换 fluid_glass 后，「真玻璃在场」
+/// 的断言对象由 BackdropFilter 改为 fluid 的 DrawBackdrop。
 void main() {
   late Directory temp;
   setUpAll(() async {
@@ -65,7 +68,7 @@ void main() {
     expect(
         find.descendant(
             of: find.byType(GlassAlertDialog),
-            matching: find.byType(BackdropFilter)),
+            matching: find.byType(DrawBackdrop)),
         findsOneWidget);
     expect(find.text('删除此会话？'), findsOneWidget);
     expect(find.text('此操作无法撤销。'), findsOneWidget);
@@ -128,7 +131,7 @@ void main() {
     expect(
         find.descendant(
             of: find.byType(GlassSheetSurface),
-            matching: find.byType(BackdropFilter)),
+            matching: find.byType(DrawBackdrop)),
         findsOneWidget);
     expect(find.text('置顶会话'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -149,8 +152,7 @@ void main() {
         findsWidgets);
     expect(
         find.descendant(
-            of: find.byType(ReplyPage),
-            matching: find.byType(BackdropFilter)),
+            of: find.byType(ReplyPage), matching: find.byType(DrawBackdrop)),
         findsWidgets);
     expect(find.byType(TextField), findsWidgets);
     expect(tester.takeException(), isNull);
@@ -165,11 +167,10 @@ void main() {
     for (final url in urls) {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
-      canvas.drawRect(const Rect.fromLTWH(0, 0, 300, 180),
-          Paint()..color = Colors.blue);
+      canvas.drawRect(
+          const Rect.fromLTWH(0, 0, 300, 180), Paint()..color = Colors.blue);
       final picture = recorder.endRecording();
-      final bitmap =
-          await tester.runAsync(() => picture.toImage(300, 180));
+      final bitmap = await tester.runAsync(() => picture.toImage(300, 180));
       picture.dispose();
       final key = await CachedNetworkImageProvider(url)
           .obtainKey(const ImageConfiguration());
@@ -184,11 +185,9 @@ void main() {
     ));
     await tester.pumpAndSettle();
     final fabs = tester.widgetList<GlassFab>(find.byType(GlassFab)).toList();
-    expect(fabs, hasLength(2),
-        reason: '桌面端图片查看器应有左右两颗翻页玻璃钮');
+    expect(fabs, hasLength(2), reason: '桌面端图片查看器应有左右两颗翻页玻璃钮');
     for (final fab in fabs) {
-      expect(fab.variant, GlassVariant.clear,
-          reason: '浮在图片上的控制层必须用 Clear 变体');
+      expect(fab.variant, GlassVariant.clear, reason: '浮在图片上的控制层必须用 Clear 变体');
     }
     expect(tester.takeException(), isNull);
   });

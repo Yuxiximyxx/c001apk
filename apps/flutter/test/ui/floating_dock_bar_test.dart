@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:c001apk_flutter/components/floating_dock_bar.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
@@ -69,8 +68,9 @@ void main() {
     expect(size.width, lessThan(400 * FloatingDockBar.widthFactor));
     expect(size.height, FloatingDockBar.height);
     expect(tester.getCenter(capsule).dx, closeTo(200, 0.5));
-    // 真毛玻璃：BackdropFilter 在场
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    // 真玻璃：fluid DrawBackdrop 在场（miuix22 起胶囊面与全应用
+    // 玻璃面同为 fluid 引擎；药丸在静止/无 program 时不出滤镜）
+    expect(find.byType(DrawBackdrop), findsOneWidget);
   });
 
   group('bar width formula', () {
@@ -380,72 +380,54 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('switching the stored material changes the live filter',
+    testWidgets('switching the stored material changes the live tint',
         (tester) async {
       // miuix16 链路审计（小乐真机反馈「切换三种玻璃没什么区别」）：
-      // 设置存储 → listenable → Dock 重建 → 实际挂到 BackdropFilter 上
-      // 的 filter。逐档切换存储值，断言树上真实 filter 与纱色逐档等于
-      // 新 spec 现算的结果——只断言规格表不同不算数。
+      // 设置存储 → listenable → Dock 重建 → 实际生效的玻璃参数。
+      // miuix22：胶囊面换 fluid DrawBackdrop 后，光学在引擎内写死、
+      // 树上可观测的活参数只剩经唯一映射点 dockGlassColorsForSpec
+      // 注入子树的 LiquidGlassColors（container=纱色）——逐档切换
+      // 存储值，断言子树里的 container 逐档等于新 spec 的纱色且
+      // 两两不同；映射函数本身另有纯函数组钉住（见下方 fluid 组）。
       Future<void> store(int v) => tester.runAsync(
           () => GStorage.settings.put(SettingsBoxKey.dockGlassMaterial, v));
 
-      ({ui.ImageFilter filter, Color tint}) capture() {
-        final filterWidget = tester.widget<BackdropFilter>(
+      Color captureTint() {
+        final themeWidget = tester.widget<LiquidGlassTheme>(
           find
               .descendant(
                 of: find.byKey(const Key('floatingDockCapsule')),
-                matching: find.byType(BackdropFilter),
+                matching: find.byType(LiquidGlassTheme),
               )
               .first,
         );
-        final tinted = filterWidget.child as Container;
-        return (
-          filter: filterWidget.filter!,
-          tint: (tinted.decoration! as BoxDecoration).color!,
-        );
+        return themeWidget.colors.container;
       }
-
-      ui.ImageFilter expectedFilter(DockGlassMaterial material) =>
-          glassImageFilter(
-            spec: material.spec,
-            size: Size(FloatingDockBar.barWidthForTabCount(2, 400),
-                FloatingDockBar.height),
-            dpr: 1,
-            refractionProgram: null,
-            cornerRadii: BorderRadius.circular(FloatingDockBar.height / 2),
-          );
 
       await store(0);
       await pumpDock(tester,
           selectedIndex: 0, brightness: Brightness.dark, useOverride: false);
-      final clearShot = capture();
-      expect(
-          clearShot.tint, glassTintColor(DockGlassMaterial.clear.spec, true));
-      expect(clearShot.filter, expectedFilter(DockGlassMaterial.clear));
+      final clearTint = captureTint();
+      expect(clearTint, glassTintColor(DockGlassMaterial.clear.spec, true));
 
       await store(2);
       await tester.pump(const Duration(milliseconds: 300));
-      final liquidShot = capture();
-      expect(
-          liquidShot.tint, glassTintColor(DockGlassMaterial.liquid.spec, true));
-      expect(liquidShot.filter, expectedFilter(DockGlassMaterial.liquid));
-      expect(liquidShot.filter, isNot(equals(clearShot.filter)));
+      final liquidTint = captureTint();
+      expect(liquidTint, glassTintColor(DockGlassMaterial.liquid.spec, true));
+      expect(liquidTint, isNot(equals(clearTint)));
 
       await store(1);
       await tester.pump(const Duration(milliseconds: 300));
-      final frostedShot = capture();
-      expect(frostedShot.tint,
-          glassTintColor(DockGlassMaterial.frosted.spec, true));
-      expect(frostedShot.filter, expectedFilter(DockGlassMaterial.frosted));
-      expect(frostedShot.filter, isNot(equals(liquidShot.filter)));
-      expect(frostedShot.filter, isNot(equals(clearShot.filter)));
+      final frostedTint = captureTint();
+      expect(frostedTint, glassTintColor(DockGlassMaterial.frosted.spec, true));
+      expect(frostedTint, isNot(equals(liquidTint)));
+      expect(frostedTint, isNot(equals(clearTint)));
       expect(tester.takeException(), isNull);
     });
   });
 
   group('fluid glass kyant dock spike', () {
-    test('spec maps into LiquidGlassColors through tint and accent only',
-        () {
+    test('spec maps into LiquidGlassColors through tint and accent only', () {
       // Kyant 组件的光学参数（blur/vibrancy/lens/色散）在组件内写死，
       // spec 只能经颜色进组件：container = glassTintColor（纱色+透明度，
       // 三预设身份经此可辨）、accent 原样透传。映射函数单独钉住，
@@ -456,16 +438,15 @@ void main() {
             dockGlassColorsForSpec(material.spec, dark: true, accent: accent);
         expect(colors.accent, accent);
         expect(colors.container, glassTintColor(material.spec, true));
-        final light = dockGlassColorsForSpec(material.spec,
-            dark: false, accent: accent);
+        final light =
+            dockGlassColorsForSpec(material.spec, dark: false, accent: accent);
         expect(light.container, glassTintColor(material.spec, false));
       }
       // 三预设的 container 必须两两不同（Kyant 路上预设只剩纱色深浅
       // 一条身份线，连这条都丢了就是映射坏了）。
       final darkTints = DockGlassMaterial.values
-          .map((m) =>
-              dockGlassColorsForSpec(m.spec, dark: true, accent: accent)
-                  .container)
+          .map((m) => dockGlassColorsForSpec(m.spec, dark: true, accent: accent)
+              .container)
           .toSet();
       expect(darkTints, hasLength(DockGlassMaterial.values.length));
     });
@@ -481,10 +462,8 @@ void main() {
       expect(colors.track, defaults.track);
       expect(colors.toggleAccent, defaults.toggleAccent);
       expect(colors.destructive, defaults.destructive);
-      final lightColors = dockGlassColorsForSpec(
-          DockGlassMaterial.frosted.spec,
-          dark: false,
-          accent: accent);
+      final lightColors = dockGlassColorsForSpec(DockGlassMaterial.frosted.spec,
+          dark: false, accent: accent);
       final lightDefaults = LiquidGlassColors.forBrightness(Brightness.light);
       expect(lightColors.content, lightDefaults.content);
       expect(lightColors.track, lightDefaults.track);
@@ -494,9 +473,9 @@ void main() {
         'injected page backdrop still falls back without runtime shaders',
         (tester) async {
       // 测试环境无运行时 shader：即便主页注入了页面录制，Dock 也必须
-      // 整栏回落 miuix20 现 Dock（BackdropFilter 出图、几何/点按一致、
-      // 不抛异常、LiquidBottomTabs 不出现）。Kyant 路只能在真机
-      // Impeller 上目视，本测试钉住回落门。
+      // 整栏回落现 Dock（几何/点按一致、不抛异常、LiquidBottomTabs
+      // 不出现；胶囊面本身与全应用同为 fluid DrawBackdrop 出图）。
+      // Kyant 路只能在真机 Impeller 上目视，本测试钉住回落门。
       final tapped = <int>[];
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1;
@@ -524,9 +503,9 @@ void main() {
       final capsule = find.byKey(const Key('floatingDockCapsule'));
       expect(capsule, findsOneWidget);
       expect(
-        find.descendant(of: capsule, matching: find.byType(BackdropFilter)),
+        find.descendant(of: capsule, matching: find.byType(DrawBackdrop)),
         findsOneWidget,
-        reason: '回落路径应仍是现引擎的 BackdropFilter 出图',
+        reason: '回落路胶囊面应为 fluid DrawBackdrop 出图',
       );
       final rect = tester.getRect(capsule);
       expect(rect.width, FloatingDockBar.barWidthForTabCount(2, 400));

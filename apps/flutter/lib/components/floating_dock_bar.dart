@@ -765,29 +765,7 @@ class _SelectionPill extends StatelessWidget {
   }
 }
 
-/// fluid 试验：把有效 spec 映射成 Kyant 组件的颜色面。
-/// [LiquidBottomTabs] 的光学参数在组件内写死为 Kyant 原方（面板
-/// vibrancy 饱和 1.5 + blur 8 + lens 24·24；药丸 lens 10·14 ×
-/// pressProgress、色散恒开），不吃 spec——能经 [LiquidGlassColors]
-/// 进组件的只有颜色：
-/// - accent ← 应用强调色（与回落路选中项着色同源，组件拿它染
-///   药丸里的标签副本与选中标记）；
-/// - container ← [glassTintColor]（spec 的纱基色 #121212/#FAFAFA
-///   + tintAlpha，即三预设身份与「透明度」滑杆经此生效）；
-/// - content/track 等 ← 库的明暗默认（标签本体颜色由
-///   [_FloatingDockBarState._buildKyantBar] 逐项给，不经 content）。
-/// 其余 spec 字段（sigma / saturate / refractionBandDp /
-/// refractionAmountDp / dispersion / highlightAlpha / borderAlpha）
-/// 在 Kyant 路没有入口，逐项缺口见试验报告，不要在此静默吞掉。
-LiquidGlassColors dockGlassColorsForSpec(
-  DockGlassSpec spec, {
-  required bool dark,
-  required Color accent,
-}) {
-  final base = LiquidGlassColors.forBrightness(
-      dark ? Brightness.dark : Brightness.light);
-  return base.copyWith(
-    accent: accent,
-    container: glassTintColor(spec, dark),
-  );
-}
+/// 颜色映射 [dockGlassColorsForSpec] 已于 miuix22 迁到
+/// glass_surface.dart，成为全应用玻璃面的唯一映射点；本文件经
+/// 顶部对 glass_surface.dart 的 import/re-export 继续使用同一函数，
+/// Dock 的 LiquidBottomTabs 接线与传参逐字不变。

@@ -1,8 +1,8 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:c001apk_flutter/components/floating_dock_bar.dart';
 import 'package:c001apk_flutter/components/glass_menu.dart';
+import 'package:fluid_glass/fluid_glass.dart' show DrawBackdrop;
 // glass_surface.dart 由 floating_dock_bar.dart re-export，不再直引。
 import 'package:c001apk_flutter/utils/storage_util.dart';
 import 'package:flutter/material.dart';
@@ -17,10 +17,12 @@ import 'package:hive/hive.dart';
 ///    管线：sheet 的 (28,28,0,0)、菜单的 20、Dock 胶囊的 34 都必须
 ///    原样到达 shader uniform（物理像素）。
 /// 3. 玻璃菜单入场闪烁——根因是 GlassSurface 异步 .then 取 shader
-///    program，首帧无透镜、回调后整条滤镜链被换掉。修法：
-///    RefractionSupport 同步缓存 + 菜单面板的滤镜就绪门。本组断言
-///    菜单 BackdropFilter 的 filter 自第一帧起就是终态（与按缓存
-///    program 现算的一致），且入场全程不再被换。
+///    program，首帧无透镜、回调后整条滤镜链被换掉。miuix19 的修法
+///    （同步缓存 + 就绪门）在 miuix22 引擎迁移后对应为：DrawBackdrop
+///    效果链同步构建、菜单就绪门改挂 fluid 程序加载。本组断言改为
+///    新引擎的等价不变量：菜单面自第一帧起就是 fluid DrawBackdrop
+///    （无异步换链的可能），且传给引擎的形状带真实圆角 20（第 2 条
+///    在新引擎的对应钉法——fluid 的 lens 按形状真实角算 SDF）。
 void main() {
   late Directory temp;
   setUpAll(() async {
@@ -46,8 +48,7 @@ void main() {
         spec: sheetSpec,
         size: const Size(411, 262),
         dpr: 2,
-        cornerRadii:
-            const BorderRadius.vertical(top: Radius.circular(28)),
+        cornerRadii: const BorderRadius.vertical(top: Radius.circular(28)),
       );
       expect(values, hasLength(11));
       expect(values[0], 411 * 2);
@@ -99,8 +100,8 @@ void main() {
               child: const SizedBox(
                 width: 200,
                 height: 52,
-                child: Align(
-                    alignment: Alignment.centerLeft, child: Text('深色模式')),
+                child:
+                    Align(alignment: Alignment.centerLeft, child: Text('深色模式')),
               ),
             ),
           ),
@@ -108,52 +109,43 @@ void main() {
       );
     }
 
-    ui.ImageFilter menuFilter(WidgetTester tester) {
+    DrawBackdrop menuSurface(WidgetTester tester) {
       final surface = find.ancestor(
           of: find.text('始终关闭'), matching: find.byType(GlassSurface));
-      return tester
-          .widget<BackdropFilter>(
-            find.descendant(
-                of: surface, matching: find.byType(BackdropFilter)),
-          )
-          .filter!;
+      return tester.widget<DrawBackdrop>(
+        find.descendant(of: surface, matching: find.byType(DrawBackdrop)),
+      );
     }
 
-    testWidgets('menu backdrop filter is final from the first frame',
+    testWidgets('menu surface is the fluid draw from the first frame',
         (tester) async {
       await tester.pumpWidget(host());
       await tester.tap(find.text('深色模式'));
       await tester.pump();
-      // 第一帧：滤镜必须已是终态——按 RefractionSupport 的同步缓存
-      // program 与菜单面真实参数（medium 收敛、圆角 20、浅色 rim）
-      // 现算的滤镜链，两者必须一致。
-      final first = menuFilter(tester);
-      final surface = find.ancestor(
-          of: find.text('始终关闭'), matching: find.byType(GlassSurface));
-      final expected = glassImageFilter(
-        spec: DockGlassMaterial.frosted.spec.adjustedForSurface(
-          variant: GlassVariant.regular,
-          sizeClass: GlassSizeClass.medium,
-        ),
-        size: tester.getSize(surface),
-        dpr: tester.view.devicePixelRatio,
-        refractionProgram: RefractionSupport.cachedProgram,
-        cornerRadii: BorderRadius.circular(20),
-        rimStrength: glassHighlightAlpha(
-            DockGlassMaterial.frosted.spec.adjustedForSurface(
-              variant: GlassVariant.regular,
-              sizeClass: GlassSizeClass.medium,
-            ),
-            false),
-        innerShadow: 0.3,
-      );
-      expect(first, expected,
-          reason: '菜单首帧的滤镜就应是终态，不许入场中途换链');
-      // 入场全程（量尺寸/就绪门放行/动画结束）滤镜不得被换掉。
+      // 第一帧：菜单面已是 fluid DrawBackdrop（效果链同步构建，
+      // 不存在旧引擎「首帧无透镜、回调后换链」的窗口），且形状
+      // 带菜单的真实圆角 20——fluid 的 lens 据此算 SDF，面内不会
+      // 再出现 miuix19 的假弧线。
+      final first = menuSurface(tester);
+      final corners =
+          first.shape().corners(const Size(200, 152), TextDirection.ltr);
+      expect(corners.topLeft, 20);
+      expect(corners.topRight, 20);
+      expect(corners.bottomRight, 20);
+      expect(corners.bottomLeft, 20);
+      // 入场全程不得换引擎/换形状。
       await tester.pump(const Duration(milliseconds: 60));
-      expect(menuFilter(tester), first, reason: '入场中滤镜不许被换');
+      expect(
+          menuSurface(tester)
+              .shape()
+              .corners(const Size(200, 152), TextDirection.ltr),
+          corners);
       await tester.pumpAndSettle();
-      expect(menuFilter(tester), first, reason: '入场结束滤镜仍是同一条链');
+      expect(
+          menuSurface(tester)
+              .shape()
+              .corners(const Size(200, 152), TextDirection.ltr),
+          corners);
       expect(find.text('始终关闭'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

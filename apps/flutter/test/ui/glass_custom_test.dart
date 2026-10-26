@@ -1,15 +1,16 @@
 import 'dart:io';
-import 'dart:ui' as ui;
-
 import 'package:c001apk_flutter/components/floating_dock_bar.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
+import 'package:fluid_glass/fluid_glass.dart' show LiquidGlassTheme;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 /// miuix17 玻璃参数可调：有效 spec 解析（预设 + 自定义滑杆值）、老用户
 /// 迁移初值、变体/面积系数，以及 miuix16 运行时审计的扩展——改滑杆
-/// 存储值后，实际挂到渲染层的 filter 与纱色必须随之变化。
+/// 存储值后，实际生效的玻璃参数必须随之变化（miuix22 起 Dock 胶囊
+/// 面换 fluid 引擎后，树上可观测的活参数是经唯一映射点注入的纱色，
+/// 见 runtime audit 组的注记）。
 void main() {
   late Directory temp;
   setUpAll(() async {
@@ -172,43 +173,34 @@ void main() {
       await tester.pump();
     }
 
-    ({ui.ImageFilter filter, Color tint}) capture(WidgetTester tester) {
-      final filterWidget = tester.widget<BackdropFilter>(
+    Color captureTint(WidgetTester tester) {
+      // miuix22：胶囊面换 fluid DrawBackdrop 后，纱色经唯一映射点
+      // dockGlassColorsForSpec 以 LiquidGlassColors 注入子树——树上
+      // 可观测的活参数就是它。其余滑杆分量（sigma/dispersion 等）
+      // 在 fluid 侧无入口（光学写死），不再有树上可断言的 filter，
+      // 其解析正确性由上方 spec 解析组与映射纯函数组钉住。
+      final themeWidget = tester.widget<LiquidGlassTheme>(
         find
             .descendant(
               of: find.byKey(const Key('floatingDockCapsule')),
-              matching: find.byType(BackdropFilter),
+              matching: find.byType(LiquidGlassTheme),
             )
             .first,
       );
-      final tinted = filterWidget.child as Container;
-      return (
-        filter: filterWidget.filter!,
-        tint: (tinted.decoration! as BoxDecoration).color!,
-      );
+      return themeWidget.colors.container;
     }
 
-    testWidgets('changing stored slider values changes the live filter',
+    testWidgets('changing stored slider values changes the live tint',
         (tester) async {
-      // 起点：液态预设、无自定义——渲染层应与 miuix16 审计一致。
+      // 起点：液态预设、无自定义——纱色应与液态预设一致。
       await tester.runAsync(
           () => GStorage.settings.put(SettingsBoxKey.dockGlassMaterial, 2));
       await pumpDock(tester);
-      final before = capture(tester);
-      expect(before.tint,
-          glassTintColor(DockGlassMaterial.liquid.spec, true));
-      expect(
-          before.filter,
-          glassImageFilter(
-            spec: DockGlassMaterial.liquid.spec,
-            size: Size(FloatingDockBar.barWidthForTabCount(2, 400),
-                FloatingDockBar.height),
-            dpr: 1,
-            refractionProgram: null,
-            cornerRadii: BorderRadius.circular(FloatingDockBar.height / 2),
-          ));
+      final before = captureTint(tester);
+      expect(before, glassTintColor(DockGlassMaterial.liquid.spec, true));
 
-      // 拖滑杆等价写入：模糊 30、纱 0.7、色散 0.45。
+      // 拖滑杆等价写入：纱 alpha 拉到 0.7（另带 sigma/色散，验证
+      // 写入链不因 fluid 无入口而中断）。
       final custom = DockGlassMaterial.liquid.spec.copyWith(
         sigma: 30,
         tintAlphaDark: 0.7,
@@ -217,19 +209,9 @@ void main() {
       );
       await tester.runAsync(() => writeDockGlassCustom(custom));
       await tester.pump(const Duration(milliseconds: 300));
-      final after = capture(tester);
-      expect(after.tint, glassTintColor(custom, true));
-      expect(
-          after.filter,
-          glassImageFilter(
-            spec: custom,
-            size: Size(FloatingDockBar.barWidthForTabCount(2, 400),
-                FloatingDockBar.height),
-            dpr: 1,
-            refractionProgram: null,
-            cornerRadii: BorderRadius.circular(FloatingDockBar.height / 2),
-          ));
-      expect(after.filter, isNot(equals(before.filter)));
+      final after = captureTint(tester);
+      expect(after, glassTintColor(custom, true));
+      expect(after, isNot(equals(before)));
       expect(tester.takeException(), isNull);
     });
   });
