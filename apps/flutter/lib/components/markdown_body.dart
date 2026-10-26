@@ -10,6 +10,7 @@ import '../utils/storage_util.dart';
 import '../utils/utils.dart';
 import 'html_text.dart';
 import 'network_image.dart';
+import 'source_container.dart';
 
 /// Posts opt into Markdown without changing the legacy comment/chat renderer.
 class FeedText extends StatelessWidget {
@@ -167,15 +168,17 @@ class MarkdownBody extends StatelessWidget {
         if (!MarkdownContent.allowsUrl(src, image: true)) {
           return const SizedBox.shrink();
         }
+        final images = {...?picArr, ...content.imageUrls}.toList();
         return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: GestureDetector(
-              onTap: () => Get.toNamed('/imageview', arguments: {
-                'imgList': {...?picArr, ...content.imageUrls}.toList(),
-                'initialPage':
-                    {...?picArr, ...content.imageUrls}.toList().indexOf(src),
-              }),
-              child: networkImage(src, fit: BoxFit.contain),
+            child: ImageContainer(
+              imgList: images,
+              initialPage: images.indexOf(src),
+              closedColor: Colors.transparent,
+              closedBuilder: (context, open) => GestureDetector(
+                onTap: open,
+                child: networkImage(src, fit: BoxFit.contain),
+              ),
             ));
       }
       return null;

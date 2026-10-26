@@ -9,6 +9,8 @@ import 'package:flutter_miuix/miuix.dart';
 import '../../utils/miuix_palette.dart';
 import 'package:get/get.dart';
 
+import '../../components/source_container.dart';
+
 import '../../pages/home/app/app_list_page.dart';
 import '../../pages/home/feed/home_feed_page.dart';
 import '../../pages/home/return_top_controller.dart';
@@ -118,39 +120,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: GestureDetector(
-                onTap: () => Get.toNamed('/search'),
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.light
-                        ? const Color(0xFFECECEE)
-                        : MiuixTheme.of(context).colors.background,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.search,
-                        size: 16,
-                        color: MiuixTheme.of(context)
-                            .colors
-                            .onSurface
-                            .withValues(alpha: 0.45),
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        '搜索帖子、用户',
-                        style: TextStyle(
-                          fontSize: 14,
+              child: SearchContainer(
+                closedColor: Theme.of(context).brightness == Brightness.light
+                    ? const Color(0xFFECECEE)
+                    : MiuixTheme.of(context).colors.background,
+                closedBuilder: (context, open) => GestureDetector(
+                  onTap: open,
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.light
+                          ? const Color(0xFFECECEE)
+                          : MiuixTheme.of(context).colors.background,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search,
+                          size: 16,
                           color: MiuixTheme.of(context)
                               .colors
                               .onSurface
                               .withValues(alpha: 0.45),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 7),
+                        Text(
+                          '搜索帖子、用户',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: MiuixTheme.of(context)
+                                .colors
+                                .onSurface
+                                .withValues(alpha: 0.45),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

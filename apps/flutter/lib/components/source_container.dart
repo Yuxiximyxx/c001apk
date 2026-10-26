@@ -5,6 +5,7 @@ import '../constants/constants.dart';
 import '../pages/app/app_page.dart';
 import '../pages/feed/feed_page.dart';
 import '../pages/others/imageview_page.dart';
+import '../pages/search/search_page.dart';
 import '../pages/topic/topic_page.dart';
 import '../pages/user/user_page.dart';
 import '../utils/miuix_palette.dart';
@@ -274,6 +275,39 @@ class ImageContainer extends StatelessWidget {
       closedBuilder: closedBuilder,
       openBuilder: (_, __) =>
           ImageViewPage(imgList: imgList, initialPage: initialPage),
+    );
+  }
+}
+
+/// Opens the search page ([SearchPage]) from the source element (the
+/// home page's fake search field), so the field itself grows into the
+/// search page instead of the page sliding in unrelated.
+///
+/// Only for parameter-less entries: [SearchPage] reads its optional
+/// title/pageType/pageParam from GetX route parameters, which a
+/// container route does not carry. The home entry passes none — exactly
+/// like the `Get.toNamed('/search')` call this replaces — while the
+/// parameterised search entries elsewhere keep their named routes.
+class SearchContainer extends StatelessWidget {
+  const SearchContainer({
+    super.key,
+    required this.closedColor,
+    required this.closedBuilder,
+  });
+
+  /// Must match the search field's own fill colour so the morph has no
+  /// visible seam.
+  final Color closedColor;
+  final AnchoredClosedBuilder closedBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnchoredContainer(
+      closedColor: closedColor,
+      openColor: Theme.of(context).scaffoldBackgroundColor,
+      closedShape: const StadiumBorder(),
+      closedBuilder: closedBuilder,
+      openBuilder: (_, __) => const SearchPage(),
     );
   }
 }

@@ -190,20 +190,29 @@ class ChatCard extends StatelessWidget {
     if (data.messagePic!.startsWith('http')) {
       List<double> imageLp =
           Utils.getImageLp(data.messagePic!.split('?').first);
-      return Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        width: width,
-        height: width * imageLp[1] / imageLp[0],
-        child: GestureDetector(
-          onTap: onViewImage,
-          child: clipNetworkImage(
-            data.messagePic!,
-            radius: 12,
-            fit: BoxFit.fill,
+      // This branch only renders when the page's onViewImage would land
+      // on the fullscreen viewer (any local/unsent delivery renders the
+      // file branch above instead), so anchor the viewer to the bubble
+      // itself like every other image source in the app.
+      return ImageContainer(
+        imgList: [data.messagePic!],
+        initialPage: 0,
+        closedColor: Colors.transparent,
+        closedBuilder: (context, open) => Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          width: width,
+          height: width * imageLp[1] / imageLp[0],
+          child: GestureDetector(
+            onTap: open,
+            child: clipNetworkImage(
+              data.messagePic!,
+              radius: 12,
+              fit: BoxFit.fill,
+            ),
           ),
         ),
       );

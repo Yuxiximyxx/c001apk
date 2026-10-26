@@ -153,9 +153,13 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      // Button navigation now uses Android's forward fade. It keeps the
-      // surface at full size and never reuses the previous swipe direction.
-      expect(pageBounds(tester).size, original.size);
+      // Button navigation now uses the card geometry: the exiting page
+      // shrinks symmetrically around the screen centre while fading,
+      // instead of sliding off in the cancelled swipe's direction.
+      expect(pageBounds(tester).width, lessThan(original.width));
+      expect(pageBounds(tester).height, lessThan(original.height));
+      expect(pageBounds(tester).center.dx, closeTo(original.center.dx, 0.01));
+      expect(pageBounds(tester).center.dy, closeTo(original.center.dy, 0.01));
       expect(pageBounds(tester).left, greaterThanOrEqualTo(original.left));
       await tester.pumpAndSettle();
       expect(find.text('上一页'), findsOneWidget);
