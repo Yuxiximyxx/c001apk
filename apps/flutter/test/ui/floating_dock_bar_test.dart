@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:c001apk_flutter/components/floating_dock_bar.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
+import 'package:fluid_glass/fluid_glass.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -63,10 +64,8 @@ void main() {
     // = 2×76 + 2×6 = 164，且必须小于旧固定 58% 口径（400×0.58=232，
     // 两个按钮摊那么宽是真机反馈「空/挤不合理」的来源）。
     expect(size.width, FloatingDockBar.barWidthForTabCount(2, 400));
-    expect(
-        size.width,
-        2 * FloatingDockBar.slotWidth +
-            2 * FloatingDockBar.sidePadding);
+    expect(size.width,
+        2 * FloatingDockBar.slotWidth + 2 * FloatingDockBar.sidePadding);
     expect(size.width, lessThan(400 * FloatingDockBar.widthFactor));
     expect(size.height, FloatingDockBar.height);
     expect(tester.getCenter(capsule).dx, closeTo(200, 0.5));
@@ -154,16 +153,15 @@ void main() {
       return gesture;
     }
 
-    testWidgets('drag past midpoint switches only on release',
-        (tester) async {
+    testWidgets('drag past midpoint switches only on release', (tester) async {
       final tapped = <int>[];
       await pumpDock(tester,
           selectedIndex: 0, brightness: Brightness.dark, onTap: tapped.add);
       final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
       // 槽宽 76（miuix19 公式）；指距 100px（手势检测吃掉约一个 slop
       // 后仍约 1.1 槽，过中点）。
-      final gesture = await dragBy(
-          tester, Offset(rect.left + rect.width * 0.25, rect.center.dy), 100, 10);
+      final gesture = await dragBy(tester,
+          Offset(rect.left + rect.width * 0.25, rect.center.dy), 100, 10);
       expect(tapped, isEmpty, reason: '拖动中不得触发切换');
       await gesture.up();
       await pumpFrames(tester, 45);
@@ -242,8 +240,8 @@ void main() {
             onTap: tapped.add);
         final rect =
             tester.getRect(find.byKey(const Key('floatingDockCapsule')));
-        final gesture = await dragBy(
-            tester, Offset(rect.left + rect.width * 0.25, rect.center.dy), 100, 10);
+        final gesture = await dragBy(tester,
+            Offset(rect.left + rect.width * 0.25, rect.center.dy), 100, 10);
         expect(tapped, isEmpty, reason: '$material 拖动中不切换');
         await gesture.up();
         await pumpFrames(tester, 45);
@@ -316,12 +314,10 @@ void main() {
       expect(liquid.tintAlphaDark, lessThan(frosted.tintAlphaDark));
       expect(clear.tintAlphaLight, lessThan(liquid.tintAlphaLight));
       expect(liquid.tintAlphaLight, lessThan(frosted.tintAlphaLight));
-      expect(clear.highlightAlphaDark,
-          greaterThan(liquid.highlightAlphaDark));
-      expect(liquid.highlightAlphaDark,
-          greaterThan(frosted.highlightAlphaDark));
-      expect(frosted.refractionAmountDp,
-          lessThan(clear.refractionAmountDp));
+      expect(clear.highlightAlphaDark, greaterThan(liquid.highlightAlphaDark));
+      expect(
+          liquid.highlightAlphaDark, greaterThan(frosted.highlightAlphaDark));
+      expect(frosted.refractionAmountDp, lessThan(clear.refractionAmountDp));
       expect(clear.refractionAmountDp, lessThan(liquid.refractionAmountDp));
       expect(liquid.dispersion, greaterThan(0));
       // 深色模式三档一律深纱（121212），不再是乳白色
@@ -350,8 +346,7 @@ void main() {
   });
 
   group('setting persistence', () {
-    test('dock glass material round-trips through the settings box',
-        () async {
+    test('dock glass material round-trips through the settings box', () async {
       expect(
           DockGlassMaterial.fromStorage(
               GStorage.settings.get(SettingsBoxKey.dockGlassMaterial)),
@@ -424,15 +419,15 @@ void main() {
       await pumpDock(tester,
           selectedIndex: 0, brightness: Brightness.dark, useOverride: false);
       final clearShot = capture();
-      expect(clearShot.tint,
-          glassTintColor(DockGlassMaterial.clear.spec, true));
+      expect(
+          clearShot.tint, glassTintColor(DockGlassMaterial.clear.spec, true));
       expect(clearShot.filter, expectedFilter(DockGlassMaterial.clear));
 
       await store(2);
       await tester.pump(const Duration(milliseconds: 300));
       final liquidShot = capture();
-      expect(liquidShot.tint,
-          glassTintColor(DockGlassMaterial.liquid.spec, true));
+      expect(
+          liquidShot.tint, glassTintColor(DockGlassMaterial.liquid.spec, true));
       expect(liquidShot.filter, expectedFilter(DockGlassMaterial.liquid));
       expect(liquidShot.filter, isNot(equals(clearShot.filter)));
 
@@ -444,6 +439,73 @@ void main() {
       expect(frostedShot.filter, expectedFilter(DockGlassMaterial.frosted));
       expect(frostedShot.filter, isNot(equals(liquidShot.filter)));
       expect(frostedShot.filter, isNot(equals(clearShot.filter)));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('fluid glass dock spike', () {
+    test(
+        'sigma to fluid blur radius round-trips through the library conversion',
+        () {
+      // 本仓 sigma（直接喂 ImageFilter.blur）→ fluid blur() 的半径 →
+      // 库自带 blurRadiusToSigma 必须还原同一个 sigma，否则三档模糊
+      // 量在 fluid 引擎下会整体偏移。
+      for (final sigma in [6.0, 8.0, 20.0, 30.0]) {
+        for (final dpr in [1.0, 2.75]) {
+          final radius = fluidBlurRadiusForSigma(sigma, dpr);
+          expect(radius, greaterThan(0));
+          expect(blurRadiusToSigma(radius, devicePixelRatio: dpr),
+              closeTo(sigma, 1e-9));
+        }
+      }
+      // sigma 0 钳 0（库内 blur 跳过）；色散开关只看 spec 正负。
+      expect(fluidBlurRadiusForSigma(0, 2.75), 0);
+      expect(fluidChromaticAberration(DockGlassMaterial.liquid.spec), isTrue);
+      expect(fluidChromaticAberration(DockGlassMaterial.frosted.spec), isFalse);
+      expect(fluidChromaticAberration(DockGlassMaterial.clear.spec), isFalse);
+    });
+
+    testWidgets(
+        'injected page backdrop still falls back without runtime shaders',
+        (tester) async {
+      // 测试环境无运行时 shader：即便主页注入了页面录制，Dock 也必须
+      // 整栏回落现引擎（BackdropFilter 出图、几何/点按一致、不抛异常）。
+      // fluid 出图路径只能在真机 Impeller 上目视，本测试钉住回落门。
+      final tapped = <int>[];
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final backdrop = LayerBackdrop();
+      addTearDown(backdrop.dispose);
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(brightness: Brightness.dark),
+        home: Scaffold(
+          bottomNavigationBar: FloatingDockBar(
+            selectedIndex: 0,
+            onDestinationSelected: tapped.add,
+            materialOverride: DockGlassMaterial.liquid,
+            pageBackdrop: backdrop,
+          ),
+          body: BackdropLayer(
+            backdrop: backdrop,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ));
+      await tester.pump();
+      final capsule = find.byKey(const Key('floatingDockCapsule'));
+      expect(capsule, findsOneWidget);
+      expect(
+        find.descendant(of: capsule, matching: find.byType(BackdropFilter)),
+        findsOneWidget,
+        reason: '回落路径应仍是现引擎的 BackdropFilter 出图',
+      );
+      final rect = tester.getRect(capsule);
+      expect(rect.width, FloatingDockBar.barWidthForTabCount(2, 400));
+      expect(rect.height, FloatingDockBar.height);
+      await tester.tapAt(Offset(rect.left + rect.width * 0.75, rect.center.dy));
+      expect(tapped, [1]);
       expect(tester.takeException(), isNull);
     });
   });

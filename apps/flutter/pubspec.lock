@@ -497,6 +497,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  fluid_glass:
+    dependency: "direct main"
+    description:
+      name: fluid_glass
+      sha256: "5a9b40d2f602d8d9525ec52f5e7b053fc8846161ef3bfb0da73223af3cc58c58"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.3"
   flutter:
     dependency: "direct main"
     description: flutter

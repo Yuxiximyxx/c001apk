@@ -29,11 +29,10 @@ enum DockGlassMaterial {
   /// 液态玻璃：模糊次轻、纱薄、透镜最强 + 光谱色散。
   liquid;
 
-  static DockGlassMaterial fromStorage(Object? value) => value is int &&
-          value >= 0 &&
-          value < values.length
-      ? values[value]
-      : DockGlassMaterial.frosted;
+  static DockGlassMaterial fromStorage(Object? value) =>
+      value is int && value >= 0 && value < values.length
+          ? values[value]
+          : DockGlassMaterial.frosted;
 }
 
 /// 一种玻璃材质的完整参数。配方出处：liquid-glass-recipes 三档 +
@@ -238,10 +237,26 @@ extension DockGlassMaterialSpec on DockGlassMaterial {
 
 /// 饱和度 ColorFilter 矩阵（luma 0.213/0.715/0.072）。
 List<double> dockSaturationMatrix(double s) => <double>[
-      0.213 + 0.787 * s, 0.715 - 0.715 * s, 0.072 - 0.072 * s, 0, 0,
-      0.213 - 0.213 * s, 0.715 + 0.285 * s, 0.072 - 0.072 * s, 0, 0,
-      0.213 - 0.213 * s, 0.715 - 0.715 * s, 0.072 + 0.928 * s, 0, 0,
-      0, 0, 0, 1, 0,
+      0.213 + 0.787 * s,
+      0.715 - 0.715 * s,
+      0.072 - 0.072 * s,
+      0,
+      0,
+      0.213 - 0.213 * s,
+      0.715 + 0.285 * s,
+      0.072 - 0.072 * s,
+      0,
+      0,
+      0.213 - 0.213 * s,
+      0.715 - 0.715 * s,
+      0.072 + 0.928 * s,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
     ];
 
 /// 读取设置里的玻璃材质（设置盒不可用时回退默认磨砂）。
@@ -342,8 +357,7 @@ DockGlassSpec resolveDockGlassSpec({
     sigma: pick(DockGlassCustomField.sigma, preset.sigma),
     saturate: pick(DockGlassCustomField.saturate, preset.saturate),
     tintAlphaDark: pick(DockGlassCustomField.tintDark, preset.tintAlphaDark),
-    tintAlphaLight:
-        pick(DockGlassCustomField.tintLight, preset.tintAlphaLight),
+    tintAlphaLight: pick(DockGlassCustomField.tintLight, preset.tintAlphaLight),
     highlightAlphaDark:
         pick(DockGlassCustomField.highlightDark, preset.highlightAlphaDark),
     highlightAlphaLight:
@@ -373,13 +387,13 @@ DockGlassSpec currentDockGlassSpec() {
 bool dockGlassIsCustomized() {
   final custom = readDockGlassCustom();
   if (custom == null) return false;
-  return resolveDockGlassSpec(custom: custom) != currentDockGlassMaterial().spec;
+  return resolveDockGlassSpec(custom: custom) !=
+      currentDockGlassMaterial().spec;
 }
 
 /// 把一份 spec 作为自定义参数写入设置盒（滑杆拖动的落盘点）。
-Future<void> writeDockGlassCustom(DockGlassSpec spec) =>
-    GStorage.settings.put(
-        SettingsBoxKey.dockGlassCustom, dockGlassCustomFromSpec(spec));
+Future<void> writeDockGlassCustom(DockGlassSpec spec) => GStorage.settings
+    .put(SettingsBoxKey.dockGlassCustom, dockGlassCustomFromSpec(spec));
 
 /// 选中预设：预设索引与「把该预设数值写入滑杆组」同时落盘，此后有效
 /// spec 由滑杆值（=预设值）决定，chips 回到该预设的选中态。
@@ -567,6 +581,24 @@ ui.ImageFilter glassImageFilter({
   }
   return filter;
 }
+
+/// fluid_glass 试验（分支 fluid-dock-spike）：把本仓 spec 的模糊量
+/// 换算成 fluid_glass `blur()` 吃的 Android 口径半径。库内按 Skia 的
+/// ConvertRadiusToSigma 换算 sigma = (0.57735·r·dpr + 0.5) / dpr，
+/// 而本仓 spec.sigma 是直接喂 ImageFilter.blur 的高斯 sigma——要在
+/// fluid 链上得到同一个模糊量必须反解半径（与
+/// [fluid_glass 的 blurRadiusToSigma] 互为逆运算，单测钉住往返）。
+/// sigma·dpr ≤ 0.5 时半径钳 0（库内 blur 直接跳过），与 sigma≈0 视觉
+/// 等价。
+double fluidBlurRadiusForSigma(double sigma, double dpr) {
+  final radius = (sigma * dpr - 0.5) / (0.57735 * dpr);
+  return radius > 0 ? radius : 0;
+}
+
+/// fluid 链的色散开关：本仓 spec.dispersion 是强度值（自研 shader 的
+/// 7 段光谱采样位移系数），Kyant/fluid 的 chromaticAberration 是布尔
+/// （shader 内固定强度，与 Kyant 原生一致），只能映射开/关。
+bool fluidChromaticAberration(DockGlassSpec spec) => spec.dispersion > 0;
 
 /// 共享玻璃面：柔和投影 + 真毛玻璃（BackdropFilter 模糊/折射/饱和）+
 /// 乳纱 + 描边 + 顶缘 inset 高光，[child] 叠在玻璃之上。悬浮 Dock、
@@ -800,9 +832,8 @@ class _GlassFabState extends State<GlassFab> {
                   child: Icon(
                     widget.icon,
                     size: widget.iconSize,
-                    color: enabled
-                        ? baseColor
-                        : baseColor.withValues(alpha: 0.38),
+                    color:
+                        enabled ? baseColor : baseColor.withValues(alpha: 0.38),
                   ),
                 ),
               ),
@@ -812,8 +843,6 @@ class _GlassFabState extends State<GlassFab> {
       ),
     );
     final message = widget.tooltip;
-    return message == null
-        ? button
-        : Tooltip(message: message, child: button);
+    return message == null ? button : Tooltip(message: message, child: button);
   }
 }

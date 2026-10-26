@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fluid_glass/fluid_glass.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -31,9 +32,17 @@ class _MainPageState extends State<MainPage> {
   bool _resetting = false;
   final _readingKey = GlobalKey<AdaptiveReadingPaneState>();
 
+  /// fluid_glass 试验（分支 fluid-dock-spike）：正文录制句柄——正文
+  /// 外包 BackdropLayer 录制、悬浮 Dock 经它采样出图。Dock 未注入
+  /// （宽屏 rail）或 shader 不可用时 Dock 自动回落现引擎。
+  final _dockPageBackdrop = LayerBackdrop();
+
   @override
   void initState() {
     super.initState();
+    // 预热 fluid 的 shader 程序，避免 Dock 首帧无折射（可选优化，
+    // 程序本来也会在首次使用时懒加载）。
+    unawaited(FluidGlass.ensureInitialized());
     _mainController.checkLoginInfo();
     AccountStore.changes.addListener(_sessionChanged);
   }
@@ -58,6 +67,7 @@ class _MainPageState extends State<MainPage> {
     AccountStore.changes.removeListener(_sessionChanged);
     _indexSctream.close();
     _contrller.dispose();
+    _dockPageBackdrop.dispose();
     Get.delete<ReturnTopController>(tag: 'home');
     Get.delete<MainController>();
     super.dispose();
@@ -111,12 +121,15 @@ class _MainPageState extends State<MainPage> {
                         ),
                       ),
                     Expanded(
-                      child: FeedReadingPane(
-                        paneKey: _readingKey,
-                        child: PageView(
-                          physics: const NeverScrollableScrollPhysics(),
-                          controller: _contrller,
-                          children: pages,
+                      child: BackdropLayer(
+                        backdrop: _dockPageBackdrop,
+                        child: FeedReadingPane(
+                          paneKey: _readingKey,
+                          child: PageView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            controller: _contrller,
+                            children: pages,
+                          ),
                         ),
                       ),
                     ),
@@ -129,6 +142,7 @@ class _MainPageState extends State<MainPage> {
                         builder: (_, snapshot) => FloatingDockBar(
                           selectedIndex: snapshot.data ?? _selectedIndex,
                           onDestinationSelected: onDestinationSelected,
+                          pageBackdrop: _dockPageBackdrop,
                         ),
                       )
                     : null,
