@@ -6,6 +6,7 @@ import '../../components/cards/message_card.dart';
 import '../../pages/noitfication/notification_controller.dart';
 import '../../components/announcement_entry.dart';
 import '../../utils/global_data.dart';
+import '../message/message_controller.dart';
 
 // ignore: constant_identifier_names
 enum NotificationType { AT, COMMENT, LIKE, FOLLOW, MESSAGE, SYSTEM }
@@ -42,6 +43,23 @@ class _NotificationPageState extends State<NotificationPage> {
   /// 内嵌实例与路由打开的同类页隔离控制器注册，避免互相 dispose 误删。
   String get _controllerTag =>
       widget.embedded ? '${type.name}_embedded' : type.name;
+
+  /// 「酷安小秘书」未读徽标：路由打开时用路由参数带来的本地计数；
+  /// 内嵌（消息 Tab 私信段）时响应式读 MessageController 的共享计数，
+  /// 该计数由宿主页的 checkCount 填充。
+  Widget? _systemBadge() {
+    if (widget.embedded) {
+      if (!Get.isRegistered<MessageController>()) return null;
+      return Obx(() {
+        final count =
+            Get.find<MessageController>().notificationCount.value ?? 0;
+        return count > 0 ? Badge.count(count: count) : const SizedBox.shrink();
+      });
+    }
+    return _notificationCount > 0
+        ? Badge.count(count: _notificationCount)
+        : null;
+  }
 
   late final _notificationController = Get.put(
     NotificationController(
@@ -114,17 +132,25 @@ class _NotificationPageState extends State<NotificationPage> {
                         const CircleAvatar(child: Icon(Icons.support_agent)),
                     title: const Text('酷安小秘书'),
                     subtitle: const Text('系统通知与信息', maxLines: 1),
-                    trailing: _notificationCount > 0
-                        ? Badge.count(count: _notificationCount)
-                        : null,
+                    trailing: _systemBadge(),
                     onTap: () {
-                      _onNotificationsRead?.call();
+                      if (widget.embedded) {
+                        // 内嵌模式没有路由参数回调：直接清共享控制器里的
+                        // 未读数，徽标随 Obx 消失（与旧 sheet 流程等价）。
+                        if (Get.isRegistered<MessageController>()) {
+                          Get.find<MessageController>()
+                              .notificationCount
+                              .value = null;
+                        }
+                      } else {
+                        _onNotificationsRead?.call();
+                        setState(() => _notificationCount = 0);
+                      }
                       Get.toNamed('/notification',
                           arguments: {
                             'type': NotificationType.SYSTEM,
                           },
                           preventDuplicates: false);
-                      setState(() => _notificationCount = 0);
                     },
                   ),
                 ),

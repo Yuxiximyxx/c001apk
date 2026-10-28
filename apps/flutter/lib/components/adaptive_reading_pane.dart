@@ -251,6 +251,7 @@ class AdaptiveReadingPaneState extends State<AdaptiveReadingPane> {
                       offstage: reading && !showSidebar,
                       child: FeedNavigation(
                         compact: showSidebar,
+                        paneCapable: _canSplit,
                         openFeed: _open,
                         selectedId: _selectedId,
                         child: ExcludeFocus(
@@ -280,6 +281,7 @@ class AdaptiveReadingPaneState extends State<AdaptiveReadingPane> {
                                     child: KeyboardScrollRegion(
                                         autofocus: entry.key == _selectedId,
                                         child: FeedNavigation(
+                                            paneCapable: _canSplit,
                                             openFeed: _open,
                                             selectedId: _selectedId,
                                             child: NotificationListener<

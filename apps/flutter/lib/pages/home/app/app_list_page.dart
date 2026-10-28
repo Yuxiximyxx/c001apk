@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import '../../../components/expressive_loading_indicator.dart';
 import '../../../components/expressive_refresh_indicator.dart';
 import '../../../components/glass_surface.dart';
+import '../../../components/scroll_hiding_action.dart';
 import '../../../components/source_container.dart';
 
 import '../../../pages/home/app/app_list_controller.dart';
@@ -103,15 +104,8 @@ class _AppListPageState extends State<AppListPage>
         },
         child: Scaffold(
           floatingActionButton: _checkUpdate
-              ? SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 2),
-                    end: const Offset(0, 0),
-                  ).animate(CurvedAnimation(
-                    parent: _fabAnimationCtr!,
-                    curve: AppAnim.enterCurve,
-                    reverseCurve: AppAnim.exitCurve,
-                  )),
+              ? ScrollHidingAction(
+                  animation: _fabAnimationCtr!,
                   child: GlassFab(
 
                     onPressed: () => Get.toNamed('/appUpdate'),

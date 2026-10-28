@@ -7,6 +7,7 @@ import 'package:c001apk_flutter/pages/home/app/app_list_controller.dart';
 import 'package:c001apk_flutter/pages/home/app/app_list_page.dart';
 import 'package:c001apk_flutter/pages/home/return_top_controller.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
+import 'package:c001apk_flutter/components/glass_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,10 +70,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     await tester.runAsync(() async {});
     await tester.pumpAndSettle();
-    expect(find.byType(FloatingActionButton).hitTestable(), findsOneWidget);
+    expect(find.byType(GlassFab).hitTestable(), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -400));
     await tester.pumpAndSettle();
-    expect(find.byType(FloatingActionButton).hitTestable(), findsNothing);
+    expect(find.byType(GlassFab).hitTestable(), findsNothing);
     final boundary = boundaryKey.currentContext!.findRenderObject()!
         as RenderRepaintBoundary;
     final image = (await tester.runAsync(() => boundary.toImage()))!;
@@ -91,7 +92,7 @@ void main() {
     image.dispose();
     await tester.drag(find.byType(ListView), const Offset(0, 200));
     await tester.pumpAndSettle();
-    expect(find.byType(FloatingActionButton).hitTestable(), findsOneWidget);
+    expect(find.byType(GlassFab).hitTestable(), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

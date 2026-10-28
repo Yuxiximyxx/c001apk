@@ -242,16 +242,6 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                 ),
               ),
             ]),
-            const GlassSettingsItem(),
-            if (Platform.isAndroid) const AppIconItem(),
-            const SwitchItem(
-              icon: Icons.font_download_outlined,
-              title: '使用系统字体',
-              subtitle: '使用设备系统默认字体显示界面文字',
-              boxKey: SettingsBoxKey.useSystemFont,
-              defaultValue: true,
-              forceAppUpdate: true,
-            ),
             const ItemTitle(title: '导航栏'),
             const NavigationAppearanceSettings(),
             const ItemTitle(title: '阅读与字号'),
@@ -286,6 +276,16 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                 ),
               ),
             ]),
+            const GlassSettingsItem(),
+            if (Platform.isAndroid) const AppIconItem(),
+            const SwitchItem(
+              icon: Icons.font_download_outlined,
+              title: '使用系统字体',
+              subtitle: '使用设备系统默认字体显示界面文字',
+              boxKey: SettingsBoxKey.useSystemFont,
+              defaultValue: true,
+              forceAppUpdate: true,
+            ),
           ],
         SettingsSection.content => [
             ValueListenableBuilder(

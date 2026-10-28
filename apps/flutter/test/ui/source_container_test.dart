@@ -13,7 +13,6 @@ import 'package:c001apk_flutter/pages/feed/feed_page.dart';
 import 'package:c001apk_flutter/pages/feed/reply/reply_page.dart';
 import 'package:c001apk_flutter/pages/ffflist/ffflist_page.dart';
 import 'package:c001apk_flutter/pages/history/history_page.dart';
-import 'package:c001apk_flutter/pages/others/imageview_page.dart';
 import 'package:c001apk_flutter/pages/topic/topic_page.dart';
 import 'package:c001apk_flutter/pages/user/user_page.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
@@ -253,7 +252,7 @@ void main() {
     final containers = tester
         .widgetList<AnchoredContainer>(find.byType(AnchoredContainer))
         .toList();
-    expect(containers.length, 6);
+    expect(containers.length, 7);
 
     final context = tester.element(find.byType(Column).first);
     Widget openAt(int index) => containers[index].openBuilder(context, () {});
@@ -267,8 +266,10 @@ void main() {
 
     expect(openAt(3), isA<HistoryPage>());
     expect((openAt(3) as HistoryPage).type, HistoryType.History);
+    expect(openAt(4), isA<FFFListPage>());
+    expect((openAt(4) as FFFListPage).type, FFFListType.RECENT);
 
-    final secondRowTargets = [openAt(4), openAt(5)];
+    final secondRowTargets = [openAt(5), openAt(6)];
     expect(secondRowTargets.every((w) => w is FFFListPage), isTrue);
     expect(
       secondRowTargets.map((w) => (w as FFFListPage).type),
@@ -292,30 +293,32 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('image thumbnails wire an ImageContainer for the gallery',
-      (tester) async {
+  testWidgets('image thumbnails open the media gallery route', (tester) async {
     const pics = [
       'https://image.coolapk.com/a@100x80.jpg',
       'https://image.coolapk.com/b@100x80.jpg',
     ];
     await tester.pumpWidget(GetMaterialApp(
+      getPages: [
+        GetPage(
+          name: '/imageview',
+          page: () => const Scaffold(body: Text('gallery stub')),
+        ),
+      ],
       home: Scaffold(body: image(300, pics)),
     ));
     await tester.pumpAndSettle();
 
-    final containers =
-        tester.widgetList<ImageContainer>(find.byType(ImageContainer));
-    expect(containers.length, 2);
-    expect(containers.first.imgList, pics);
-    expect(containers.first.initialPage, 0);
-    expect(containers.last.initialPage, 1);
-
-    final context = tester.element(find.byType(ImageContainer).first);
-    final anchored = (containers.first.build(context) as AnchoredContainer);
-    final opened = anchored.openBuilder(context, () {});
-    expect(opened, isA<ImageViewPage>());
-    expect((opened as ImageViewPage).imgList, pics);
-    expect(opened.initialPage, 0);
+    // Upstream 1.5.0 wiring (miuix23 merge): thumbnails are plain
+    // gallery items; tapping one routes to /imageview with the media
+    // gallery arguments instead of the fork's old ImageContainer morph.
+    expect(find.byType(ImageContainer), findsNothing);
+    await tester.tap(find.byType(GestureDetector).at(1));
+    await tester.pumpAndSettle();
+    expect(find.text('gallery stub'), findsOneWidget);
+    final arguments = Get.arguments as Map<String, dynamic>;
+    expect(arguments['initialPage'], 1);
+    expect((arguments['mediaItems'] as List).length, 2);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:c001apk_flutter/components/app_keyboard_navigation.dart';
 import 'package:c001apk_flutter/components/adaptive_main_scaffold.dart';
 import 'package:c001apk_flutter/pages/message/message_page.dart';
+import 'package:c001apk_flutter/pages/message/messages_page.dart';
 import 'package:c001apk_flutter/pages/settings/settings_page.dart';
 import 'package:c001apk_flutter/utils/global_data.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
@@ -64,7 +65,7 @@ void main() {
           child: AdaptiveMainScaffold(
             selectedIndex: 2,
             onDestinationSelected: (_) {},
-            bodyBuilder: (_, __) => const MessagePage(),
+            bodyBuilder: (_, __) => const MessagesPage(),
           ),
         ),
         scale: 1.5,
@@ -114,11 +115,11 @@ void main() {
     await resize(tester, 1200);
     await tester.pumpWidget(app(const MessagePage()));
     await tester.pumpAndSettle();
-    expect(tester.getTopLeft(find.text('我的常去')).dy,
-        greaterThan(tester.getBottomLeft(find.text('我的回复')).dy));
+    expect(tester.getTopLeft(find.text('我的常去').last).dy,
+        greaterThan(tester.getBottomLeft(find.text('我的赞')).dy));
     await resize(tester, 400);
-    expect(tester.getTopLeft(find.text('我的常去')).dy,
-        greaterThan(tester.getBottomLeft(find.text('我的回复')).dy));
+    expect(tester.getTopLeft(find.text('我的常去').last).dy,
+        greaterThan(tester.getBottomLeft(find.text('我的赞')).dy));
     expect(tester.takeException(), isNull);
   });
 
@@ -151,8 +152,8 @@ void main() {
     await tester.pumpAndSettle();
     // Fork design: single column at any text scale — recent visits stay
     // below the shortcut rows instead of moving beside them.
-    expect(tester.getTopLeft(find.text('我的常去')).dy,
-        greaterThan(tester.getBottomLeft(find.text('我的回复')).dy));
+    expect(tester.getTopLeft(find.text('我的常去').last).dy,
+        greaterThan(tester.getBottomLeft(find.text('我的赞')).dy));
     // Below the fork's fixed 840dp two-pane threshold the settings page
     // falls back to category navigation even at large text scales.
     await resize(tester, 700);

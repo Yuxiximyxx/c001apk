@@ -98,9 +98,10 @@ class _DropDownMenuItemState extends State<DropDownMenuItem> {
         // The Miuix end slot is width-capped (~134dp); at a 2x text scale
         // the widest dropdown item (4 CJK chars + arrow) needs ~137dp and
         // overflows by a few pixels. Clamp the button's text scaling so it
-        // always fits the slot.
+        // always fits the slot (1.5 leaves margin under wider test fonts;
+        // 1.75 still overflowed by 2px there, miuix23).
         MediaQuery.withClampedTextScaling(
-          maxScaleFactor: 1.75,
+          maxScaleFactor: 1.5,
           child: Builder(
             builder: (context) => InkWell(
               onTap: widget.enabled ? () => _openMenu(context) : null,

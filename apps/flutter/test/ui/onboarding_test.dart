@@ -137,6 +137,14 @@ void main() {
     expect(identity.calls, 0);
     await tap(tester, find.byKey(const ValueKey('onboarding-next')),
         persist: true);
+    // Finishing persists through real Hive IO; the fixed 50ms window in
+    // the persist tap can elapse before the write lands on a slow disk.
+    // Wait (bounded) for the completion callback before asserting.
+    for (var i = 0; i < 100 && finished == 0; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump();
+    }
     expect(GStorage.hideHomePublishButton, isFalse);
     expect(GStorage.floatingNavigation, isFalse);
     expect(filter.enabled, isTrue);

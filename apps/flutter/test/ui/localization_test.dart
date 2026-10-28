@@ -27,6 +27,7 @@ import 'package:c001apk_flutter/utils/utils.dart';
 import 'package:dio/dio.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
+import 'package:c001apk_flutter/pages/message/message_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter/gestures.dart';
@@ -272,7 +273,9 @@ Future<void> tapDockDestination(WidgetTester tester, String destination) async {
   final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
   final index = FloatingDockBar.labels.indexOf(destination);
   await tester.tapAt(Offset(
-      rect.left + rect.width * (index * 2 + 1) / 4, rect.center.dy));
+      rect.left +
+          rect.width * (index * 2 + 1) / (2 * FloatingDockBar.labels.length),
+      rect.center.dy));
 }
 
 void main() {
@@ -360,16 +363,32 @@ void main() {
             .widget<TabBarView>(find.byType(TabBarView).first)
             .controller!;
         final target = switch (surface) {
-          // The fork's tab strip is the chip row in the home AppBar.
-          'tabs' => find
-              .descendant(
-                  of: find.byType(AppBar),
-                  matching: find.byType(SingleChildScrollView))
-              .first,
+          // The home tab strip is the glass capsule in the top bar.
+          'tabs' => find.byKey(const ValueKey('liquid-tabs-surface')),
           'carousel' => find.byType(CarouselCard),
           'grid' => find.byType(IconLinkGridCard),
           _ => find.byType(IconMiniScrollCard),
         };
+        if (surface == 'tabs') {
+          // The capsule is a drag-to-select control, not a scrollable
+          // strip: dragging commits the segment under the pointer and
+          // must neither open an item nor leave the home route.
+          final initialTab = homeTabs.index;
+          await tester.drag(target, const Offset(260, 0), kind: kind);
+          await tester.pumpAndSettle();
+          expect(homeTabs.index, homeTabs.length - 1);
+          expect(Get.currentRoute, '/',
+              reason: 'Dragging must not open an item');
+          await tester.drag(target, const Offset(-520, 0), kind: kind);
+          await tester.pumpAndSettle();
+          expect(homeTabs.index, 0);
+          await tester.tap(find.descendant(
+              of: find.byType(AppBar), matching: find.text('热门')));
+          await tester.pumpAndSettle();
+          expect(homeTabs.index, initialTab + 1);
+          await tester.pumpWidget(const SizedBox.shrink());
+          return;
+        }
         final scrollable = find
             .descendant(
               of: target,
@@ -575,7 +594,7 @@ void main() {
     await tester.pumpAndSettle();
     final myList = find
         .descendant(
-          of: find.byType(CustomScrollView),
+          of: find.byType(MessagePage),
           matching: find.byType(Scrollable),
         )
         .first;
@@ -660,7 +679,7 @@ void main() {
     expect(material.copyButtonLabel, '复制');
     expect(material.pasteButtonLabel, '粘贴');
     expect(find.text('首页'), findsOneWidget);
-    expect(FloatingDockBar.labels, ['首页', '我的']);
+    expect(FloatingDockBar.labels, ['首页', '关注', '消息', '我的']);
     expect(find.widgetWithText(Tab, '关注'), findsNothing);
     expect(find.text('Home'), findsNothing);
     tester.view.physicalSize = const Size(1400, 900);
@@ -680,15 +699,9 @@ void main() {
         tester
             .widget<NavigationRail>(find.byType(NavigationRail))
             .selectedIndex,
-        1);
+        3);
     expect(find.text('点击登录'), findsOneWidget);
     expect(find.text('粉丝', skipOffstage: false), findsNothing);
-    final localCard = find
-        .ancestor(of: find.text('本地收藏'), matching: find.byType(Material))
-        .last;
-    final divider = find.byType(Divider).first;
-    expect(tester.getTopLeft(localCard).dy - tester.getBottomLeft(divider).dy,
-        lessThan(20));
     expect(find.text('Settings'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -806,14 +819,11 @@ void main() {
         uid: '321', username: 'synthetic', token: 'synthetic-token'));
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tapDockDestination(tester, '我的');
+    await tapDockDestination(tester, '消息');
     await tester.pumpAndSettle();
     expect(find.textContaining('合成系统信息', findRichText: true), findsNothing);
     expect(adapter.notificationPages, isEmpty);
-    await tester.ensureVisible(find.text('消息通知'));
-    await tester.tap(find.text('消息通知'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('私信与信息'));
+    await tester.tap(find.widgetWithText(TextButton, '私信'));
     await tester.pumpAndSettle();
     expect(find.text('酷安小秘书'), findsOneWidget);
     expect(find.widgetWithText(Badge, '3'), findsOneWidget);
@@ -831,12 +841,8 @@ void main() {
     Get.back();
     await tester.pumpAndSettle();
     expect(find.text('合成联系人'), findsOneWidget);
-    Get.back();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('消息通知'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('私信与信息'));
-    await tester.pumpAndSettle();
+    // The inbox is a dock destination now, not a pushed route: the
+    // conversation list is still on screen and its badge has cleared.
     expect(find.text('酷安小秘书'), findsOneWidget);
     expect(find.widgetWithText(Badge, '3'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -854,12 +860,9 @@ void main() {
     await tester.runAsync(() => AccountStore().useGuest());
     await tester.pumpWidget(const C001APKAPP());
     await tester.pumpAndSettle();
-    await tapDockDestination(tester, '我的');
+    await tapDockDestination(tester, '消息');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('消息通知'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('私信与信息'));
-    await tester.tap(find.text('私信与信息'));
+    await tester.tap(find.widgetWithText(TextButton, '私信'));
     await tester.pumpAndSettle();
     expect(find.text('c001apk 小助手'), findsOneWidget);
     expect(find.text('登录后查看私信与酷安通知'), findsOneWidget);

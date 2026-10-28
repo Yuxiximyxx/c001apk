@@ -59,13 +59,12 @@ void main() {
     final capsule = find.byKey(const Key('floatingDockCapsule'));
     expect(capsule, findsOneWidget);
     final size = tester.getSize(capsule);
-    // miuix19 新口径：总宽 = Tab 数 × 单槽宽 + 两侧内距
-    // = 2×76 + 2×6 = 164，且必须小于旧固定 58% 口径（400×0.58=232，
-    // 两个按钮摊那么宽是真机反馈「空/挤不合理」的来源）。
-    expect(size.width, FloatingDockBar.barWidthForTabCount(2, 400));
+    // miuix19 新口径：总宽 = Tab 数 × 单槽宽 + 两侧内距；miuix23
+    // 四 Tab = 4×76 + 2×6 = 316（未触 320 上限与屏宽 −32 封顶）。
+    expect(size.width, FloatingDockBar.barWidthForTabCount(4, 400));
     expect(size.width,
-        2 * FloatingDockBar.slotWidth + 2 * FloatingDockBar.sidePadding);
-    expect(size.width, lessThan(400 * FloatingDockBar.widthFactor));
+        4 * FloatingDockBar.slotWidth + 2 * FloatingDockBar.sidePadding);
+    expect(size.width, lessThanOrEqualTo(400 - 32));
     expect(size.height, FloatingDockBar.height);
     expect(tester.getCenter(capsule).dx, closeTo(200, 0.5));
     // 真玻璃：fluid DrawBackdrop 在场（miuix22 起胶囊面与全应用
@@ -98,25 +97,25 @@ void main() {
     expect(icon.bottom, lessThanOrEqualTo(label.top + 2));
     expect(icon.center.dx, closeTo(label.center.dx, 24));
 
-    await pumpDock(tester, selectedIndex: 1, brightness: Brightness.dark);
+    await pumpDock(tester, selectedIndex: 3, brightness: Brightness.dark);
     // miuix15：选中态由药丸弹簧位置连续驱动，切换后等弹簧到位再断言终态。
     await tester.pumpAndSettle(const Duration(milliseconds: 16));
     expect(find.text('我的'), findsOneWidget);
     expect(find.text('首页'), findsNothing);
   });
 
-  testWidgets('tapping each half reports its index', (tester) async {
+  testWidgets('tapping slots reports their indices', (tester) async {
     final tapped = <int>[];
     await pumpDock(tester,
         selectedIndex: 0, brightness: Brightness.dark, onTap: tapped.add);
     final rect = tester.getRect(find.byKey(const Key('floatingDockCapsule')));
-    await tester.tapAt(Offset(rect.left + rect.width * 0.75, rect.center.dy));
-    await tester.tapAt(Offset(rect.left + rect.width * 0.25, rect.center.dy));
-    expect(tapped, [1, 0]);
+    await tester.tapAt(Offset(rect.left + rect.width * 0.875, rect.center.dy));
+    await tester.tapAt(Offset(rect.left + rect.width * 0.125, rect.center.dy));
+    expect(tapped, [3, 0]);
   });
 
   testWidgets('light mode renders with label and icons', (tester) async {
-    await pumpDock(tester, selectedIndex: 1, brightness: Brightness.light);
+    await pumpDock(tester, selectedIndex: 3, brightness: Brightness.light);
     expect(find.text('我的'), findsOneWidget);
     expect(find.byIcon(Icons.person), findsOneWidget);
     expect(find.byIcon(Icons.home_outlined), findsOneWidget);
@@ -233,6 +232,8 @@ void main() {
         DockGlassMaterial.liquid,
       ]) {
         final tapped = <int>[];
+        // 每档材质卸载重挂，避免上一档的拖动态（_targetValue）残留。
+        await tester.pumpWidget(const SizedBox());
         await pumpDock(tester,
             selectedIndex: 0,
             brightness: Brightness.dark,
@@ -508,9 +509,9 @@ void main() {
         reason: '回落路胶囊面应为 fluid DrawBackdrop 出图',
       );
       final rect = tester.getRect(capsule);
-      expect(rect.width, FloatingDockBar.barWidthForTabCount(2, 400));
+      expect(rect.width, FloatingDockBar.barWidthForTabCount(4, 400));
       expect(rect.height, FloatingDockBar.height);
-      await tester.tapAt(Offset(rect.left + rect.width * 0.75, rect.center.dy));
+      await tester.tapAt(Offset(rect.left + rect.width * 0.375, rect.center.dy));
       expect(tapped, [1]);
       expect(tester.takeException(), isNull);
     });

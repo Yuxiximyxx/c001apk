@@ -102,6 +102,11 @@ void main() {
   testWidgets('规则可停用恢复，个人规则可添加删除', (tester) async {
     await showPage(tester);
     await tester.scrollUntilVisible(find.text('规则与名单'), 200);
+    // The fork's shorter ItemTitle leaves this tile straddling the
+    // viewport edge after scrollUntilVisible; pin it fully into view
+    // before tapping (its centre is otherwise 7px off-surface).
+    await tester.ensureVisible(find.text('规则与名单'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('规则与名单'));
     await tester.pumpAndSettle();
     final toggle = find.byKey(const ValueKey('filter-list-topic'));

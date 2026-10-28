@@ -1,3 +1,4 @@
+import 'package:c001apk_flutter/components/app_anim.dart';
 import 'package:c001apk_flutter/router/page_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,9 +41,9 @@ void main() {
 
     test('below the floor the scale is pinned and progress becomes fade',
         () {
-      // easeOutQuart(0.2) ≈ 0.59 < 0.875, so the scale must stay floored
+      // AppAnim.sharedCurve(0.2) < 0.875, so the scale must stay floored
       // while the alpha carries the stock ramp times the tail fraction.
-      final t = Curves.easeOutQuart.transform(0.2);
+      final t = AppAnim.sharedCurve.transform(0.2);
       expect(t, lessThan(kCardPageMinScale));
       final frame = cardPageFrame(
         animationValue: 0.2,
@@ -61,7 +62,7 @@ void main() {
     });
 
     test('above the floor the scale follows the curved progress', () {
-      final t = Curves.easeOutQuart.transform(0.5);
+      final t = AppAnim.sharedCurve.transform(0.5);
       expect(t, greaterThan(kCardPageMinScale));
       final frame = cardPageFrame(
         animationValue: 0.5,
@@ -87,7 +88,7 @@ void main() {
     });
 
     test('partial cover interpolates scale and dim', () {
-      final u = Curves.easeOutCubic.transform(0.5);
+      final u = AppAnim.enterCurve.transform(0.5);
       final frame = cardPageFrame(
         animationValue: 1,
         secondaryValue: 0.5,

@@ -92,20 +92,18 @@ Widget messageFirstCardRow(
     );
   }
 
+  // 槽数随 titles 动态（miuix23 起第二卡两排各剩 2 项；第一卡仍 3 项）。
   return IntrinsicHeight(
     child: Row(
       children: [
-        Expanded(flex: 1, child: slot(0)),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 10),
-          child: VerticalDivider(width: 1),
-        ),
-        Expanded(flex: 1, child: slot(1)),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 10),
-          child: VerticalDivider(width: 1),
-        ),
-        Expanded(flex: 1, child: slot(2)),
+        for (var i = 0; i < titles.length; i++) ...[
+          if (i > 0)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: VerticalDivider(width: 1),
+            ),
+          Expanded(flex: 1, child: slot(i)),
+        ],
       ],
     ),
   );
