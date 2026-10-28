@@ -24,7 +24,6 @@ void main() {
     Hive.init(temp.path);
     GStorage.settings = await Hive.openBox('settings');
     GStorage.blackList = await Hive.openBox('blackList');
-    GStorage.favFeed = await Hive.openBox('favFeed');
     GlobalData().isLogin = false;
     GlobalData().SESSID = '';
     await GStorage.settings.putAll({

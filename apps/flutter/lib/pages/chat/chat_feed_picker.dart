@@ -2,12 +2,10 @@ import '../../components/expressive_loading_indicator.dart';
 import '../../components/glass_dialog.dart';
 import 'package:flutter/material.dart';
 
-import '../../logic/model/fav_history/fav_history.dart';
 import '../../logic/model/feed/datum.dart';
 import '../../logic/network/network_repo.dart';
 import '../../logic/state/loading_state.dart';
 import '../../utils/global_data.dart';
-import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
 
 /// Shares a canonical feed URL through the existing text-message protocol.
@@ -71,7 +69,7 @@ class _ChatFeedPickerState extends State<ChatFeedPicker> {
         width: 520,
         height: MediaQuery.sizeOf(context).height * .7,
         child: DefaultTabController(
-            length: 3,
+            length: 2,
             child: Column(children: [
               Padding(
                   padding: const EdgeInsets.only(left: 20, top: 8),
@@ -85,7 +83,6 @@ class _ChatFeedPickerState extends State<ChatFeedPicker> {
                   ])),
               const TabBar(tabs: [
                 Tab(text: '我的动态'),
-                Tab(text: '本地收藏'),
                 Tab(text: '链接')
               ]),
               Expanded(
@@ -129,21 +126,6 @@ class _ChatFeedPickerState extends State<ChatFeedPicker> {
                           const ListTile(title: Text('没有更多动态')),
                       ]);
                     }),
-                Builder(builder: (_) {
-                  final items = GStorage.favFeed.values
-                      .whereType<FavHistoryItem>()
-                      .toList()
-                      .reversed
-                      .toList();
-                  if (items.isEmpty) {
-                    return const Center(child: Text('暂无本地收藏，可粘贴动态链接'));
-                  }
-                  return ListView(children: [
-                    for (final item in items)
-                      if (RegExp(r'^[0-9]+$').hasMatch(item.id ?? ''))
-                        _tile(item.id!, item.message ?? '动态')
-                  ]);
-                }),
                 Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(children: [

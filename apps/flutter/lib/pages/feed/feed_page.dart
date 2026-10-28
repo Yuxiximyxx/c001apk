@@ -45,7 +45,6 @@ import '../../../components/app_anim.dart';
 enum FeedMenuItem {
   Copy,
   Share,
-  Fav,
   Block,
   Source,
   Report;
@@ -53,7 +52,6 @@ enum FeedMenuItem {
   String get label => switch (this) {
         FeedMenuItem.Copy => '复制',
         FeedMenuItem.Share => '分享',
-        FeedMenuItem.Fav => '收藏',
         FeedMenuItem.Block => '屏蔽',
         FeedMenuItem.Source => '查看原文',
         FeedMenuItem.Report => '举报',
@@ -709,14 +707,6 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                                     data),
                                 context: context);
                             break;
-                          case FeedMenuItem.Fav:
-                            if (_feedController.isFav) {
-                              GStorage.onDeleteFeed(_id, isHistory: false);
-                            } else {
-                              _feedController.onFav();
-                            }
-                            _feedController.isFav = !_feedController.isFav;
-                            break;
                           case FeedMenuItem.Block:
                             GStorage.onBlock(
                               _feedController.feedUid.toString(),
@@ -745,11 +735,7 @@ class _FeedPageState extends State<FeedPage> with TickerProviderStateMixin {
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
                                 value: item,
-                                child: item == FeedMenuItem.Fav
-                                    ? Text(
-                                        _feedController.isFav ? '取消收藏' : '收藏',
-                                      )
-                                    : item == FeedMenuItem.Block
+                                child: item == FeedMenuItem.Block
                                         ? Text(
                                             _feedController.isBlocked
                                                 ? '取消屏蔽'

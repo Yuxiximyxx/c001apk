@@ -18,15 +18,10 @@ Widget messageSeconfCard(bool isLogin, BuildContext context) {
           context,
           null,
           [
-            '本地收藏',
             '浏览历史',
             '我的常去',
           ],
           [
-            () => Get.toNamed(
-                  '/history',
-                  arguments: {'type': HistoryType.Favorite},
-                ),
             () => Get.toNamed(
                   '/history',
                   arguments: {'type': HistoryType.History},
@@ -39,7 +34,6 @@ Widget messageSeconfCard(bool isLogin, BuildContext context) {
                 : () {},
           ],
           [
-            Icons.archive_outlined,
             Icons.history,
             Icons.my_location,
           ],
@@ -50,7 +44,6 @@ Widget messageSeconfCard(bool isLogin, BuildContext context) {
           [
             '我的收藏',
             '我的赞',
-            '我的回复',
           ],
           [
             isLogin
@@ -65,17 +58,10 @@ Widget messageSeconfCard(bool isLogin, BuildContext context) {
                       arguments: {'type': FFFListType.LIKE},
                     )
                 : () {},
-            isLogin
-                ? () => Get.toNamed(
-                      '/ffflist',
-                      arguments: {'type': FFFListType.REPLY},
-                    )
-                : () {},
           ],
           [
             Icons.star_border,
             Icons.favorite_border,
-            Icons.messenger_outline,
           ],
         ),
       ],

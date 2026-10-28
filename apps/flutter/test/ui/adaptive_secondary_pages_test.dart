@@ -105,7 +105,6 @@ void main() {
     });
   }
 
-  testWidgets('my page places messages beside shortcuts only when they fit',
   testWidgets('my page stacks shortcuts above recent visits at any width',
 
       (tester) async {

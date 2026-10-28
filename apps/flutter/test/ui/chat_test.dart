@@ -134,7 +134,6 @@ void main() {
     temp = await Directory.systemTemp.createTemp('c001apk-chat-');
     Hive.init(temp.path);
     GStorage.settings = await Hive.openBox('settings');
-    GStorage.favFeed = await Hive.openBox('favorites');
     GStorage.blackList = await Hive.openBox('blacklist');
     await GStorage.settings.putAll({
       SettingsBoxKey.xAppDevice: 'synthetic-device',

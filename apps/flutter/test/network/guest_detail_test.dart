@@ -69,7 +69,6 @@ void main() {
     Hive.init(temp.path);
     GStorage.settings = await Hive.openBox('settings');
     GStorage.blackList = await Hive.openBox('blackList');
-    GStorage.favFeed = await Hive.openBox('favFeed');
     await GStorage.settings.putAll({
       SettingsBoxKey.xAppDevice: 'synthetic-test-device',
       SettingsBoxKey.versionCode: '2604201',

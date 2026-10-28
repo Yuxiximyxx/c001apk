@@ -35,7 +35,6 @@ void main() {
       SettingsBoxKey.isLogin: true,
     });
     for (final name in [
-      'favFeed',
       'historyFeed',
       'searchHistory',
       'blackList'
@@ -56,7 +55,6 @@ void main() {
       expect(GStorage.token, 'synthetic-account-value');
       expect(GStorage.selectedTheme, 2);
       for (final box in [
-        GStorage.favFeed,
         GStorage.historyFeed,
         GStorage.searchHistory,
         GStorage.blackList

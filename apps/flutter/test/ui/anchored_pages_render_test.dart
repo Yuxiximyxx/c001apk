@@ -26,7 +26,6 @@ void main() {
     temp = await Directory.systemTemp.createTemp('c001apk-anchored-render-');
     Hive.init(temp.path);
     GStorage.settings = await Hive.openBox('settings');
-    GStorage.favFeed = await Hive.openBox('favFeed');
     GStorage.historyFeed = await Hive.openBox('historyFeed');
   });
   tearDownAll(() async {
@@ -130,7 +129,6 @@ void main() {
 
   group('HistoryPage opened by a container renders its skeleton', () {
     final cases = <(HistoryType, String)>[
-      (HistoryType.Favorite, '本地收藏'),
       (HistoryType.History, '浏览历史'),
     ];
     for (final (type, title) in cases) {

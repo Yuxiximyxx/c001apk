@@ -23,7 +23,6 @@ void main() {
     temp = await Directory.systemTemp.createTemp('c001apk-homefab-');
     Hive.init(temp.path);
     GStorage.settings = await Hive.openBox('settings');
-    GStorage.favFeed = await Hive.openBox('favFeed');
     GStorage.historyFeed = await Hive.openBox('historyFeed');
   });
   tearDownAll(() async {

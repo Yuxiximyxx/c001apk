@@ -35,7 +35,6 @@ class GStorage {
       settings.get(SettingsBoxKey.liquidGlassLevel));
   static late final Box<dynamic> searchHistory;
   static late final Box<dynamic> historyFeed;
-  static late final Box<dynamic> favFeed;
   static late final Box<dynamic> blackList;
   static late final Box<dynamic> settings;
 
@@ -76,16 +75,8 @@ class GStorage {
     }
   }
 
-  static void onDeleteFeed(String id, {bool isHistory = true}) {
-    if (isHistory) {
-      historyFeed.delete(id);
-    } else {
-      favFeed.delete(id);
-    }
-  }
-
-  static bool checkFav(String id) {
-    return favFeed.get(id) != null;
+  static void onDeleteFeed(String id) {
+    historyFeed.delete(id);
   }
 
   static bool checkHistory(String id) {
@@ -144,7 +135,6 @@ class GStorage {
     regAdapter();
     searchHistory = await Hive.openBox('searchHistory');
     historyFeed = await Hive.openBox('historyFeed');
-    favFeed = await Hive.openBox('favFeed');
     blackList = await Hive.openBox('blackList');
     settings = await Hive.openBox('settings');
 
@@ -186,8 +176,6 @@ class GStorage {
     searchHistory.close();
     historyFeed.compact();
     historyFeed.close();
-    favFeed.compact();
-    favFeed.close();
     blackList.compact();
     blackList.close();
     settings.compact();

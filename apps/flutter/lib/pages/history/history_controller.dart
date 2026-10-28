@@ -11,15 +11,12 @@ class HistoryController extends GetxController {
   HistoryController({required this.type});
   final HistoryType type;
 
-  late final Box favFeed = GStorage.favFeed;
   late final Box historyFeed = GStorage.historyFeed;
 
   RxList<Datum> dataList = <Datum>[].obs;
 
   Future<void> _getData() async {
-    List<dynamic> list = type == HistoryType.Favorite
-        ? favFeed.values.toList()
-        : historyFeed.values.toList();
+    List<dynamic> list = historyFeed.values.toList();
     if (list.isNotEmpty) {
       list.sort((a, b) =>
           (a as FavHistoryItem).time!.compareTo((b as FavHistoryItem).time!));
@@ -47,19 +44,12 @@ class HistoryController extends GetxController {
   }
 
   void clearAll() async {
-    if (type == HistoryType.Favorite) {
-      favFeed.clear();
-    } else {
-      historyFeed.clear();
-    }
+    historyFeed.clear();
     dataList.value = <Datum>[];
   }
 
   onDeleteFeed(dynamic id) {
-    GStorage.onDeleteFeed(
-      id.toString(),
-      isHistory: type == HistoryType.History,
-    );
+    GStorage.onDeleteFeed(id.toString());
     dataList.value = dataList.where((data) => data.id != id).toList();
   }
 }

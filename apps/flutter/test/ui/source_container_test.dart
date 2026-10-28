@@ -246,13 +246,14 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // First card: 动态/关注/粉丝 (3). Second card: 本地收藏/浏览历史
-    // (2) + 我的收藏/我的赞/我的回复 (3). 消息通知 opens a sheet and
-    // stays unanchored. Total 8.
+    // First card: 动态/关注/粉丝 (3). Second card: 浏览历史 (1) +
+    // 我的收藏/我的赞 (2). 我的常去 is a plain route tap and stays
+    // unanchored; 本地收藏与我的回复已随 miuix23 删除/移至消息页.
+    // Total 6.
     final containers = tester
         .widgetList<AnchoredContainer>(find.byType(AnchoredContainer))
         .toList();
-    expect(containers.length, 8);
+    expect(containers.length, 6);
 
     final context = tester.element(find.byType(Column).first);
     Widget openAt(int index) => containers[index].openBuilder(context, () {});
@@ -265,15 +266,13 @@ void main() {
     );
 
     expect(openAt(3), isA<HistoryPage>());
-    expect((openAt(3) as HistoryPage).type, HistoryType.Favorite);
-    expect(openAt(4), isA<HistoryPage>());
-    expect((openAt(4) as HistoryPage).type, HistoryType.History);
+    expect((openAt(3) as HistoryPage).type, HistoryType.History);
 
-    final secondRowTargets = [openAt(5), openAt(6), openAt(7)];
+    final secondRowTargets = [openAt(4), openAt(5)];
     expect(secondRowTargets.every((w) => w is FFFListPage), isTrue);
     expect(
       secondRowTargets.map((w) => (w as FFFListPage).type),
-      [FFFListType.COLLECTION, FFFListType.LIKE, FFFListType.REPLY],
+      [FFFListType.COLLECTION, FFFListType.LIKE],
     );
 
     await tester.pumpWidget(const SizedBox.shrink());

@@ -7,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../components/common_body.dart';
 import '../../components/liquid_top_bar.dart';
+import '../../components/liquid_navigation_bar.dart';
 import '../../components/liquid_popup_menu.dart';
 import '../../components/network_image.dart';
 import '../../logic/local_follow/local_follow_store.dart';
@@ -64,6 +65,57 @@ class _FollowFeedPageState extends State<FollowFeedPage>
 
   @override
   bool get wantKeepAlive => true;
+
+  /// 关注页筛选段控（miuix23 玻璃四页覆盖）：与主页同款的
+  /// LiquidNavigationBar.tabs 玻璃胶囊，悬浮在信息流顶部，段目与
+  /// 顶栏的选择器共用同一 [_selection] 状态（全部/用户/话题/数码/
+  /// 应用/悄悄）。玻璃关时不显示，顶栏选择器仍可切换。
+  static const _segmentOrder = [
+    FollowFeedSelection.all,
+    FollowFeedSelection.users,
+    FollowFeedSelection.topics,
+    FollowFeedSelection.products,
+    FollowFeedSelection.apps,
+    FollowFeedSelection.local,
+  ];
+  static const _segmentLabels = ['全部', '用户', '话题', '数码', '应用', '悄悄'];
+
+  Widget _bodyWithSegmentCapsule(BuildContext context, Widget body) {
+    if (!GlobalData().isLogin ||
+        !GStorage.floatingNavigation ||
+        !GStorage.liquidGlass) {
+      return body;
+    }
+    final isLocalView = _selection == FollowFeedSelection.local;
+    final padding = MediaQuery.paddingOf(context);
+    final padded = isLocalView
+        ? Padding(padding: const EdgeInsets.only(top: 56), child: body)
+        : MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+                padding: padding.copyWith(top: padding.top + 56)),
+            child: body);
+    return Stack(children: [
+      Positioned.fill(child: padded),
+      Positioned(
+        top: 6,
+        left: 12,
+        right: 12,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: LiquidNavigationBar.tabs(
+              labels: _segmentLabels,
+              selectedIndex: _segmentOrder.indexOf(_selection),
+              onDestinationSelected: (index) =>
+                  _select(_segmentOrder[index]),
+              level: GStorage.liquidGlassLevel,
+            ),
+          ),
+        ),
+      ),
+    ]);
+  }
 
   List<PopupMenuEntry<FollowFeedSelection>> _menuItems() => [
         const PopupMenuItem<FollowFeedSelection>(
@@ -150,13 +202,18 @@ class _FollowFeedPageState extends State<FollowFeedPage>
             : const Text('本地关注'),
         onSearch: () => Get.toNamed('/search'),
 
-        body: !GlobalData().isLogin || _selection == FollowFeedSelection.local
-            ? const SafeArea(bottom: false, child: LocalFollowFeedView())
-            : HomeFeedPage(
-                key: ValueKey(_selection),
-                tabType: TabType.FOLLOW,
-                followType: _selection.value,
-              ),
+        body: Builder(
+          builder: (context) => _bodyWithSegmentCapsule(
+            context,
+            !GlobalData().isLogin || _selection == FollowFeedSelection.local
+                ? const SafeArea(bottom: false, child: LocalFollowFeedView())
+                : HomeFeedPage(
+                    key: ValueKey(_selection),
+                    tabType: TabType.FOLLOW,
+                    followType: _selection.value,
+                  ),
+          ),
+        ),
       ),
     );
   }

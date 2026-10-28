@@ -17,7 +17,12 @@
          
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <!-- miuix23：窗口背景改透明——HyperOS 在半透明输入法升起时按
+             windowBackground 给键盘区垫底（浅色白/深色黑），改为透明后
+             键盘下直接透出 Flutter 表面绘制的页面内容，不再垫色。
+             adjustNothing 不动（红线）；启动期由 LaunchTheme 的
+             splash 背景负责，不受此项影响。 -->
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>

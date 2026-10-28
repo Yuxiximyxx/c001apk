@@ -303,7 +303,6 @@ void main() {
     Hive.init(temp.path);
     GStorage.settings = await Hive.openBox('settings');
     GStorage.blackList = await Hive.openBox('blackList');
-    GStorage.favFeed = await Hive.openBox('favFeed');
     GStorage.historyFeed = await Hive.openBox('historyFeed');
     GStorage.searchHistory = await Hive.openBox('searchHistory');
     await GStorage.settings.putAll({

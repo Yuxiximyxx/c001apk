@@ -6,15 +6,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../components/cards/message_first_card.dart';
 import '../../components/cards/message_header_card.dart';
 import '../../components/cards/message_second_card.dart';
-import '../../components/cards/message_third_card.dart';
 import '../../components/cards/recent_visits_card.dart';
-import '../../components/expressive_list_section.dart';
 import '../../components/liquid_top_bar.dart';
 import '../../pages/message/message_controller.dart';
-import '../../pages/noitfication/notification_page.dart';
-import '../../utils/extensions.dart';
 import '../../utils/global_data.dart';
-import '../../logic/announcements/app_announcements.dart';
 import '../../utils/storage_util.dart';
 
 class MessagePage extends StatefulWidget {
@@ -28,21 +23,6 @@ class _MessagePageState extends State<MessagePage>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
-  final _titleList = ['@我的动态', '@我的评论', '我收到的赞', '好友关注', '私信与信息'];
-  final _backgroundList = [
-    0xFF2196f3,
-    0xFF00bcd4,
-    0xFF4caf50,
-    0xFFf44336,
-    0xFFff9800,
-  ];
-  final _iconList = [
-    Icons.alternate_email,
-    Icons.message_outlined,
-    Icons.thumb_up_alt_outlined,
-    Icons.person_add_outlined,
-    Icons.mail_outline,
-  ];
   late final MessageController _messageController =
       Get.put(MessageController());
   final ValueNotifier<int> _recentRefresh = ValueNotifier<int>(0);
@@ -81,44 +61,6 @@ class _MessagePageState extends State<MessagePage>
           messageSeconfCard(GlobalData().isLogin, context),
         ],
       );
-
-  Widget _messages(BuildContext context) {
-    final announcements = AppAnnouncements.service;
-    Widget list() => ExpressiveListSection(
-          padding: EdgeInsets.zero,
-          children: [
-            for (var index = 0; index < _titleList.length; index++)
-              Obx(() => messageThirdCard(
-                    context,
-                    _backgroundList[index],
-                    _iconList[index],
-                    _titleList[index],
-                    (_messageController.thirdList.getOrNull(index) ?? 0) +
-                        (index == 4 ? announcements?.unreadCount ?? 0 : 0),
-                    () {
-                      if (!GlobalData().isLogin && index != 4) return;
-                      Get.toNamed('/notification', arguments: {
-                        'type': NotificationType.values[index],
-                        if (index == 4)
-                          'notificationCount':
-                              _messageController.notificationCount.value,
-                        if (index == 4)
-                          'onNotificationsRead': () =>
-                              _messageController.notificationCount.value = null,
-                      });
-                      final count =
-                          _messageController.thirdList.getOrNull(index);
-                      if (count != null && count > 0) {
-                        _messageController.thirdList[index] = null;
-                      }
-                    },
-                  )),
-          ],
-        );
-    return announcements == null
-        ? list()
-        : AnimatedBuilder(animation: announcements, builder: (_, __) => list());
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -215,38 +157,13 @@ class _MessagePageState extends State<MessagePage>
                       SliverPadding(
                         padding: EdgeInsets.fromLTRB(10, 10, 10,
                             10 + MediaQuery.paddingOf(context).bottom),
-                        sliver: SliverToBoxAdapter(child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final scale =
-                                (MediaQuery.textScalerOf(context).scale(16) /
-                                        16)
-                                    .clamp(1.0, 1.5);
-                            final content =
-                                constraints.maxWidth >= 820 * scale
-                                    ? Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                              child: _shortcuts(context)),
-                                          const SizedBox(width: 20),
-                                          Expanded(
-                                              child: _messages(context)),
-                                        ],
-                                      )
-                                    : Column(children: [
-                                        _shortcuts(context),
-                                        const SizedBox(height: 10),
-                                        _messages(context),
-                                      ]);
-                            return Column(children: [
-                              content,
-                              const SizedBox(height: 10),
-                              // 「我的常去」直接内嵌展示最近访问（fork 定制）
-                              RecentVisitsCard(refreshSignal: _recentRefresh),
-                            ]);
-                          },
-                        )),
+                        sliver: SliverToBoxAdapter(
+                            child: Column(children: [
+                          _shortcuts(context),
+                          const SizedBox(height: 10),
+                          // 「我的常去」直接内嵌展示最近访问（fork 定制）
+                          RecentVisitsCard(refreshSignal: _recentRefresh),
+                        ])),
                       ),
                     ],
                   ),

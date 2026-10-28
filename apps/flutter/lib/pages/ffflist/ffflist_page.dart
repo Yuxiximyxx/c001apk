@@ -24,7 +24,8 @@ enum FFFListType {
 }
 
 class FFFListPage extends StatefulWidget {
-  const FFFListPage({super.key, this.uid, this.type, this.id, this.title});
+  const FFFListPage(
+      {super.key, this.uid, this.type, this.id, this.title, this.embedded = false});
 
   /// Direct-construction parameters (source-anchored container navigation).
   /// Fall back to the GetX route arguments when null.
@@ -32,6 +33,10 @@ class FFFListPage extends StatefulWidget {
   final FFFListType? type;
   final String? id;
   final String? title;
+
+  /// 内嵌模式（消息 Tab「我的回复」分段）：不出 Scaffold/AppBar，
+  /// 只保留 TabBar（回复/回复我）+ 列表本体，顶栏由宿主提供。
+  final bool embedded;
 
   @override
   State<FFFListPage> createState() => _FFFListPageState();
@@ -88,21 +93,7 @@ class _FFFListPageState extends State<FFFListPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _titleText,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        bottom: _tabList != null
-            ? TabBar(
-                controller: _tabController,
-                tabs: _tabList.map((item) => Tab(text: item)).toList())
-            : const PreferredSize(
-                preferredSize: Size.zero, child: Divider(height: 1)),
-      ),
-      body: _tabList != null
+    final Widget content = _tabList != null
           ? TabBarView(
               controller: _tabController,
               children: _type == FFFListType.REPLY
@@ -136,7 +127,31 @@ class _FFFListPageState extends State<FFFListPage>
               uid: _type == FFFListType.COLLECTION ? null : _uid,
               id: _id,
               type: _type,
-            ),
+            );
+    if (widget.embedded) {
+      if (_tabList == null) return content;
+      return Column(children: [
+        TabBar(
+            controller: _tabController,
+            tabs: _tabList.map((item) => Tab(text: item)).toList()),
+        Expanded(child: content),
+      ]);
+    }
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _titleText,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        bottom: _tabList != null
+            ? TabBar(
+                controller: _tabController,
+                tabs: _tabList.map((item) => Tab(text: item)).toList())
+            : const PreferredSize(
+                preferredSize: Size.zero, child: Divider(height: 1)),
+      ),
+      body: content,
     );
   }
 }

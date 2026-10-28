@@ -9,11 +9,9 @@ import '../../pages/history/history_controller.dart';
 // ignore: constant_identifier_names
 enum HistoryType {
   // ignore: constant_identifier_names
-  Favorite,
-  // ignore: constant_identifier_names
   History;
 
-  String get label => this == HistoryType.Favorite ? '本地收藏' : '浏览历史';
+  String get label => '浏览历史';
 }
 
 class HistoryPage extends StatefulWidget {
@@ -64,7 +62,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       context: context,
                       builder: (context) => GlassAlertDialog(
                         title: Text(
-                            '确定清除全部${_type == HistoryType.Favorite ? '收藏' : '浏览历史'}？'),
+                            '确定清除全部浏览历史？'),
                         actions: [
                           TextButton(
                             onPressed: () => Get.back(),

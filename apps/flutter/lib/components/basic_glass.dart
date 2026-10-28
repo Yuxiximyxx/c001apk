@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:fluid_glass/fluid_glass.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../constants/liquid_glass_level.dart';
+import 'glass_surface.dart' hide GlassSurface;
 
 /// Public backend: ordinary translucent/frosted surfaces and navigation.
 /// The official source assembly supplies the same API with its own renderer.
@@ -82,17 +84,81 @@ class GlassSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = borderRadius ?? BorderRadius.circular(extent.height / 2);
     final solid = !enabled || MediaQuery.highContrastOf(context);
-    final content = ColoredBox(
-      color: (fallbackTint ?? tint).withValues(alpha: solid ? 1 : .9),
-      child: const SizedBox.expand(),
+    if (solid) {
+      return ClipRRect(
+        borderRadius: radius,
+        child: ColoredBox(
+          color: (fallbackTint ?? tint).withValues(alpha: 1),
+          child: const SizedBox.expand(),
+        ),
+      );
+    }
+    // miuix23：出图换 fork 定版 fluid_glass 引擎（换引擎不换壳）——
+    // 本类的公开 API、调用点的布局与交互全部保留，只把 basic 的
+    // 「半透明色 + 4px 高斯模糊」换成与悬浮 Dock 同一套 fluid
+    // DrawBackdrop 链：采样经 fluidGlassBackdropOf 统一解析，纱色用
+    // 调用方 tint（alpha 按旧 basic 口径 .9），光学走当前玻璃材质
+    // spec（blur 8 / vibrancy 1.5 / lens 按 spec)，level == low 时
+    // 只模糊不折射（对应旧 basic 在 low 下不启用的行为）。
+    // spec 变化经 dockGlassSettingsListenable 监听即时生效，与
+    // fork GlassSurface 同口径。
+    final listenable = dockGlassSettingsListenable();
+    if (listenable == null) return _buildFluid(context, radius);
+    return ValueListenableBuilder(
+      valueListenable: listenable,
+      builder: (context, _, __) => _buildFluid(context, radius),
     );
-    return ClipRRect(
-      borderRadius: radius,
-      child: solid || level == LiquidGlassLevel.low
-          ? content
-          : BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-              child: content),
+  }
+
+  Widget _buildFluid(BuildContext context, BorderRadius radius) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final spec = currentDockGlassSpec();
+    final colors = dockGlassColorsForSpec(spec,
+            dark: dark, accent: theme.colorScheme.primary)
+        .copyWith(container: tint.withValues(alpha: .9));
+    final shape =
+        glassShapeForBorderRadius(radius, Directionality.of(context));
+    final low = level == LiquidGlassLevel.low;
+    return LiquidGlassTheme(
+      colors: colors,
+      child: DrawBackdrop(
+        backdrop: fluidGlassBackdropOf(context),
+        shape: () => shape,
+        effects: (scope) => low
+            ? (scope
+              ..vibrancy()
+              ..blur(fluidGlassBlurRadius))
+            : (scope
+              ..vibrancy()
+              ..blur(fluidGlassBlurRadius)
+              ..lens(
+                spec.refractionBandDp,
+                spec.refractionAmountDp,
+                chromaticAberration: spec.dispersion > 0,
+              )),
+        highlight: () => Highlight.standard
+            .copyWith(alpha: glassHighlightAlpha(spec, dark)),
+        shadow: shadow
+            ? () => GlassShadow(
+                  radius: 18,
+                  offset: const Offset(0, 6),
+                  color: Colors.black.withValues(alpha: dark ? 0.35 : 0.18),
+                )
+            : null,
+        innerShadow: () => GlassInnerShadow(
+          radius: 24,
+          offset: const Offset(0, 24),
+          color: const Color(0x26000000),
+          alpha: 0.3,
+        ),
+        isolateSurface: false,
+        onDrawSurface: (canvas, size) {
+          canvas.drawRect(
+              Offset.zero & size, Paint()..color = colors.container);
+        },
+        child: const SizedBox.expand(),
+      ),
     );
   }
 }

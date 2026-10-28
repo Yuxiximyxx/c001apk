@@ -39,7 +39,6 @@ class FeedController extends CommonController {
   Rx<LoadingState> feedState = LoadingState.loading().obs;
   final accountDetailNotice = ''.obs;
   final isLoadingDetail = false.obs;
-  bool isFav = false;
   bool isBlocked = false;
 
   Rx<ReplySortType> replySelection = ReplySortType.def.obs;
@@ -157,7 +156,6 @@ class FeedController extends CommonController {
       replyNum = data.replynum;
       onGetData();
 
-      isFav = GStorage.checkFav(id);
       isBlocked = GStorage.checkUser(feedUid.toString());
       // todo: check
       if (recordHistory && !GStorage.checkHistory(id)) {
@@ -165,11 +163,6 @@ class FeedController extends CommonController {
       }
     }
     feedState.value = response;
-  }
-
-  void onFav() {
-    Datum data = (feedState.value as Success).response;
-    GStorage.favFeed.put(id, getFeed(data));
   }
 
   FavHistoryItem getFeed(Datum data) {

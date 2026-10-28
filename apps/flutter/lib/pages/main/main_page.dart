@@ -16,6 +16,7 @@ import '../../components/expressive_loading_indicator.dart';
 import '../../components/floating_dock_bar.dart';
 import '../../../components/app_anim.dart';
 import '../local_follow/local_follow_page.dart';
+import '../message/messages_page.dart';
 import '../../components/home_publish_action.dart';
 import '../../components/scroll_hiding_action.dart';
 import '../../utils/global_data.dart';
@@ -113,6 +114,7 @@ class _MainPageState extends State<MainPage>
                   },
                 ),
                 const FollowFeedPage(),
+                const MessagesPage(),
                 const MessagePage(),
               ];
               const railDestinations = <NavigationRailDestination>[
@@ -125,6 +127,11 @@ class _MainPageState extends State<MainPage>
                   selectedIcon: Icon(Icons.feed),
                   icon: Icon(Icons.feed_outlined),
                   label: Text('关注'),
+                ),
+                NavigationRailDestination(
+                  selectedIcon: Icon(Icons.message),
+                  icon: Icon(Icons.message_outlined),
+                  label: Text('消息'),
                 ),
                 NavigationRailDestination(
                   selectedIcon: Icon(Icons.person),

@@ -83,7 +83,6 @@ void main() {
     temp = await Directory.systemTemp.createTemp('c001apk-topic-bg-');
     Hive.init(temp.path);
     GStorage.settings = await Hive.openBox('settings');
-    GStorage.favFeed = await Hive.openBox('favFeed');
     GStorage.historyFeed = await Hive.openBox('historyFeed');
     GStorage.blackList = await Hive.openBox('blackList');
     await GStorage.settings.putAll({

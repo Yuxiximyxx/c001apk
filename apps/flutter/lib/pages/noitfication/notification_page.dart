@@ -11,17 +11,26 @@ import '../../utils/global_data.dart';
 enum NotificationType { AT, COMMENT, LIKE, FOLLOW, MESSAGE, SYSTEM }
 
 class NotificationPage extends StatefulWidget {
-  const NotificationPage({super.key});
+  const NotificationPage({super.key, this.typeOverride, this.embedded = false});
+
+  /// 直接构造参数（消息 Tab 的「私信」分段内嵌时用）；为空时回落到
+  /// GetX 路由参数，与原路由打开行为一致。
+  final NotificationType? typeOverride;
+
+  /// 内嵌模式：只出列表本体，不带 Scaffold/AppBar（宿主自带顶栏）。
+  final bool embedded;
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  final NotificationType type = Get.arguments['type'];
-  final VoidCallback? _onNotificationsRead =
-      Get.arguments['onNotificationsRead'];
-  late int _notificationCount = Get.arguments['notificationCount'] ?? 0;
+  late final NotificationType type =
+      widget.typeOverride ?? Get.arguments['type'];
+  late final VoidCallback? _onNotificationsRead =
+      widget.typeOverride != null ? null : Get.arguments['onNotificationsRead'];
+  late int _notificationCount =
+      widget.typeOverride != null ? 0 : Get.arguments['notificationCount'] ?? 0;
   late final String _title = switch (type) {
     NotificationType.AT => '@我的动态',
     NotificationType.COMMENT => '@我的评论',
@@ -30,6 +39,10 @@ class _NotificationPageState extends State<NotificationPage> {
     NotificationType.MESSAGE => '私信与信息',
     NotificationType.SYSTEM => '酷安小秘书',
   };
+  /// 内嵌实例与路由打开的同类页隔离控制器注册，避免互相 dispose 误删。
+  String get _controllerTag =>
+      widget.embedded ? '${type.name}_embedded' : type.name;
+
   late final _notificationController = Get.put(
     NotificationController(
       url: switch (type) {
@@ -41,7 +54,7 @@ class _NotificationPageState extends State<NotificationPage> {
         NotificationType.SYSTEM => '/v6/notification/list',
       },
     ),
-    tag: type.name,
+    tag: _controllerTag,
   );
   bool _controllerUsed = false;
 
@@ -49,7 +62,7 @@ class _NotificationPageState extends State<NotificationPage> {
   void dispose() {
     if (_controllerUsed) {
       _notificationController.scrollController?.dispose();
-      Get.delete<NotificationController>(tag: type.name);
+      Get.delete<NotificationController>(tag: _controllerTag);
     }
     super.dispose();
   }
@@ -57,31 +70,23 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   Widget build(BuildContext context) {
     if (!GlobalData().isLogin) {
-      return Scaffold(
-          appBar: AppBar(title: Text(_title)),
-          body: SafeArea(
-              top: false,
-              child: Column(children: [
-                if (type == NotificationType.MESSAGE)
-                  const Padding(
-                      padding: EdgeInsets.all(10), child: AnnouncementEntry()),
-                Expanded(
-                    child: Center(
-                        child: TextButton(
-                            onPressed: () => Get.toNamed('/login'),
-                            child: const Text('登录后查看私信与酷安通知')))),
-              ])));
+      final body = SafeArea(
+          top: false,
+          child: Column(children: [
+            if (type == NotificationType.MESSAGE)
+              const Padding(
+                  padding: EdgeInsets.all(10), child: AnnouncementEntry()),
+            Expanded(
+                child: Center(
+                    child: TextButton(
+                        onPressed: () => Get.toNamed('/login'),
+                        child: const Text('登录后查看私信与酷安通知')))),
+          ]));
+      if (widget.embedded) return body;
+      return Scaffold(appBar: AppBar(title: Text(_title)), body: body);
     }
     _controllerUsed = true;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_title),
-        bottom: const PreferredSize(
-          preferredSize: Size.zero,
-          child: Divider(height: 1),
-        ),
-      ),
-      body: commonBody(
+    final body = commonBody(
         _notificationController,
         itemBuilder: type == NotificationType.MESSAGE
             ? (data) => Obx(() => MessageCard(
@@ -125,7 +130,17 @@ class _NotificationPageState extends State<NotificationPage> {
                 ),
               ])
             : null,
+      );
+    if (widget.embedded) return body;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_title),
+        bottom: const PreferredSize(
+          preferredSize: Size.zero,
+          child: Divider(height: 1),
+        ),
       ),
+      body: body,
     );
   }
 }
