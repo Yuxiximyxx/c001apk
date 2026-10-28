@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_miuix/miuix.dart';
 import 'package:get/get.dart';
 
 import '../../components/cards/message_first_card.dart'
     show messageFirstCardRow;
-import '../../pages/history/history_page.dart' show HistoryPage, HistoryType;
-import '../../pages/ffflist/ffflist_page.dart' show FFFListPage, FFFListType;
+import '../../pages/history/history_page.dart' show HistoryType;
+import '../../pages/ffflist/ffflist_page.dart' show FFFListType;
 
-Widget messageSeconfCard(
-    bool isLogin, BuildContext context, Function() onNotificationTap,
-    [int? notificationBadge]) {
-  return MiuixCard(
-    cornerRadius: 24,
+Widget messageSeconfCard(bool isLogin, BuildContext context) {
+  return Material(
+    clipBehavior: Clip.hardEdge,
+    borderRadius: const BorderRadius.all(Radius.circular(12)),
+    color: Theme.of(context).colorScheme.onInverseSurface,
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -21,7 +20,7 @@ Widget messageSeconfCard(
           [
             '本地收藏',
             '浏览历史',
-            '消息通知',
+            '我的常去',
           ],
           [
             () => Get.toNamed(
@@ -32,21 +31,17 @@ Widget messageSeconfCard(
                   '/history',
                   arguments: {'type': HistoryType.History},
                 ),
-            // The notification sheet itself gates each entry: guests may
-            // only open 私信与信息 (which hosts the announcement inbox).
-            onNotificationTap,
+            isLogin
+                ? () => Get.toNamed(
+                      '/ffflist',
+                      arguments: {'type': FFFListType.RECENT},
+                    )
+                : () {},
           ],
           [
             Icons.archive_outlined,
             Icons.history,
-            Icons.notifications_outlined,
-          ],
-          [null, null, notificationBadge],
-          [
-            const HistoryPage(type: HistoryType.Favorite),
-            const HistoryPage(type: HistoryType.History),
-            // 消息通知 opens a modal sheet, not a page: no anchored target.
-            null,
+            Icons.my_location,
           ],
         ),
         messageFirstCardRow(
@@ -81,12 +76,6 @@ Widget messageSeconfCard(
             Icons.star_border,
             Icons.favorite_border,
             Icons.messenger_outline,
-          ],
-          null,
-          [
-            isLogin ? const FFFListPage(type: FFFListType.COLLECTION) : null,
-            isLogin ? const FFFListPage(type: FFFListType.LIKE) : null,
-            isLogin ? const FFFListPage(type: FFFListType.REPLY) : null,
           ],
         ),
       ],

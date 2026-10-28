@@ -7,10 +7,16 @@ class FeedNavigation extends InheritedWidget {
       required this.openFeed,
       required this.selectedId,
       this.paneCapable = false,
+      this.compact = false,
       required super.child});
 
   final bool Function(String) openFeed;
   final String? selectedId;
+  final bool compact;
+
+  static bool compactOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<FeedNavigation>()?.compact ??
+      false;
 
   /// True when [openFeed] can actually present the feed beside the list
   /// (split reading pane). When false, [open] falls back to pushing a route,
@@ -28,5 +34,7 @@ class FeedNavigation extends InheritedWidget {
 
   @override
   bool updateShouldNotify(FeedNavigation oldWidget) =>
-      oldWidget.selectedId != selectedId || oldWidget.paneCapable != paneCapable;
+      oldWidget.selectedId != selectedId ||
+          oldWidget.paneCapable != paneCapable ||
+          oldWidget.compact != compact;
 }

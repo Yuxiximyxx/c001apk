@@ -8,6 +8,7 @@ import '../../../components/expressive_loading_indicator.dart';
 import '../../../components/expressive_refresh_indicator.dart';
 import '../../../components/glass_surface.dart';
 import '../../../components/source_container.dart';
+
 import '../../../pages/home/app/app_list_controller.dart';
 import '../../../pages/home/return_top_controller.dart';
 import '../../../utils/extensions.dart';
@@ -112,6 +113,7 @@ class _AppListPageState extends State<AppListPage>
                     reverseCurve: AppAnim.exitCurve,
                   )),
                   child: GlassFab(
+
                     onPressed: () => Get.toNamed('/appUpdate'),
                     tooltip: '更新',
                     icon: Icons.update,

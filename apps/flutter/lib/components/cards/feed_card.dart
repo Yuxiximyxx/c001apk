@@ -13,12 +13,18 @@ import '../../components/like_button.dart';
 import '../../components/no_splash_factory.dart';
 import '../../components/source_container.dart';
 import '../feed_navigation.dart';
+import '../content_filter_gate.dart';
+import '../content_filter_text.dart';
+import '../../logic/content_filter/content_filter_projection.dart';
+import '../../logic/content_filter/content_filter_rule.dart';
 import '../../logic/model/feed/datum.dart';
+import '../../logic/media/feed_media_context.dart';
 import '../../utils/date_util.dart';
 import '../../utils/extensions.dart';
 import '../../utils/global_data.dart';
 import '../../utils/storage_util.dart';
 import '../../utils/utils.dart';
+import '../../utils/markdown_content.dart';
 
 class FeedCard extends StatelessWidget {
   const FeedCard({
@@ -52,9 +58,11 @@ class FeedCard extends StatelessWidget {
       false;
 
   Widget _content(BuildContext context, {required VoidCallback onViewFeed}) {
+    final compact = !isFeedContent && FeedNavigation.compactOf(context);
     return Padding(
       padding: EdgeInsets.only(bottom: isFeedContent ? 12 : 10),
       child: Column(
+        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           header(
@@ -69,18 +77,23 @@ class FeedCard extends StatelessWidget {
               }
             },
           ),
-          ..._message(),
-          if (!data.picArr.isNullOrEmpty) _image(),
-          if (!data.forwardSourceType.isNullOrEmpty)
-            _forwardSourceFeed(context),
-          if (!data.extraUrl.isNullOrEmpty) _extraUrl(context),
-          if (!data.replyRows.isNullOrEmpty) _hotReply(context, onViewFeed),
+          if (compact)
+            _summary(context)
+          else ...[
+            ..._message(),
+            if (!data.picArr.isNullOrEmpty) _image(),
+            if (!data.forwardSourceType.isNullOrEmpty)
+              _forwardSourceFeed(context),
+            if (!data.extraUrl.isNullOrEmpty) _extraUrl(context),
+            if (!data.replyRows.isNullOrEmpty) _hotReply(context),
+          ],
           bottomInfo(context, data, isFeedContent, onViewFeed, () {
             if (onLike != null) {
               onLike!(data.id, data.userAction?.like);
             }
           }),
-          if (data.targetRow != null || !data.relationRows.isNullOrEmpty)
+          if (!compact &&
+              (data.targetRow != null || !data.relationRows.isNullOrEmpty))
             _rows(context),
         ],
       ),
@@ -88,15 +101,19 @@ class FeedCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ContentFilterGate(
+      data: data, scope: FilterScope.feed, builder: _buildVisible);
+
+  Widget _buildVisible(BuildContext context) {
     if (isFeedContent) {
       return Material(
         child: InkWell(
           highlightColor: Colors.transparent,
           splashColor: Colors.transparent,
           splashFactory: NoSplashFactory(),
-          onLongPress: () =>
-              Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
+          onLongPress: () => Get.toNamed('/copy', parameters: {
+            'text': ContentFilterProjection.displayMessage(data)
+          }),
           child: _content(context, onViewFeed: () => _onViewFeed(context)),
         ),
       );
@@ -105,8 +122,9 @@ class FeedCard extends StatelessWidget {
       final card = MiuixCard(
         cornerRadius: 24,
         onPressed: () => _onViewFeed(context),
-        onLongPress: () =>
-            Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
+        onLongPress: () => Get.toNamed('/copy', parameters: {
+          'text': ContentFilterProjection.displayMessage(data)
+        }),
         child: _content(context, onViewFeed: () => _onViewFeed(context)),
       );
       // Reading-pane selection highlight (upstream FeedNavigation): outline
@@ -132,10 +150,61 @@ class FeedCard extends StatelessWidget {
       closedBuilder: (context, open) => MiuixCard(
         cornerRadius: 24,
         onPressed: open,
-        onLongPress: () =>
-            Get.toNamed('/copy', parameters: {'text': data.message.orEmpty}),
+        onLongPress: () => Get.toNamed('/copy', parameters: {
+          'text': ContentFilterProjection.displayMessage(data)
+        }),
         child: _content(context, onViewFeed: open),
       ),
+    );
+  }
+
+  Widget _summary(BuildContext context) {
+    final pictures = data.picArr ?? <String>[];
+    final media = mediaGalleryArguments(pictures,
+        mediaItems: mediaForDatum(data),
+        contentId: data.id?.toString())['mediaItems'] as List<FeedMedia>;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (!data.messageTitle.isNullOrEmpty)
+          Text(Utils.parseHtmlString(data.messageTitle!),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+        ContentFilterText(
+            key: ValueKey('feed-summary:${data.id}'),
+            source: data.message ?? '',
+            builder: (message) => Text(
+                Utils.parseHtmlString(MarkdownContent.parse(message).preview),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, height: 1.5))),
+        if (pictures.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: SizedBox(
+                height: 72,
+                child: Row(children: [
+                  for (var i = 0; i < pictures.length && i < 3; i++) ...[
+                    if (i > 0) const SizedBox(width: 4),
+                    Expanded(
+                        child: GestureDetector(
+                      onTap: () => Get.toNamed('/imageview',
+                          arguments: mediaGalleryArguments(pictures,
+                              mediaItems: media,
+                              contentId: data.id?.toString(),
+                              initialPage: i)),
+                      child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: mediaThumbnail(media[i],
+                              width: double.infinity,
+                              height: 72,
+                              fit: BoxFit.cover)),
+                    )),
+                  ],
+                ])),
+          ),
+      ]),
     );
   }
 
@@ -152,6 +221,8 @@ class FeedCard extends StatelessWidget {
           return image(
             maxWidth,
             data.picArr!,
+            mediaItems: mediaForDatum(data),
+            contentId: data.id?.toString(),
           );
         },
       ),
@@ -160,23 +231,59 @@ class FeedCard extends StatelessWidget {
 
   Widget _forwardSourceFeed(BuildContext context) {
     final source = data.forwardSourceFeed;
-    final color = isFeedContent
-        ? Theme.of(context).colorScheme.onInverseSurface
-        : Theme.of(context).colorScheme.surface;
-    Widget block(VoidCallback? onTap) {
-      return Material(
-        color: color,
+    if (source == null) return _forwardSourceVisible(context);
+    return ContentFilterGate(
+        data: source, scope: FilterScope.feed, builder: _forwardSourceVisible);
+  }
+
+  Widget _forwardSourceVisible(BuildContext context) {
+    final source = data.forwardSourceFeed;
+    if (source == null || _paneCapable(context)) {
+      return _forwardSourcePlain(context);
+    }
+    return FeedContainer(
+      feedId: '${source.id}',
+      closedColor: isFeedContent
+          ? Theme.of(context).colorScheme.onInverseSurface
+          : Theme.of(context).colorScheme.surface,
+      closedShape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+      closedBuilder: (context, open) =>
+          _forwardSourcePlain(context, onTapOverride: open),
+    );
+  }
+
+  Widget _forwardSourcePlain(BuildContext context,
+      {VoidCallback? onTapOverride}) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        left: isFeedContent ? 16 : 10,
+        top: 10,
+        right: isFeedContent ? 16 : 10,
+      ),
+      child: Material(
+        color: isFeedContent
+            ? Theme.of(context).colorScheme.onInverseSurface
+            : Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
-          onTap: onTap,
-          onLongPress: source != null
-              ? () => Get.toNamed('/copy',
-                  parameters: {'text': source.message ?? ''})
+          onTap: onTapOverride ??
+              (data.forwardSourceFeed != null
+                  ? () => FeedNavigation.open(
+                      context, '${data.forwardSourceFeed?.id}')
+                  : null),
+          onLongPress: data.forwardSourceFeed != null
+              ? () => Get.toNamed('/copy', parameters: {
+                    'text': ContentFilterProjection.displayMessage(
+                        data.forwardSourceFeed!)
+                  })
               : null,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(10),
-            child: source == null
+            child: data.forwardSourceFeed == null
                 ? Text(
                     '动态已被删除',
                     maxLines: 1,
@@ -189,48 +296,51 @@ class FeedCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (!source.messageTitle.isNullOrEmpty) ...[
+                      if (!data
+                          .forwardSourceFeed!.messageTitle.isNullOrEmpty) ...[
                         htmlText(
-                            '<a class="feed-link-uname" href="/u/${source.uid}">@${source.username}</a>: ${source.messageTitle}'),
-                        FeedText(source.message ?? '', preview: true),
+                            '<a class="feed-link-uname" href="/u/${data.forwardSourceFeed?.uid}">@${data.forwardSourceFeed?.username}</a>: ${data.forwardSourceFeed?.messageTitle}',
+                            picArr: data.forwardSourceFeed!.picArr,
+                            mediaItems: mediaForDatum(data.forwardSourceFeed!),
+                            contentId: data.forwardSourceFeed!.id?.toString()),
+                        ContentFilterText(
+                            source: data.forwardSourceFeed!.message ?? '',
+                            builder: (message) => FeedText(message,
+                                preview: true,
+                                picArr: data.forwardSourceFeed!.picArr,
+                                mediaItems:
+                                    mediaForDatum(data.forwardSourceFeed!),
+                                contentId:
+                                    data.forwardSourceFeed!.id?.toString())),
                       ],
-                      if (source.messageTitle.isNullOrEmpty)
-                        FeedText(
-                            '<a class="feed-link-uname" href="/u/${source.uid}">@${source.username}</a>:\n${source.message}',
-                            preview: true),
-                      if (!source.picArr.isNullOrEmpty) ...[
+                      if (data.forwardSourceFeed!.messageTitle.isNullOrEmpty)
+                        ContentFilterText(
+                            source: data.forwardSourceFeed!.message ?? '',
+                            builder: (message) => FeedText(
+                                '<a class="feed-link-uname" href="/u/${data.forwardSourceFeed?.uid}">@${data.forwardSourceFeed?.username}</a>:\n$message',
+                                preview: true,
+                                picArr: data.forwardSourceFeed!.picArr,
+                                mediaItems:
+                                    mediaForDatum(data.forwardSourceFeed!),
+                                contentId:
+                                    data.forwardSourceFeed!.id?.toString())),
+                      if (!data.forwardSourceFeed!.picArr.isNullOrEmpty) ...[
                         const SizedBox(height: 10),
                         LayoutBuilder(
-                          builder: (context, constraints) =>
-                              image(constraints.maxWidth, source.picArr!),
+                          builder: (context, constraints) => image(
+                              constraints.maxWidth,
+                              data.forwardSourceFeed!.picArr!,
+                              mediaItems:
+                                  mediaForDatum(data.forwardSourceFeed!),
+                              contentId:
+                                  data.forwardSourceFeed!.id?.toString()),
                         ),
                       ],
                     ],
                   ),
           ),
         ),
-      );
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        left: isFeedContent ? 16 : 10,
-        top: 10,
-        right: isFeedContent ? 16 : 10,
       ),
-      child: source == null
-          ? block(null)
-          : _paneCapable(context)
-              ? block(() => FeedNavigation.open(context, '${source.id}'))
-              : FeedContainer(
-                  feedId: '${source.id}',
-                  closedColor: color,
-                  closedShape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                  ),
-                  closedBuilder: (context, open) => block(open),
-                ),
     );
   }
 
@@ -307,7 +417,14 @@ class FeedCard extends StatelessWidget {
     );
   }
 
-  Widget _hotReply(BuildContext context, VoidCallback onViewFeed) {
+  Widget _hotReply(BuildContext context) {
+    return ContentFilterGate(
+        data: data.replyRows!.first,
+        scope: FilterScope.comment,
+        builder: _hotReplyVisible);
+  }
+
+  Widget _hotReplyVisible(BuildContext context) {
     var reply = data.replyRows![0];
     var replyPic = reply.picArr.isNullOrEmpty
         ? ''
@@ -319,18 +436,25 @@ class FeedCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: InkWell(
-          onTap: onViewFeed,
-          onLongPress: () =>
-              Get.toNamed('/copy', parameters: {'text': reply.message.orEmpty}),
+          onTap: () => _onViewFeed(context),
+          onLongPress: () => Get.toNamed('/copy', parameters: {
+            'text': ContentFilterProjection.displayMessage(reply)
+          }),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(10),
-            child: htmlText(
-              """<a class="feed-link-uname" href="/u/${reply.uid}">${reply.userInfo?.username}</a>: ${reply.message}$replyPic""",
-              fontSize: 14,
-              onShowTotalReply: onViewFeed,
-              picArr: reply.picArr,
-            ),
+            child: ContentFilterText(
+                source: reply.message ?? '',
+                builder: (message) => htmlText(
+                      """<a class="feed-link-uname" href="/u/${reply.uid}">${reply.userInfo?.username}</a>: $message$replyPic""",
+                      fontSize: 14,
+                      onShowTotalReply: _onViewFeed,
+                      picArr: reply.picArr,
+                      mediaItems:
+                          mediaForDatum(reply, type: MediaContentType.reply),
+                      contentId: reply.id?.toString(),
+                      contentType: MediaContentType.reply,
+                    )),
           ),
         ),
       ),
@@ -386,6 +510,9 @@ class FeedCard extends StatelessWidget {
             data.messageTitle.orEmpty,
             fontSize: 16,
             isBold: true,
+            picArr: data.picArr,
+            mediaItems: mediaForDatum(data),
+            contentId: data.id?.toString(),
           ),
         ),
       Padding(
@@ -394,13 +521,18 @@ class FeedCard extends StatelessWidget {
           top: 5,
           right: isFeedContent ? 16 : 10,
         ),
-        child: FeedText(
-          data.message.orEmpty,
-          fontSize: 16,
-          preview: !isFeedContent,
-          forcePlain: forcePlain,
-          picArr: data.picArr,
-        ),
+        child: ContentFilterText(
+            key: ValueKey('feed-message:${data.id}'),
+            source: data.message.orEmpty,
+            builder: (message) => FeedText(
+                  message,
+                  fontSize: 16,
+                  preview: !isFeedContent,
+                  forcePlain: forcePlain,
+                  picArr: data.picArr,
+                  mediaItems: mediaForDatum(data),
+                  contentId: data.id?.toString(),
+                )),
       )
     ];
   }

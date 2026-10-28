@@ -4,12 +4,13 @@ import 'dart:io';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_miuix/miuix.dart';
 
-import '../../utils/miuix_palette.dart';
 import 'package:get/get.dart';
 
-import '../../components/source_container.dart';
+import '../../components/mouse_drag_scroll.dart';
+import '../../components/liquid_top_bar.dart';
+import '../../components/liquid_navigation_bar.dart';
+import '../../utils/storage_util.dart';
 
 import '../../pages/home/app/app_list_page.dart';
 import '../../pages/home/feed/home_feed_page.dart';
@@ -39,7 +40,14 @@ enum TabType {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage(
+      {super.key,
+      this.useRail = false,
+      this.onFeedSelected,
+      this.onPublishVisibilityChanged});
+
+  final bool useRail;
+  final ValueChanged<bool>? onFeedSelected, onPublishVisibilityChanged;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -62,14 +70,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     TabType.COOLPIC,
   ];
 
-  final _pages = [
-    if (Platform.isAndroid) const AppListPage(),
-    const HomeFeedPage(tabType: TabType.FEED),
-    const HomeFeedPage(tabType: TabType.HOT),
-    const HomeTopicPage(tabType: TabType.TOPIC),
-    const HomeTopicPage(tabType: TabType.PRODUCT),
-    const HomeFeedPage(tabType: TabType.COOLPIC),
-  ];
+  List<Widget> get _pages => [
+        if (Platform.isAndroid) const AppListPage(),
+        HomeFeedPage(
+            tabType: TabType.FEED,
+            useRail: widget.useRail,
+            onPublishVisibilityChanged: widget.onPublishVisibilityChanged),
+        const HomeFeedPage(tabType: TabType.HOT),
+        const HomeTopicPage(tabType: TabType.TOPIC),
+        const HomeTopicPage(tabType: TabType.PRODUCT),
+        const HomeFeedPage(tabType: TabType.COOLPIC),
+      ];
 
   void scrollToTop(int index) {
     _pageScrollController.setIndex(_tabTypes[index].index);
@@ -84,6 +95,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       initialIndex: _tabTypes.indexOf(TabType.FEED),
       length: _tabTypes.length,
     );
+    _tabController.addListener(() => widget.onFeedSelected
+        ?.call(_tabTypes[_tabController.index] == TabType.FEED));
 
     _returnTopSubscription = _pageScrollController.index.listen((index) {
       if (index == 998) {
@@ -101,126 +114,42 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: miuixPageBackground(context),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: miuixPageBackground(context),
-        surfaceTintColor: Colors.transparent,
-        titleSpacing: 16,
-        title: Row(
-          children: [
-            const Text(
-              '酷安',
-              style: TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: SearchContainer(
-                closedColor: Theme.of(context).brightness == Brightness.light
-                    ? const Color(0xFFECECEE)
-                    : MiuixTheme.of(context).colors.background,
-                closedBuilder: (context, open) => GestureDetector(
-                  onTap: open,
-                  child: Container(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.light
-                          ? const Color(0xFFECECEE)
-                          : MiuixTheme.of(context).colors.background,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.search,
-                          size: 16,
-                          color: MiuixTheme.of(context)
-                              .colors
-                              .onSurface
-                              .withValues(alpha: 0.45),
-                        ),
-                        const SizedBox(width: 7),
-                        Text(
-                          '搜索帖子、用户',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: MiuixTheme.of(context)
-                                .colors
-                                .onSurface
-                                .withValues(alpha: 0.45),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: AnimatedBuilder(
-            animation: _tabController,
-            builder: (_, __) {
-              final colors = MiuixTheme.of(context).colors;
-              return Align(
-                alignment: Alignment.centerLeft,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < _tabTypes.length; i++)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: GestureDetector(
-                            onTap: () {
-                              final sameTab = i == _tabController.index &&
-                                  !_tabController.indexIsChanging;
-                              _tabController.animateTo(i);
-                              if (sameTab) {
-                                scrollToTop(i);
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 15, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: i == _tabController.index
-                                    ? colors.primary
-                                    : colors.background,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                _tabTypes[i].label,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: i == _tabController.index
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                  color: i == _tabController.index
-                                      ? Colors.white
-                                      : colors.onSurface,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+    return LiquidTopBarScaffold(
+      glassTitle: (context) => AnimatedBuilder(
+        animation: _tabController,
+        builder: (context, _) => LiquidNavigationBar.tabs(
+          selectedIndex: _tabController.index,
+          labels: _tabTypes.map((type) => type.label).toList(),
+          level: GStorage.liquidGlassLevel,
+          onDestinationSelected: (index) {
+            if (_tabController.index == index) {
+              scrollToTop(index);
+            } else {
+              _tabController.animateTo(index);
+            }
+          },
+
         ),
       ),
+      title: MouseDragScroll(
+        child: TabBar(
+          controller: _tabController,
+          tabs: _tabTypes.map((type) => Tab(text: type.label)).toList(),
+          isScrollable: true,
+          dividerColor: Theme.of(context).platform == TargetPlatform.android
+              ? Colors.transparent
+              : null,
+          tabAlignment: Theme.of(context).platform == TargetPlatform.android
+              ? TabAlignment.start
+              : null,
+          onTap: (index) {
+            if (!_tabController.indexIsChanging) {
+              scrollToTop(index);
+            }
+          },
+        ),
+      ),
+      onSearch: () => Get.toNamed('/search'),
       body: TabBarView(controller: _tabController, children: _pages),
     );
   }

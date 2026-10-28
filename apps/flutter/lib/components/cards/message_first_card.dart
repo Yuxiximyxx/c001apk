@@ -7,13 +7,15 @@ import '../../pages/ffflist/ffflist_page.dart' show FFFListPage, FFFListType;
 import '../../utils/extensions.dart';
 import '../../utils/miuix_palette.dart';
 
-Widget messageFirstCard(
-  bool isLogin,
-  BuildContext context,
-  List<int?>? values,
-) {
-  return MiuixCard(
-    cornerRadius: 24,
+Widget messageFirstCard(bool isLogin, BuildContext context, List<int?>? values,
+    {bool transparent = false}) {
+  return Material(
+    clipBehavior: Clip.hardEdge,
+    borderRadius: const BorderRadius.all(Radius.circular(12)),
+    color: transparent
+        ? Colors.transparent
+        : Theme.of(context).colorScheme.onInverseSurface,
+
     child: messageFirstCardRow(
       context,
       values,

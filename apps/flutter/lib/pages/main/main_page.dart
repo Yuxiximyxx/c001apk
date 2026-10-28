@@ -10,10 +10,15 @@ import '../../pages/main/main_controller.dart';
 import '../../pages/message/message_page.dart';
 import '../../logic/accounts/account_store.dart';
 import '../../components/adaptive_reading_pane.dart';
+import '../../components/app_navigation_history.dart';
 import '../../components/feed_reading_pane.dart';
 import '../../components/expressive_loading_indicator.dart';
 import '../../components/floating_dock_bar.dart';
 import '../../../components/app_anim.dart';
+import '../local_follow/local_follow_page.dart';
+import '../../components/home_publish_action.dart';
+import '../../components/scroll_hiding_action.dart';
+import '../../utils/global_data.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -22,7 +27,11 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> {
+class _MainPageState extends State<MainPage>
+    with SingleTickerProviderStateMixin {
+  bool _homeFeedSelected = true;
+  late final _publishAnimation = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 300), value: 1);
   final ReturnTopController _pageScrollController =
       Get.put(ReturnTopController(), tag: 'home');
   int _selectedIndex = 0;
@@ -58,6 +67,8 @@ class _MainPageState extends State<MainPage> {
       _contrller.dispose();
       _contrller = PageController(initialPage: _selectedIndex);
       setState(() => _resetting = false);
+      _homeFeedSelected = true;
+      _publishAnimation.value = 1;
       _mainController.checkLoginInfo();
     });
   }
@@ -68,6 +79,7 @@ class _MainPageState extends State<MainPage> {
     _indexSctream.close();
     _contrller.dispose();
     _dockPageBackdrop.dispose();
+    _publishAnimation.dispose();
     Get.delete<ReturnTopController>(tag: 'home');
     Get.delete<MainController>();
     super.dispose();
@@ -75,34 +87,51 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
-    const pages = [
-      HomePage(),
-      MessagePage(),
-    ];
-
-    const railDestinations = <NavigationRailDestination>[
-      NavigationRailDestination(
-        selectedIcon: Icon(Icons.home),
-        icon: Icon(Icons.home_outlined),
-        label: Text('首页'),
-      ),
-      NavigationRailDestination(
-        selectedIcon: Icon(Icons.person),
-        icon: Icon(Icons.person_outline),
-        label: Text('我的'),
-      ),
-    ];
-
-    // All three destinations share the root route. Let Android handle back
+    // All destinations share the root route. Let Android handle back
     // to the launcher without changing the selected destination.
     return _resetting
         ? const Scaffold(body: Center(child: ExpressiveLoadingIndicator()))
         : LayoutBuilder(
-            builder: (_, constriants) {
-              final useRail = constriants.maxWidth -
+            builder: (_, constraints) {
+              final useRail = constraints.maxWidth -
                       MediaQuery.paddingOf(context).horizontal >=
                   600;
-
+              final pages = [
+                HomePage(
+                  useRail: useRail,
+                  onFeedSelected: (selected) {
+                    if (_homeFeedSelected != selected) {
+                      setState(() => _homeFeedSelected = selected);
+                    }
+                  },
+                  onPublishVisibilityChanged: (visible) {
+                    if (visible) {
+                      _publishAnimation.forward();
+                    } else {
+                      _publishAnimation.reverse();
+                    }
+                  },
+                ),
+                const FollowFeedPage(),
+                const MessagePage(),
+              ];
+              const railDestinations = <NavigationRailDestination>[
+                NavigationRailDestination(
+                  selectedIcon: Icon(Icons.home),
+                  icon: Icon(Icons.home_outlined),
+                  label: Text('首页'),
+                ),
+                NavigationRailDestination(
+                  selectedIcon: Icon(Icons.feed),
+                  icon: Icon(Icons.feed_outlined),
+                  label: Text('关注'),
+                ),
+                NavigationRailDestination(
+                  selectedIcon: Icon(Icons.person),
+                  icon: Icon(Icons.person_outline),
+                  label: Text('我的'),
+                ),
+              ];
               return Scaffold(
                 extendBody: true,
                 body: SafeArea(
@@ -118,6 +147,14 @@ class _MainPageState extends State<MainPage> {
                           selectedIndex: snapshot.data,
                           onDestinationSelected: onDestinationSelected,
                           labelType: NavigationRailLabelType.all,
+                          trailing: GlobalData().isLogin &&
+                                  snapshot.data == 0 &&
+                                  _homeFeedSelected
+                              ? ScrollHidingAction(
+                                  animation: _publishAnimation,
+                                  child:
+                                      const HomePublishAction(extended: true))
+                              : null,
                         ),
                       ),
                     Expanded(
@@ -125,6 +162,7 @@ class _MainPageState extends State<MainPage> {
                         backdrop: _dockPageBackdrop,
                         child: FeedReadingPane(
                           paneKey: _readingKey,
+                          leadingInset: useRail ? 80 : 0,
                           child: PageView(
                             physics: const NeverScrollableScrollPhysics(),
                             controller: _contrller,
@@ -153,7 +191,8 @@ class _MainPageState extends State<MainPage> {
 
   void onDestinationSelected(int index) {
     if (_resetting || !_contrller.hasClients) return;
-    _readingKey.currentState?.close();
+    AppNavigationHistoryScope.maybeOf(context)?.discardForward();
+    _readingKey.currentState?.reset();
     if (index == 0 && _selectedIndex == 0) {
       _pageScrollController.setIndex(998);
     }

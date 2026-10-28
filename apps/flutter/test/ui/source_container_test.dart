@@ -238,7 +238,7 @@ void main() {
                       messageFirstCard(true, context, const [3, 4, 5])),
               Builder(
                   builder: (context) =>
-                      messageSeconfCard(true, context, () {})),
+                      messageSeconfCard(true, context)),
             ],
           ),
         ),

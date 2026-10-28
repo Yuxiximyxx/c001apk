@@ -91,9 +91,9 @@ class FloatingDockBar extends StatefulWidget {
   static const double height = 68;
   static const double _pillInset = 6;
 
-  static const labels = ['首页', '我的'];
-  static const _icons = [Icons.home_outlined, Icons.person_outline];
-  static const _selectedIcons = [Icons.home, Icons.person];
+  static const labels = ['首页', '关注', '我的'];
+  static const _icons = [Icons.home_outlined, Icons.feed_outlined, Icons.person_outline];
+  static const _selectedIcons = [Icons.home, Icons.feed, Icons.person];
 
   @override
   State<FloatingDockBar> createState() => _FloatingDockBarState();

@@ -375,6 +375,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
                         ),
                       ),
                     ],
+
                   ],
                 ),
         ),
