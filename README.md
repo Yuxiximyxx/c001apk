@@ -1,4 +1,13 @@
-> **本仓库是 [TG-Twilight/c001apk](https://github.com/TG-Twilight/c001apk) 的个人 fork。** 应用名「**宽**」，在上游基础上做 MIUIX（HyperOS 风格）定制：底部导航只留「首页 / 我的」、MIUIX 毛玻璃底栏与卡片、悬浮回复卡片、话题页分段排序等。正式签名安装包见 [本仓库 Releases](https://github.com/Yuxiximyxx/c001apk/releases)（当前版本 v1.3.5-miuix6），下方为上游 README 原文。
+> **本仓库是 [TG-Twilight/c001apk](https://github.com/TG-Twilight/c001apk) 的个人 fork。** 应用名「**宽**」，在上游基础上做 MIUIX（HyperOS 风格）深度定制，当前版本 **[v1.5.0-miuix26](https://github.com/Yuxiximyxx/c001apk/releases/tag/v1.5.0-miuix26)**，正式签名安装包见 [本仓库 Releases](https://github.com/Yuxiximyxx/c001apk/releases)。下方为上游 README 原文。
+>
+> **与上游的主要差异**
+> - 液态玻璃悬浮 Dock 与玻璃顶栏（fluid_glass 引擎，Kyant 同源配方）：顶栏药丸与底栏药丸同源，玻璃录制每页单例共享、滚动期动态降分辨率
+> - 底部导航四功能「首页 / 关注 / 消息 / 我的」；消息（通知 / 私信 / 我的回复）为独立页，我的页含资料卡内入口行与全展开的「我的常去」
+> - 玻璃材质三档可切换（毛玻璃 / 磨砂玻璃 / 液态玻璃，默认磨砂）+ 参数滑杆
+> - 键盘弹起无垫底、悬浮回复卡片、设置项玻璃下拉菜单、首启无引导直达主页
+> - 本地收藏功能已移除（线上「我的收藏」不受影响）
+>
+> **注意**：本 fork 使用自有签名，与上游官方包签名不同，不能直接覆盖安装上游版，需先卸载再装。维护方式：本地定制已定版，后续每周同步一次上游更新并发布。
 
 <div align="center">
 
