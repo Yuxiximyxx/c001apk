@@ -113,6 +113,22 @@ void main() {
   Future<void> next(WidgetTester tester) =>
       tap(tester, find.byKey(const ValueKey('onboarding-next')));
 
+  /// Finishing/skipping persists through real Hive IO (putAll/put + flush).
+  /// The persist tap only gives that IO a fixed 50ms real window; once the
+  /// test is back on the fake clock, pumpAndSettle returns as soon as the
+  /// (static, determinate) tree stops scheduling frames and does NOT wait
+  /// for the in-flight write, so asserting completion immediately races the
+  /// disk on a loaded machine. Poll in real time (bounded) until the save
+  /// lands; the assertions after this still verify the same outcomes and
+  /// still fail if completion never happens.
+  Future<void> awaitCompleted(WidgetTester tester) async {
+    for (var i = 0; i < 200 && !state.completed; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump();
+    }
+  }
+
   testWidgets(
       'four steps keep draft local then finish applies explicit choices',
       (tester) async {
@@ -161,6 +177,7 @@ void main() {
     await show(tester);
     await tap(tester, find.text('我也会发布'));
     await tap(tester, find.text('跳过引导'), persist: true);
+    await awaitCompleted(tester);
     expect(GStorage.hideHomePublishButton, isTrue);
     expect(filter.enabled, isFalse);
     expect(state.completed, isTrue);
@@ -240,6 +257,7 @@ void main() {
     expect(find.text('4 / 4'), findsOneWidget);
     await tap(tester, find.byKey(const ValueKey('onboarding-next')),
         persist: true);
+    await awaitCompleted(tester);
     expect(state.completed, isTrue);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -263,6 +281,7 @@ void main() {
       }
       await tap(tester, find.byKey(const ValueKey('onboarding-next')),
           persist: true);
+      await awaitCompleted(tester);
       expect(state.completed, isTrue);
       expect(GStorage.hideHomePublishButton, isFalse);
       expect(tester.takeException(), isNull);
