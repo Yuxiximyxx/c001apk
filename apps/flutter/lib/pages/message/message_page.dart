@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../components/expressive_refresh_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Response;
@@ -62,6 +64,19 @@ class _MessagePageState extends State<MessagePage>
         ],
       );
 
+  /// 标题玻璃片宽度（与关注页 _titleWidth 同口径：文字宽 + 40）。
+  double _titleWidth(BuildContext context, String label) {
+    final painter = TextPainter(
+        text: TextSpan(
+            text: label, style: Theme.of(context).textTheme.titleLarge),
+        textScaler: MediaQuery.textScalerOf(context),
+        textDirection: Directionality.of(context))
+      ..layout();
+    final width = painter.width + 40;
+    painter.dispose();
+    return width;
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -80,8 +95,23 @@ class _MessagePageState extends State<MessagePage>
         title: const Text('我的'),
         compactTitle: true,
         floatWithoutGlass: true,
-        glassTitle: (_) =>
-            const Align(alignment: Alignment.centerLeft, child: Text('我的')),
+        // 标题融进悬浮玻璃语言（miuix25 第三条口径①）：与关注页
+        // 标题同款的 LiquidGlassButton 玻璃片（纯展示、不可点），
+        // 不再是裸文字浮在顶区；右上两圆钮同为 LiquidGlassButton。
+        glassTitle: (context) => Align(
+          alignment: Alignment.centerLeft,
+          child: LiquidGlassButton(
+            height:
+                math.max(48, MediaQuery.textScalerOf(context).scale(20)),
+            width: _titleWidth(context, '我的'),
+            enabled: GStorage.liquidGlass,
+            level: GStorage.liquidGlassLevel,
+            tooltip: '我的',
+            onPressed: null,
+            child: Text('我的',
+                style: Theme.of(context).textTheme.titleLarge),
+          ),
+        ),
         glassActions: (context) => [
           for (final action in [
             (Icons.switch_account_outlined, '账号管理', '/accounts'),

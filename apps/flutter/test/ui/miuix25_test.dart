@@ -5,6 +5,7 @@ import 'package:c001apk_flutter/components/glass_surface.dart';
 import 'package:c001apk_flutter/components/liquid_navigation_bar.dart';
 import 'package:c001apk_flutter/components/liquid_top_bar.dart';
 import 'package:c001apk_flutter/components/page_backdrop_scope.dart';
+import 'package:c001apk_flutter/components/cards/message_header_card.dart';
 import 'package:c001apk_flutter/pages/message/message_page.dart';
 import 'package:c001apk_flutter/pages/message/messages_page.dart';
 import 'package:c001apk_flutter/utils/storage_util.dart';
@@ -263,6 +264,68 @@ void main() {
     expect(
         tester.getTopLeft(find.byType(basic.LiquidGlassPanel)).dy,
         greaterThanOrEqualTo(74 - 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('messages and my page: same structure in dark mode',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final dark = ThemeData(brightness: Brightness.dark);
+    // 深色下同理无顶板：正文覆下、视口顶到 0、AppBar 透明。
+    await tester.pumpWidget(
+        GetMaterialApp(theme: dark, home: const MessagesPage()));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<LiquidTopBarScaffold>(
+                find.byType(LiquidTopBarScaffold))
+            .overlayBody,
+        isTrue);
+    expect(tester.getTopLeft(find.byType(CustomScrollView)).dy, 0);
+    final messagesBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(messagesBar.backgroundColor, Colors.transparent);
+    expect(messagesBar.forceMaterialTransparency, isTrue);
+    await tester.pumpWidget(
+        GetMaterialApp(theme: dark, home: const MessagePage()));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<LiquidTopBarScaffold>(
+                find.byType(LiquidTopBarScaffold))
+            .overlayBody,
+        isTrue);
+    expect(tester.getTopLeft(find.byType(CustomScrollView)).dy, 0);
+    final myBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(myBar.backgroundColor, Colors.transparent);
+    expect(myBar.forceMaterialTransparency, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('my page: title and actions are glass, header has no board',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const GetMaterialApp(home: MessagePage()));
+    await tester.pumpAndSettle();
+    // 标题「我的」坐在 LiquidGlassButton 玻璃片里（与关注页标题
+    // 同款），不再是裸文字；右上两圆钮同为 LiquidGlassButton。
+    expect(
+        find.descendant(
+            of: find.byType(LiquidGlassButton), matching: find.text('我的')),
+        findsWidgets);
+    expect(find.byType(LiquidGlassButton), findsAtLeast(3),
+        reason: '标题片 + 账号管理 + 设置，三者同玻璃语言');
+    // 资料卡头的底板在玻璃模式下透明（无不透明白/黑板垫在顶区）：
+    // 取 MessageHeaderCard 最近的 ColoredBox 祖先即那块头底板。
+    final headerBoxes = tester.widgetList<ColoredBox>(find.ancestor(
+        of: find.byType(MessageHeaderCard),
+        matching: find.byType(ColoredBox)));
+    expect(headerBoxes.first.color, Colors.transparent);
     expect(tester.takeException(), isNull);
   });
 
