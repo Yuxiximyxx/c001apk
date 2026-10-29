@@ -72,7 +72,11 @@ class _MessagePageState extends State<MessagePage>
         SettingsBoxKey.liquidGlassLevel,
       ]),
       builder: (context, _, __) => LiquidTopBarScaffold(
-        overlayBody: false,
+        backdropIndex: 3,
+        // 顶区与主页/关注同构（miuix25 第三条）：去掉白色底板，
+        // 滚动内容覆到玻璃顶栏之下；置顶资料卡头靠自身顶部
+        // padding 吃掉顶栏 inset，首屏位置与布局不变（卡片仍
+        // 悬浮在内容上方，不改流内排布）。
         title: const Text('我的'),
         compactTitle: true,
         floatWithoutGlass: true,
@@ -121,9 +125,13 @@ class _MessagePageState extends State<MessagePage>
                       ? Colors.transparent
                       : Theme.of(context).colorScheme.surface,
                   child: Padding(
+                    // 顶部再吃脚手架给的 inset（玻璃覆下模式 = 顶栏
+                    // 高，非覆下时为 0）：置顶头钉在视口顶时，资料卡
+                    // 仍落在顶栏下方原位，顶栏玻璃悬浮在头的留白区
+                    // 之上，滚动内容从其下穿过。
                     padding: EdgeInsets.fromLTRB(
                         GStorage.floatingNavigation ? 12 : 0,
-                        10,
+                        10 + MediaQuery.paddingOf(context).top,
                         GStorage.floatingNavigation ? 12 : 0,
                         10),
                     child: Obx(() => MessageHeaderCard(

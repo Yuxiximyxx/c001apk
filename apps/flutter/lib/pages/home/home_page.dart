@@ -115,6 +115,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return LiquidTopBarScaffold(
+      backdropIndex: 0,
       glassTitle: (context) => AnimatedBuilder(
         animation: _tabController,
         builder: (context, _) => LiquidNavigationBar.tabs(

@@ -139,8 +139,12 @@ class _MessagesPageState extends State<MessagesPage>
             ),
             slivers: [
               SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                    10, 10, 10, 10 + MediaQuery.paddingOf(context).bottom),
+                // 顶部吃脚手架给的 inset（玻璃覆下模式 = 顶栏高，
+                // 与 CommonBody 的 10 + padding.top 同口径），首屏
+                // 位置与覆下前一致、滚动时内容过顶栏之下。
+                padding: EdgeInsets.fromLTRB(10,
+                    10 + MediaQuery.paddingOf(context).top,
+                    10, 10 + MediaQuery.paddingOf(context).bottom),
                 sliver: SliverToBoxAdapter(child: _notifications(context)),
               ),
             ],
@@ -180,7 +184,11 @@ class _MessagesPageState extends State<MessagesPage>
         SettingsBoxKey.liquidGlassLevel,
       ]),
       builder: (context, _, __) => LiquidTopBarScaffold(
-        overlayBody: false,
+        backdropIndex: 2,
+        // 顶区与主页/关注同构（miuix25 第三条）：正文覆到玻璃顶栏
+        // 之下滚动，不再留白色底板；首屏位置由各分段吃
+        // MediaQuery 顶部 inset 保持不变（CommonBody 系列表自带，
+        // 通知分段在 _segmentBody 里补）。
         title: _plainSegmentTitle(context),
         compactTitle: true,
         floatWithoutGlass: true,
@@ -225,7 +233,11 @@ class _MessagesPageState extends State<MessagesPage>
                 ),
                 child: KeyedSubtree(
                   key: ValueKey(_segment),
-                  child: _segmentBody(context),
+                  // Builder 让分段正文拿到脚手架改写后的 MediaQuery
+                  // （覆下模式顶部 inset），而不是页面外层 context。
+                  child: Builder(
+                    builder: (inner) => _segmentBody(inner),
+                  ),
                 ),
               ),
             ),

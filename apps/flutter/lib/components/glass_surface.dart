@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui
     show
         Canvas,
@@ -584,6 +585,97 @@ class RefractionSupport {
       _settled = true;
       return null;
     }
+  }
+}
+
+/// 选中药丸的玻璃参数（miuix25 共享定义）：底栏药丸在真机走
+/// fluid_glass 的 LiquidBottomTabs 本体，其药丸光学与弹簧在库内是
+/// 写死的 Kyant 原值；顶栏药丸（basic_glass 的 LiquidNavigationBar）
+/// 结构不同（横排文字 Tab、槽宽不等），无法直接套用组件本体，故把
+/// 同一组数值抽到这里成为两边的唯一事实源——顶栏药丸逐项引用，
+/// 测试钉死同值，禁止再在顶栏侧手调出另一套「看起来像」的参数。
+///
+/// 数值出处（fluid_glass 0.5.3 liquid_bottom_tabs.dart 与
+/// animation/damped_drag_animation.dart，逐项核对）：
+/// - 静止态药丸几乎全透：只在采样（页面经 accent 副本的 vibrancy +
+///   blur 8 + container 纱）之上叠一层中性纱——浅色 Black / 深色
+///   White，alpha = [restTintAlpha] × (1 − pressProgress)；按下再叠
+///   Black × [pressShadeAlpha] × pressProgress。**没有彩色纱**：
+///   container 纱与强调色都来自 [dockGlassColorsForSpec]（与底栏
+///   同一映射点），选中身份由强调色字形承担，不由药丸本体染色。
+/// - 药丸自身透镜只随按压长出：lens([lensBand]·p, [lensAmount]·p,
+///   色散恒开)，静止 p=0 时透镜为 0（副本侧的 24/24 透镜同样 ×p）。
+/// - 高光/阴影/内阴影全部 ×p：Highlight.standard 的 alpha 本身就是
+///   1.0，底栏直接以 pressProgress 覆写；内阴影 radius = 8·p。
+/// - 按压放大 [pressedScale] = 78/56（药丸行高 56→78 的 Kyant 原比）。
+abstract final class DockPillGlass {
+  /// 按压时药丸的放大倍率（78/56）。
+  static const double pressedScale = 78 / 56;
+
+  /// 静止中性纱的 alpha（× (1 − pressProgress)）。
+  static const double restTintAlpha = 0.10;
+
+  /// 按压压暗的 alpha（Black × pressProgress）。
+  static const double pressShadeAlpha = 0.03;
+
+  /// 药丸透镜带宽（dp，× pressProgress；静止为 0）。
+  static const double lensBand = 10;
+
+  /// 药丸透镜量（dp，× pressProgress；静止为 0）。
+  static const double lensAmount = 14;
+
+  /// 药丸透镜恒带光谱色散（Kyant 原方 chromaticAberration: true）。
+  static const bool lensChromaticAberration = true;
+
+  /// 内阴影半径（dp，× pressProgress）。
+  static const double innerShadowRadius = 8;
+
+  /// 采样模糊半径（与底栏面板/副本同值，Kyant blur 8）。
+  static const double blurRadius = fluidGlassBlurRadius;
+
+  // 弹簧组（DampedDragAnimation 的 springOf(ζ, k)，质量 1）：
+  // 位置与按压 ζ1.0/k1000 临界阻尼、速度平滑 ζ0.5/k300、
+  // 双轴缩放 ζ0.6/k250 与 ζ0.7/k250（不同步出果冻感）。
+  static const double valueZeta = 1.0;
+  static const double valueStiffness = 1000;
+  static const double pressZeta = 1.0;
+  static const double pressStiffness = 1000;
+  static const double velocityZeta = 0.5;
+  static const double velocityStiffness = 300;
+  static const double scaleXZeta = 0.6;
+  static const double scaleXStiffness = 250;
+  static const double scaleYZeta = 0.7;
+  static const double scaleYStiffness = 250;
+}
+
+/// 一条弹簧通道：直接积分 Compose spring 的 ODE（质量 1）
+/// a = −k(x − target) − 2ζ√k·v。与底栏回落路 floating_dock_bar 的
+/// 私有 _Spring 同式同参（该文件是定版基准、冻结不动，故共享层
+/// 在此另置一份通用实现，两边的 ζ/k 都取自 [DockPillGlass]）。
+class DockSpring {
+  DockSpring(this.zeta, this.stiffness, double initial)
+      : value = initial,
+        target = initial;
+
+  final double zeta;
+  final double stiffness;
+  double value;
+  double velocity = 0;
+  double target;
+
+  void step(double dt) {
+    final damping = 2 * zeta * math.sqrt(stiffness);
+    final accel = -stiffness * (value - target) - damping * velocity;
+    velocity += accel * dt;
+    value += velocity * dt;
+  }
+
+  bool settled(double posEps, double velEps) =>
+      (value - target).abs() < posEps && velocity.abs() < velEps;
+
+  void snap() {
+    value = target;
+    velocity = 0;
   }
 }
 

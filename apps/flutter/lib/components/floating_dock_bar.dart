@@ -131,12 +131,11 @@ class _Spring {
 
 class _FloatingDockBarState extends State<FloatingDockBar>
     with TickerProviderStateMixin {
-  /// 按压时药丸的放大倍率（Legado pressedScale = 78/56）。
-  static const double _pressedScale = 78 / 56;
-
-  /// 药丸透镜（Legado lens(10dp, 14dp, 色差=true)，随 pressProgress）。
-  static const double _pillLensBandDp = 10;
-  static const double _pillLensAmountDp = 14;
+  /// 按压放大与药丸透镜（miuix25 起与顶栏药丸共用同一份定义
+  /// [DockPillGlass]，数值即 Kyant 原方，两边不许再各自手抄）。
+  static const double _pressedScale = DockPillGlass.pressedScale;
+  static const double _pillLensBandDp = DockPillGlass.lensBand;
+  static const double _pillLensAmountDp = DockPillGlass.lensAmount;
 
   ui.FragmentProgram? _refractionProgram;
   Ticker? _ticker;
@@ -153,15 +152,19 @@ class _FloatingDockBarState extends State<FloatingDockBar>
   late final _Spring _value;
   late double _targetValue;
 
-  /// 按压进度 0..1，弹簧 ζ1.0/k1000。
-  final _Spring _press = _Spring(1.0, 1000, 0);
+  /// 按压进度 0..1，弹簧与顶栏药丸同源（[DockPillGlass]）。
+  final _Spring _press =
+      _Spring(DockPillGlass.pressZeta, DockPillGlass.pressStiffness, 0);
 
-  /// 药丸双轴缩放，弹簧 ζ0.6/k250 与 ζ0.7/k250。
-  final _Spring _scaleX = _Spring(0.6, 250, 1);
-  final _Spring _scaleY = _Spring(0.7, 250, 1);
+  /// 药丸双轴缩放，弹簧同源。
+  final _Spring _scaleX =
+      _Spring(DockPillGlass.scaleXZeta, DockPillGlass.scaleXStiffness, 1);
+  final _Spring _scaleY =
+      _Spring(DockPillGlass.scaleYZeta, DockPillGlass.scaleYStiffness, 1);
 
-  /// value 速度的平滑跟随（槽/秒），弹簧 ζ0.5/k300；果冻公式用它。
-  final _Spring _velocity = _Spring(0.5, 300, 0);
+  /// value 速度的平滑跟随（槽/秒），弹簧同源；果冻公式用它。
+  final _Spring _velocity = _Spring(
+      DockPillGlass.velocityZeta, DockPillGlass.velocityStiffness, 0);
 
   /// 整栏橡皮筋的原始拖距（px）：拖动中直接 snap，松手弹簧 ζ1.0/k300 回 0。
   final _Spring _panelRaw = _Spring(1.0, 300, 0);
@@ -175,7 +178,8 @@ class _FloatingDockBarState extends State<FloatingDockBar>
   @override
   void initState() {
     super.initState();
-    _value = _Spring(1.0, 1000, widget.selectedIndex.toDouble());
+    _value = _Spring(DockPillGlass.valueZeta, DockPillGlass.valueStiffness,
+        widget.selectedIndex.toDouble());
     _targetValue = widget.selectedIndex.toDouble();
     // fluid 试验：预热 fluid 的 shader 程序，避免 Kyant 组件首帧无
     // 折射（库的程序本来也会在首次使用时懒加载，这里只是提前量）。
@@ -661,8 +665,10 @@ class _SelectionPill extends StatelessWidget {
 
     final baseColor = color.withValues(alpha: color.a * (1 - p));
     final surfaceTint =
-        (dark ? Colors.white : Colors.black).withValues(alpha: 0.1 * (1 - p));
-    final pressShade = Colors.black.withValues(alpha: 0.03 * p);
+        (dark ? Colors.white : Colors.black)
+            .withValues(alpha: DockPillGlass.restTintAlpha * (1 - p));
+    final pressShade =
+        Colors.black.withValues(alpha: DockPillGlass.pressShadeAlpha * p);
     final highlightAlpha = glassHighlightAlpha(spec, dark) * p;
 
     return Container(
@@ -748,13 +754,13 @@ class _SelectionPill extends StatelessWidget {
                 ),
               ),
             if (p > 0.01)
-              // 内阴影近似：内侧暗边带（宽 8dp×p），无逐像素模糊。
+              // 内阴影近似：内侧暗边带（宽 = 共享内阴影半径 ×p）。
               DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: borderRadius,
                   border: Border.all(
                     color: Colors.black.withValues(alpha: 0.10 * p),
-                    width: 8 * p,
+                    width: DockPillGlass.innerShadowRadius * p,
                   ),
                 ),
               ),

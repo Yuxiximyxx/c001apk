@@ -92,10 +92,14 @@ class _FollowFeedPageState extends State<FollowFeedPage>
   ];
   static const _segmentLabels = ['全部', '用户', '话题', '数码', '应用', '悄悄'];
 
+  /// 筛选胶囊是否在场（与脚手架外部录制覆写的开关必须同源）。
+  bool get _capsuleActive =>
+      GlobalData().isLogin &&
+      GStorage.floatingNavigation &&
+      GStorage.liquidGlass;
+
   Widget _bodyWithSegmentCapsule(BuildContext context, Widget body) {
-    if (!GlobalData().isLogin ||
-        !GStorage.floatingNavigation ||
-        !GStorage.liquidGlass) {
+    if (!_capsuleActive) {
       return body;
     }
     final isLocalView = _selection == FollowFeedSelection.local;
@@ -188,6 +192,10 @@ class _FollowFeedPageState extends State<FollowFeedPage>
       valueListenable:
           GStorage.settings.listenable(keys: [SettingsBoxKey.isLogin]),
       builder: (context, _, __) => LiquidTopBarScaffold(
+        backdropIndex: 1,
+        // 胶囊在场时正文已有信息流录制：顶栏与 Dock 都采样那套，
+        // 脚手架不再叠录（miuix25 去重，关注页 3 套录制 → 1 套）。
+        externalBackdrop: _capsuleActive ? _feedBackdrop : null,
         compactTitle: true,
         floatWithoutGlass: true,
         glassTitle: (context) => GlobalData().isLogin

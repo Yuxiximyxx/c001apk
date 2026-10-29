@@ -18,6 +18,7 @@ import '../../../components/app_anim.dart';
 import '../local_follow/local_follow_page.dart';
 import '../message/messages_page.dart';
 import '../../components/home_publish_action.dart';
+import '../../components/page_backdrop_scope.dart';
 import '../../components/scroll_hiding_action.dart';
 import '../../utils/global_data.dart';
 
@@ -42,10 +43,13 @@ class _MainPageState extends State<MainPage>
   bool _resetting = false;
   final _readingKey = GlobalKey<AdaptiveReadingPaneState>();
 
-  /// fluid_glass 试验（分支 fluid-dock-spike）：正文录制句柄——正文
-  /// 外包 BackdropLayer 录制、悬浮 Dock 经它采样出图。Dock 未注入
-  /// （宽屏 rail）或 shader 不可用时 Dock 自动回落现引擎。
-  final _dockPageBackdrop = LayerBackdrop();
+  /// 主页面共享录制注册表（miuix25 去重）：miuix24 时这里外包一层
+  /// BackdropLayer 录整页 PageView 供 Dock 采样，各页顶栏又各自
+  /// 录一遍正文——同一内容两三套全屏捕获逐帧重录是滚动掉帧的
+  /// 头号嫌疑。现 MainPage 不再自录：每页正文唯一的录制由各页
+  /// LiquidTopBarScaffold 持有并按序号注册到此表，Dock 采样当前
+  /// 页的那套（Dock 在录制子树之外，与顶栏同为消费者）。
+  final _pageBackdrops = PageBackdropRegistry();
 
   @override
   void initState() {
@@ -79,7 +83,7 @@ class _MainPageState extends State<MainPage>
     AccountStore.changes.removeListener(_sessionChanged);
     _indexSctream.close();
     _contrller.dispose();
-    _dockPageBackdrop.dispose();
+    _pageBackdrops.dispose();
     _publishAnimation.dispose();
     Get.delete<ReturnTopController>(tag: 'home');
     Get.delete<MainController>();
@@ -165,8 +169,8 @@ class _MainPageState extends State<MainPage>
                         ),
                       ),
                     Expanded(
-                      child: BackdropLayer(
-                        backdrop: _dockPageBackdrop,
+                      child: PageBackdropScope(
+                        registry: _pageBackdrops,
                         child: FeedReadingPane(
                           paneKey: _readingKey,
                           leadingInset: useRail ? 80 : 0,
@@ -184,10 +188,13 @@ class _MainPageState extends State<MainPage>
                     ? StreamBuilder(
                         initialData: _selectedIndex,
                         stream: _indexSctream.stream,
-                        builder: (_, snapshot) => FloatingDockBar(
-                          selectedIndex: snapshot.data ?? _selectedIndex,
-                          onDestinationSelected: onDestinationSelected,
-                          pageBackdrop: _dockPageBackdrop,
+                        builder: (_, snapshot) => AnimatedBuilder(
+                          animation: _pageBackdrops,
+                          builder: (_, __) => FloatingDockBar(
+                            selectedIndex: snapshot.data ?? _selectedIndex,
+                            onDestinationSelected: onDestinationSelected,
+                            pageBackdrop: _pageBackdrops.activeBackdrop,
+                          ),
                         ),
                       )
                     : null,
@@ -215,6 +222,7 @@ class _MainPageState extends State<MainPage>
       );
     }
     _selectedIndex = index;
+    _pageBackdrops.setActive(index);
     _indexSctream.add(index);
   }
 }
