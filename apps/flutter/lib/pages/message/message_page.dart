@@ -7,7 +7,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../components/cards/message_first_card.dart';
 import '../../components/cards/message_header_card.dart';
-import '../../components/cards/message_second_card.dart';
 import '../../components/cards/recent_visits_card.dart';
 import '../../components/liquid_top_bar.dart';
 import '../../pages/message/message_controller.dart';
@@ -52,6 +51,10 @@ class _MessagePageState extends State<MessagePage>
     _recentRefresh.value++;
   }
 
+  // miuix26：原 2x2 功能格卡（浏览历史/我的常去/我的收藏/我的赞）
+  // 整张移除——「我的常去」格与下方同名展开列表重复，其余三入口
+  // 已并入上方资料卡组件（MessageHeaderCard 统计行下方）。此处只剩
+  // 非悬浮模式下独立渲染的统计卡（悬浮模式统计行在资料卡内）。
   Widget _shortcuts(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -60,7 +63,6 @@ class _MessagePageState extends State<MessagePage>
                 messageFirstCard(true, context, _messageController.firstList)),
             const SizedBox(height: 10),
           ],
-          messageSeconfCard(GlobalData().isLogin, context),
         ],
       );
 
@@ -197,8 +199,13 @@ class _MessagePageState extends State<MessagePage>
                             10 + MediaQuery.paddingOf(context).bottom),
                         sliver: SliverToBoxAdapter(
                             child: Column(children: [
-                          _shortcuts(context),
-                          const SizedBox(height: 10),
+                          // 悬浮模式下 _shortcuts 为空（统计与三入口
+                          // 都在资料卡内），不留空白间隔。
+                          if (GlobalData().isLogin &&
+                              !GStorage.floatingNavigation) ...[
+                            _shortcuts(context),
+                            const SizedBox(height: 10),
+                          ],
                           // 「我的常去」直接内嵌展示最近访问（fork 定制）
                           RecentVisitsCard(refreshSignal: _recentRefresh),
                         ])),

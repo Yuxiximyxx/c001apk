@@ -237,7 +237,7 @@ void main() {
                       messageFirstCard(true, context, const [3, 4, 5])),
               Builder(
                   builder: (context) =>
-                      messageSeconfCard(true, context)),
+                      messageProfileEntriesRow(context, true)),
             ],
           ),
         ),
@@ -245,14 +245,14 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // First card: 动态/关注/粉丝 (3). Second card: 浏览历史 (1) +
-    // 我的收藏/我的赞 (2). 我的常去 is a plain route tap and stays
-    // unanchored; 本地收藏与我的回复已随 miuix23 删除/移至消息页.
-    // Total 6.
+    // First card: 动态/关注/粉丝 (3). Entries row (miuix26 并入
+    // 资料卡): 浏览历史 (1) + 我的收藏/我的赞 (2). 旧 2x2 功能格
+    // 卡已移除,「我的常去」格随之消失 (下方同名展开列表保留);
+    // 本地收藏与我的回复已随 miuix23 删除/移至消息页. Total 6.
     final containers = tester
         .widgetList<AnchoredContainer>(find.byType(AnchoredContainer))
         .toList();
-    expect(containers.length, 7);
+    expect(containers.length, 6);
 
     final context = tester.element(find.byType(Column).first);
     Widget openAt(int index) => containers[index].openBuilder(context, () {});
@@ -266,13 +266,11 @@ void main() {
 
     expect(openAt(3), isA<HistoryPage>());
     expect((openAt(3) as HistoryPage).type, HistoryType.History);
-    expect(openAt(4), isA<FFFListPage>());
-    expect((openAt(4) as FFFListPage).type, FFFListType.RECENT);
 
-    final secondRowTargets = [openAt(5), openAt(6)];
-    expect(secondRowTargets.every((w) => w is FFFListPage), isTrue);
+    final entriesRowTargets = [openAt(4), openAt(5)];
+    expect(entriesRowTargets.every((w) => w is FFFListPage), isTrue);
     expect(
-      secondRowTargets.map((w) => (w as FFFListPage).type),
+      entriesRowTargets.map((w) => (w as FFFListPage).type),
       [FFFListType.COLLECTION, FFFListType.LIKE],
     );
 

@@ -35,7 +35,11 @@ class FFFListPage extends StatefulWidget {
   final String? title;
 
   /// 内嵌模式（消息 Tab「我的回复」分段）：不出 Scaffold/AppBar，
-  /// 只保留 TabBar（回复/回复我）+ 列表本体，顶栏由宿主提供。
+  /// 只保留 TabBar（我的回复/我收到的回复——REPLY 与 REPLYME 两张
+  /// 不同列表的真实切换）+ 列表本体，顶栏由宿主提供。子 TabBar
+  /// 不是残留标题栏，不能删：宿主是覆下同构时正文从 y=0 起，
+  /// TabBar 必须自己吃掉宿主改写的顶部 inset 落到玻璃分段栏下方
+  /// （miuix26 修复其与状态栏重叠露头的问题）。
   final bool embedded;
 
   @override
@@ -130,11 +134,28 @@ class _FFFListPageState extends State<FFFListPage>
             );
     if (widget.embedded) {
       if (_tabList == null) return content;
+      // 覆下同构（miuix25）后宿主正文从视口 y=0 起、顶部 inset 被
+      // 脚手架改写为「状态栏 + 玻璃顶栏高」写进 MediaQuery.padding。
+      // 旧写法把 TabBar 直接贴在 Column 顶端 → 它顶进状态栏与时钟/
+      // 图标重叠露头（miuix26 截图二）。修法：TabBar 先吃掉这段
+      // inset、规整地落在玻璃分段栏下方；列表本体（CommonBody 系）
+      // 会再按 padding.top 给自己加顶距，故进列表前把 top 清零，
+      // 避免双倍留白。子 Tab 是 REPLY/REPLYME 两张列表的真实切换，
+      // 保留功能、只修定位。
+      final topInset = MediaQuery.paddingOf(context).top;
       return Column(children: [
+        SizedBox(height: topInset),
         TabBar(
             controller: _tabController,
             tabs: _tabList.map((item) => Tab(text: item)).toList()),
-        Expanded(child: content),
+        Expanded(
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              padding: MediaQuery.paddingOf(context).copyWith(top: 0),
+            ),
+            child: content,
+          ),
+        ),
       ]);
     }
     return Scaffold(

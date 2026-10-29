@@ -118,7 +118,14 @@ class _FollowFeedPageState extends State<FollowFeedPage>
             child: body);
     return Stack(children: [
       Positioned.fill(
-          child: BackdropLayer(backdrop: _feedBackdrop, child: padded)),
+          child: BackdropLayer(
+              backdrop: _feedBackdrop,
+              // 与 LiquidTopBarScaffold 同口径的滚动期动态降级
+              // （miuix26）：连帧变化时捕获降半分辨率、停下全
+              // 分辨率重捕，静止观感零变化。
+              motionPixelRatio:
+                  MediaQuery.devicePixelRatioOf(context) * 0.5,
+              child: padded)),
       // miuix24 修复：miuix23 把胶囊钉在 body 顶部 6dp——body 在
       // overlay 模式下从屏幕最上方起算，于是胶囊直接压进状态栏、
       // 与时钟/信号图标重叠且点不到。现按 body 的 MediaQuery 頂部

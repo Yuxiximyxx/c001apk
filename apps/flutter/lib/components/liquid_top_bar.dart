@@ -227,6 +227,12 @@ class _LiquidTopBarScaffoldState extends State<LiquidTopBarScaffold> {
                 ? bodyChild
                 : BackdropLayer(
                     backdrop: _effectiveBackdrop,
+                    // 滚动期动态降级（miuix26）：正文连帧变化（滚动）
+                    // 时捕获分辨率降到设备像素比的一半（捕获像素数
+                    // 降到 1/4，玻璃采样本就带模糊、运动中不可辨）；
+                    // 停下后的下一帧自动以全分辨率重捕——静止画面
+                    // 观感与光学参数零变化（pixelRatio 不动）。
+                    motionPixelRatio: media.devicePixelRatio * 0.5,
                     child: bodyChild,
                   ),
           );
