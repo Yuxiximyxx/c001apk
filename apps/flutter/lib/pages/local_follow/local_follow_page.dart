@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:fluid_glass/fluid_glass.dart'
+    show BackdropLayer, LayerBackdrop;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -53,6 +55,16 @@ class _FollowFeedPageState extends State<FollowFeedPage>
     with AutomaticKeepAliveClientMixin {
   FollowFeedSelection _selection = FollowFeedSelection.load();
 
+  /// 筛选胶囊的采样录制（miuix24）：信息流包进 BackdropLayer 录制、
+  /// 胶囊作为 Stack 悬浮层在录制子树之外采样，与顶栏/Dock 同构。
+  final LayerBackdrop _feedBackdrop = LayerBackdrop();
+
+  @override
+  void dispose() {
+    _feedBackdrop.dispose();
+    super.dispose();
+  }
+
   Future<void> _select(FollowFeedSelection selection) async {
     if (selection != _selection) setState(() => _selection = selection);
     try {
@@ -88,28 +100,44 @@ class _FollowFeedPageState extends State<FollowFeedPage>
     }
     final isLocalView = _selection == FollowFeedSelection.local;
     final padding = MediaQuery.paddingOf(context);
+    // 胶囊高度与 LiquidNavigationBar.tabs 的公式一致（48 起、
+    // 随字号长高），间距一律走 TopBarMetrics（miuix24 收口）。
+    final capsuleHeight =
+        math.max(48.0, MediaQuery.textScalerOf(context).scale(14) + 24);
+    final contentOffset =
+        capsuleHeight + TopBarMetrics.rowGap + TopBarMetrics.contentGap;
     final padded = isLocalView
-        ? Padding(padding: const EdgeInsets.only(top: 56), child: body)
+        ? Padding(padding: EdgeInsets.only(top: contentOffset), child: body)
         : MediaQuery(
             data: MediaQuery.of(context).copyWith(
-                padding: padding.copyWith(top: padding.top + 56)),
+                padding: padding.copyWith(top: padding.top + contentOffset)),
             child: body);
     return Stack(children: [
-      Positioned.fill(child: padded),
+      Positioned.fill(
+          child: BackdropLayer(backdrop: _feedBackdrop, child: padded)),
+      // miuix24 修复：miuix23 把胶囊钉在 body 顶部 6dp——body 在
+      // overlay 模式下从屏幕最上方起算，于是胶囊直接压进状态栏、
+      // 与时钟/信号图标重叠且点不到。现按 body 的 MediaQuery 頂部
+      // inset（= 状态栏 + 顶栏行高，LiquidTopBarScaffold 注入）下移
+      // 到顶栏行下方，再加统一行距；六个段目均分整行、缩放兜底，
+      // 「悄悄」不再被裁切。
       Positioned(
-        top: 6,
-        left: 12,
-        right: 12,
+        top: padding.top + TopBarMetrics.rowGap,
+        left: TopBarMetrics.horizontalPadding,
+        right: TopBarMetrics.horizontalPadding,
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
-            child: LiquidNavigationBar.tabs(
-              labels: _segmentLabels,
-              selectedIndex: _segmentOrder.indexOf(_selection),
-              onDestinationSelected: (index) =>
-                  _select(_segmentOrder[index]),
-              level: GStorage.liquidGlassLevel,
+            child: TopBarGlassScope(
+              backdrop: _feedBackdrop,
+              child: LiquidNavigationBar.tabs(
+                labels: _segmentLabels,
+                selectedIndex: _segmentOrder.indexOf(_selection),
+                onDestinationSelected: (index) =>
+                    _select(_segmentOrder[index]),
+                level: GStorage.liquidGlassLevel,
+              ),
             ),
           ),
         ),

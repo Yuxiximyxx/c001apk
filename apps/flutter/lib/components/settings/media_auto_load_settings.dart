@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../constants/media_auto_load_mode.dart';
 import '../../utils/storage_util.dart';
+import 'glass_dropdown_picker.dart';
 
 class MediaAutoLoadSettings extends StatefulWidget {
   const MediaAutoLoadSettings({super.key});
@@ -51,17 +52,13 @@ class _MediaAutoLoadSettingsState extends State<MediaAutoLoadSettings> {
             // also leaves enough room for the longer title on narrow screens.
             final stackPicker = constraints.maxWidth < 400 ||
                 MediaQuery.textScalerOf(context).scale(16) > 24;
-            final picker = DropdownButtonHideUnderline(
-              child: DropdownButton<MediaAutoLoadMode>(
-                value: selected,
-                itemHeight: null,
-                isExpanded: stackPicker,
-                items: [
-                  for (final mode in MediaAutoLoadMode.values)
-                    DropdownMenuItem(value: mode, child: Text(mode.label)),
-                ],
-                onChanged: _savingFrom == null ? _save : null,
-              ),
+            // miuix24：同档位选择器，菜单改走玻璃菜单。
+            final picker = GlassDropdownPicker<MediaAutoLoadMode>(
+              value: selected,
+              items: MediaAutoLoadMode.values,
+              labelOf: (mode) => mode.label,
+              isExpanded: stackPicker,
+              onChanged: _savingFrom == null ? _save : null,
             );
             return Semantics(
               container: true,

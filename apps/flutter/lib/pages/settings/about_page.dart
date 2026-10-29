@@ -20,11 +20,14 @@ class AboutPage extends StatelessWidget {
       ),
       body: SafeArea(
           top: false,
+          bottom: false,
           child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 760),
                   child: ListView(
+                    padding: EdgeInsets.only(
+                        bottom: MediaQuery.paddingOf(context).bottom),
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),

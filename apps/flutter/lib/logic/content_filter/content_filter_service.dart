@@ -191,8 +191,8 @@ class ContentFilterService extends ChangeNotifier {
     }
   }
 
-  /// Saves onboarding's explicit changes before notifying. Subscription I/O
-  /// runs independently so entering the app never waits on a rule download.
+  /// Saves explicit preference changes before notifying. Subscription
+  /// I/O runs independently so entering the app never waits on a download.
   Future<void> applyPreferences({bool? enabled, FilterLevel? level}) async {
     if (enabled == null && level == null) return;
     await _box.putAll({

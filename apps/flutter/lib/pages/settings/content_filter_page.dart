@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../components/expressive_list_section.dart';
+import '../../components/glass_menu.dart';
 import '../../components/keyboard_scroll_region.dart';
 import '../../components/settings/item_title.dart';
 import '../../logic/content_filter/app_content_filter.dart';
@@ -18,6 +19,7 @@ class ContentFilterPage extends StatelessWidget {
       appBar: AppBar(title: const Text('屏蔽傻逼内容')),
       body: SafeArea(
           top: false,
+          bottom: false,
           child: current == null
               ? const Center(child: Text('内容过滤尚未初始化，请重新启动应用'))
               : _FilterSettings(service: current)),
@@ -110,23 +112,87 @@ class _FilterSettingsState extends State<_FilterSettings> {
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                DropdownButtonFormField<FilterRuleKind>(
+                                // miuix24：类型选择改走玻璃菜单
+                                // （与设置域其它下拉同口径），不再是
+                                // 原生 DropdownButtonFormField 的白底菜单；
+                                // 仍挂在 Form 里以 FormField 形态存在。
+                                FormField<FilterRuleKind>(
                                     initialValue: kind,
-                                    decoration:
-                                        const InputDecoration(labelText: '类型'),
-                                    items: [
-                                      for (final entry in FilterRuleKind.values)
-                                        DropdownMenuItem(
-                                            value: entry,
-                                            child: Text(_kindName(entry)))
-                                    ],
-                                    onChanged: (selected) {
-                                      if (selected != null) {
-                                        update(() {
-                                          kind = selected;
-                                        });
-                                      }
-                                    }),
+                                    builder: (field) => InputDecorator(
+                                          decoration: const InputDecoration(
+                                              labelText: '类型'),
+                                          child: Builder(
+                                            builder: (context) => InkWell(
+                                              onTap: () async {
+                                                final button = context
+                                                        .findRenderObject()
+                                                    as RenderBox?;
+                                                final overlay = Overlay.of(
+                                                        context)
+                                                    .context
+                                                    .findRenderObject()
+                                                    as RenderBox?;
+                                                if (button == null ||
+                                                    overlay == null ||
+                                                    !button.hasSize) return;
+                                                final position =
+                                                    RelativeRect.fromRect(
+                                                  Rect.fromPoints(
+                                                    button.localToGlobal(
+                                                        Offset.zero,
+                                                        ancestor: overlay),
+                                                    button.localToGlobal(
+                                                        button.size.bottomRight(
+                                                            Offset.zero),
+                                                        ancestor: overlay),
+                                                  ),
+                                                  Offset.zero & overlay.size,
+                                                );
+                                                final selected =
+                                                    await showGlassMenu<
+                                                        FilterRuleKind>(
+                                                  context: context,
+                                                  position: position,
+                                                  items: [
+                                                    for (final entry
+                                                        in FilterRuleKind
+                                                            .values)
+                                                      CheckedPopupMenuItem<
+                                                          FilterRuleKind>(
+                                                        value: entry,
+                                                        checked:
+                                                            entry == field.value,
+                                                        height: 48,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal:
+                                                                    16),
+                                                        child: Text(
+                                                            _kindName(entry)),
+                                                      ),
+                                                  ],
+                                                );
+                                                if (selected != null) {
+                                                  field.didChange(selected);
+                                                  update(() {
+                                                    kind = selected;
+                                                  });
+                                                }
+                                              },
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                      child: Text(_kindName(
+                                                          field.value ??
+                                                              kind))),
+                                                  const Icon(
+                                                      Icons.arrow_drop_down),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        )),
                                 const SizedBox(height: 16),
                                 TextFormField(
                                     key: const ValueKey('filter-rule-value'),
@@ -230,7 +296,10 @@ class _FilterSettingsState extends State<_FilterSettings> {
                 child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 760),
                     child: ListView(
-                        padding: const EdgeInsets.only(top: 12, bottom: 24),
+                        padding: EdgeInsets.only(
+                            top: 12,
+                            bottom:
+                                24 + MediaQuery.paddingOf(context).bottom),
                         children: [
                           ExpressiveListSection(children: [
                             SwitchListTile(

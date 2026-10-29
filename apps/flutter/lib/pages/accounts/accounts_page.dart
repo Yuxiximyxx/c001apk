@@ -59,6 +59,7 @@ class _AccountsPageState extends State<AccountsPage> {
         appBar: AppBar(title: const Text('账号管理')),
         body: SafeArea(
             top: false,
+            bottom: false,
             child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
@@ -67,7 +68,9 @@ class _AccountsPageState extends State<AccountsPage> {
                   valueListenable: GStorage.settings
                       .listenable(keys: [AccountStore.storageKey]),
                   builder: (context, _, __) => ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: EdgeInsets.only(
+                        top: 12,
+                        bottom: 12 + MediaQuery.paddingOf(context).bottom),
                     children: [
                       const Padding(
                           padding: EdgeInsets.fromLTRB(20, 4, 20, 16),

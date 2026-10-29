@@ -132,7 +132,8 @@ class _DeviceIdentityPageState extends State<DeviceIdentityPage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(
+                16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
             children: [
               const Text('减少重复人机验证',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),

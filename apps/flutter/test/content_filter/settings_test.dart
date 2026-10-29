@@ -226,7 +226,11 @@ void main() {
         await tester.tap(find.text('添加个人规则'));
       });
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(DropdownButtonFormField<FilterRuleKind>));
+      // miuix24：规则类型选择已由原生 DropdownButtonFormField 换成
+      // 点击打开玻璃菜单的 InputDecorator 字段（按标签「类型」定位，
+      // 对话框里还有值输入框自己的 InputDecorator）。
+      await tester.tap(find.byWidgetPredicate((widget) =>
+          widget is InputDecorator && widget.decoration.labelText == '类型'));
       await tester.pumpAndSettle();
       await tester.tap(find.text(entry.label).last);
       await tester.pumpAndSettle();

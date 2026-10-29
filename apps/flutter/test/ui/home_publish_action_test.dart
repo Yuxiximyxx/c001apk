@@ -105,7 +105,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('mounted appearance preference follows external onboarding saves',
+  testWidgets('mounted appearance preference follows external preference saves',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(1280, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -119,7 +119,7 @@ void main() {
     final mountedPage = tester.state(find.byType(SettingsDetailPage));
     expect(tester.widget<Switch>(switchFinder).value, isTrue);
 
-    // Onboarding writes the existing preference while this settings route
+    // Another surface writes the existing preference while this settings route
     // remains mounted underneath it. Returning must reveal the saved value.
     await tester.runAsync(() async {
       await GStorage.settings.putAll({

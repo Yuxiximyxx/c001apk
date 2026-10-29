@@ -6,7 +6,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../constants/liquid_glass_level.dart';
+import 'app_anim.dart';
 import 'glass_surface.dart' hide GlassSurface;
+
+/// 顶栏玻璃的采样作用域（miuix24）：顶栏与 Dock 同构的关键——页面
+/// 正文由 [LiquidTopBarScaffold] 包进 fluid 的 BackdropLayer 录制，
+/// 顶栏（Scaffold 的 appBar 槽，位于录制子树之外）经本作用域拿到
+/// 同一条 LayerBackdrop 采样链，于是顶栏与底栏一样是真折射，而不是
+/// nativeBackdrop 的 plain 路径（合成器高斯模糊、无折射、rim 钉平）。
+/// 只有 appBar 槽被包进本作用域；正文内部的玻璃面（资料卡等）仍走
+/// 原解析，避免消费者在被录子树内自采样的反馈。
+class TopBarGlassScope extends InheritedWidget {
+  const TopBarGlassScope({
+    super.key,
+    required this.backdrop,
+    required super.child,
+  });
+
+  final Backdrop backdrop;
+
+  static Backdrop? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<TopBarGlassScope>()
+      ?.backdrop;
+
+  @override
+  bool updateShouldNotify(TopBarGlassScope oldWidget) =>
+      !identical(backdrop, oldWidget.backdrop);
+}
 
 /// Public backend: ordinary translucent/frosted surfaces and navigation.
 /// The official source assembly supplies the same API with its own renderer.
@@ -114,16 +140,41 @@ class GlassSurface extends StatelessWidget {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     final spec = currentDockGlassSpec();
+    // miuix24 根因修复：miuix23 在这里把纱色覆写成调用方 tint
+    // （surfaceContainer 不透灰）× α.9——玻璃面被一层近不透的灰盖死，
+    // 只剩平灰、毫无底栏的通透感。改与底栏同源：底面一律走 spec 纱
+    // （glassTintColor，与 Dock 的 LiquidBottomTabs 同一映射点同一
+    // 数值）；透镜面（选中药丸）保留其身份色但降到 α.55 半透，让
+    // 采样内容透出来。tint 参数自此只对透镜面有意义。
+    final container = depthEffect
+        ? tint.withValues(alpha: .55)
+        : glassTintColor(spec, dark);
     final colors = dockGlassColorsForSpec(spec,
             dark: dark, accent: theme.colorScheme.primary)
-        .copyWith(container: tint.withValues(alpha: .9));
+        .copyWith(container: container);
     final shape =
         glassShapeForBorderRadius(radius, Directionality.of(context));
     final low = level == LiquidGlassLevel.low;
+    // 大面（资料卡 panel 等）透镜按面积收敛，与 fork GlassSurface 的
+    // large 档同口径（band ×0.35 封顶 14、amount ×0.35），避免整面
+    // 内容被强折射弯得没法读；小面（顶栏胶囊/药丸/圆球）全量。
+    final largeSurface = extent.height > 72;
+    final band = largeSurface
+        ? math.min(spec.refractionBandDp * 0.35, 14.0)
+        : spec.refractionBandDp;
+    final amount = largeSurface
+        ? spec.refractionAmountDp * 0.35
+        : spec.refractionAmountDp;
+    // 采样解析：顶栏作用域在场且 shader 可用时走正文录制（真折射，
+    // 与 Dock 同构）；其余走既有统一解析（合成器 plain 路径）。
+    final scopedBackdrop = TopBarGlassScope.maybeOf(context);
+    final backdrop = scopedBackdrop != null && isRuntimeShaderSupported()
+        ? scopedBackdrop
+        : fluidGlassBackdropOf(context);
     return LiquidGlassTheme(
       colors: colors,
       child: DrawBackdrop(
-        backdrop: fluidGlassBackdropOf(context),
+        backdrop: backdrop,
         shape: () => shape,
         effects: (scope) => low
             ? (scope
@@ -133,8 +184,8 @@ class GlassSurface extends StatelessWidget {
               ..vibrancy()
               ..blur(fluidGlassBlurRadius)
               ..lens(
-                spec.refractionBandDp,
-                spec.refractionAmountDp,
+                band,
+                amount,
                 chromaticAberration: spec.dispersion > 0,
               )),
         highlight: () => Highlight.standard
@@ -272,6 +323,11 @@ class LiquidNavigationBar extends StatefulWidget {
 class _BasicNavigationState extends State<LiquidNavigationBar> {
   int? _dragIndex;
 
+  /// 药丸的连续位置（槽索引单位，miuix24）：拖动时药丸中心跟随
+  /// 指针、按槽位换算成小数位置；松手后清掉，药丸由 AnimatedPositioned
+  /// 以 [AppAnim] 曲线吸附到目标槽。点击仍走各标签自身的点按。
+  double? _dragPosition;
+
   @override
   Widget build(BuildContext context) => SafeArea(
       top: false,
@@ -293,12 +349,20 @@ class _BasicNavigationState extends State<LiquidNavigationBar> {
                 final height = widget.tabs
                     ? math.max(48.0, textHeight + 24)
                     : math.max(64.0, textHeight + 40);
+                final count = widget.labels.length;
+                final slotWidth = bounds.maxWidth / count;
                 final selected = (_dragIndex ?? widget.selectedIndex)
-                    .clamp(0, widget.labels.length - 1);
-                void drag(Offset point) => setState(() => _dragIndex =
-                    (point.dx / bounds.maxWidth * widget.labels.length)
-                        .floor()
-                        .clamp(0, widget.labels.length - 1));
+                    .clamp(0, count - 1);
+                void drag(Offset point) => setState(() {
+                      _dragIndex = (point.dx / slotWidth)
+                          .floor()
+                          .clamp(0, count - 1);
+                      _dragPosition = (point.dx / slotWidth - 0.5)
+                          .clamp(0.0, (count - 1).toDouble());
+                    });
+                const pillInset = 4.0;
+                final pillPosition =
+                    _dragPosition ?? selected.toDouble();
                 return _BasicRoundHitRegion(
                     child: ClipRRect(
                         borderRadius: BorderRadius.circular(height / 2),
@@ -311,11 +375,16 @@ class _BasicNavigationState extends State<LiquidNavigationBar> {
                               drag(event.localPosition),
                           onHorizontalDragUpdate: (event) =>
                               drag(event.localPosition),
-                          onHorizontalDragCancel: () =>
-                              setState(() => _dragIndex = null),
+                          onHorizontalDragCancel: () => setState(() {
+                            _dragIndex = null;
+                            _dragPosition = null;
+                          }),
                           onHorizontalDragEnd: (_) {
                             final index = _dragIndex;
-                            setState(() => _dragIndex = null);
+                            setState(() {
+                              _dragIndex = null;
+                              _dragPosition = null;
+                            });
                             if (index != null) {
                               widget.onDestinationSelected(index);
                             }
@@ -333,6 +402,33 @@ class _BasicNavigationState extends State<LiquidNavigationBar> {
                                             theme: theme,
                                             level: widget.level,
                                             shadow: false))),
+                                // 选中药丸（miuix24）：独立玻璃透镜层，
+                                // 不再是 TextButton 的平色块背景；拖动时
+                                // 跟随指针（duration 0），其余时候以统一
+                                // 曲线滑动吸附到选中槽。
+                                AnimatedPositioned(
+                                  duration: _dragPosition != null ||
+                                          MediaQuery.disableAnimationsOf(
+                                              context)
+                                      ? Duration.zero
+                                      : AppAnim.standard,
+                                  curve: AppAnim.enterCurve,
+                                  left: pillPosition * slotWidth + pillInset,
+                                  top: pillInset,
+                                  bottom: pillInset,
+                                  width: slotWidth - pillInset * 2,
+                                  child: IgnorePointer(
+                                      child: GlassSurface.navigationLens(
+                                          shader: null,
+                                          enabled: widget.refract,
+                                          extent: Size(
+                                              slotWidth - pillInset * 2,
+                                              height - pillInset * 2),
+                                          theme: theme,
+                                          level: widget.level,
+                                          progress: 0,
+                                          shadow: false)),
+                                ),
                                 Row(
                                   children: [
                                     for (var i = 0;
@@ -353,18 +449,22 @@ class _BasicNavigationState extends State<LiquidNavigationBar> {
                                                           const EdgeInsets
                                                               .symmetric(
                                                               horizontal: 2),
-                                                      backgroundColor: selected == i
-                                                          ? theme.colorScheme
-                                                              .primaryContainer
-                                                          : Colors.transparent,
+                                                      // 药丸已由独立玻璃
+                                                      // 透镜层承担，按钮
+                                                      // 本身不再画平色块。
+                                                      backgroundColor:
+                                                          Colors.transparent,
                                                       foregroundColor: selected == i
                                                           ? theme.colorScheme
                                                               .onPrimaryContainer
                                                           : theme.colorScheme
                                                               .onSurface),
                                                   child: widget.tabs
-                                                      ? Text(widget.labels[i],
-                                                          maxLines: 1)
+                                                      ? FittedBox(
+                                                          fit: BoxFit.scaleDown,
+                                                          child: Text(
+                                                              widget.labels[i],
+                                                              maxLines: 1))
                                                       : Column(mainAxisSize: MainAxisSize.min, children: [
                                                           Icon([
                                                             Icons.home_outlined,

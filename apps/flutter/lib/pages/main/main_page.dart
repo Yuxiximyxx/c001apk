@@ -209,7 +209,9 @@ class _MainPageState extends State<MainPage>
       _contrller.animateToPage(
         index,
         duration: AppAnim.page,
-        curve: Curves.easeInOutCubicEmphasized,
+        // miuix24：主 Tab 切页曲线收口到全局共享曲线（长尾缓降），
+        // 不再单独用 easeInOutCubicEmphasized 的急停尾段。
+        curve: AppAnim.sharedCurve,
       );
     }
     _selectedIndex = index;

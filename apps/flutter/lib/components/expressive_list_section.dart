@@ -8,10 +8,20 @@ class ExpressiveListSection extends StatelessWidget {
     super.key,
     required this.children,
     this.padding = const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    this.gap = 2,
+    this.connectedBackground = true,
   });
 
   final List<Widget> children;
   final EdgeInsetsGeometry padding;
+
+  /// 行间距（miuix24 起可调，默认与旧硬编码一致）。
+  final double gap;
+
+  /// 是否给每行垫连接式底色（miuix24）：子项自带卡片底色/圆角时
+  /// （如消息页的 MiuixCard 通知行）必须关——垫层的灰色矩形会从
+  /// 卡片的大圆角后面探出成异常灰边角。关后行直接渲染子项。
+  final bool connectedBackground;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -20,12 +30,15 @@ class ExpressiveListSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (var index = 0; index < children.length; index++) ...[
-              if (index > 0) const SizedBox(height: 2),
-              _ConnectedRow(
-                first: index == 0,
-                last: index == children.length - 1,
-                child: children[index],
-              ),
+              if (index > 0) SizedBox(height: gap),
+              if (connectedBackground)
+                _ConnectedRow(
+                  first: index == 0,
+                  last: index == children.length - 1,
+                  child: children[index],
+                )
+              else
+                children[index],
             ],
           ],
         ),

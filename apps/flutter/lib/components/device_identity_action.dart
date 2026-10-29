@@ -7,7 +7,7 @@ import '../logic/szlm_identity_service.dart';
 import '../utils/storage_util.dart';
 import '../utils/szlm_duid_client.dart';
 
-/// Explicit acquisition shared by onboarding and the device settings page.
+/// Explicit acquisition for the device settings page.
 class DeviceIdentityAction extends StatefulWidget {
   const DeviceIdentityAction({super.key, this.service, this.onAcquired});
 

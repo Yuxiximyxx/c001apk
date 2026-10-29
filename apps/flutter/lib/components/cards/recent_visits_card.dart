@@ -13,7 +13,8 @@ import '../../utils/extensions.dart';
 import '../../utils/miuix_palette.dart';
 import '../../utils/utils.dart';
 
-/// 「我的常去」区块：直接在「我的」页内嵌展示最近访问的前几条；
+/// 「我的常去」区块：直接在「我的」页内嵌完整展示全部最近访问
+/// （miuix24 起不再截断前几条、没有「查看全部」入口，进页面即全列）；
 /// 加载中/失败/为空时退回原来的单行入口，保证行为不回退。
 class RecentVisitsCard extends StatefulWidget {
   const RecentVisitsCard({super.key, required this.refreshSignal});
@@ -54,7 +55,7 @@ class _RecentVisitsCardState extends State<RecentVisitsCard> {
         final recent =
             all.where((d) => d.entityType == 'recentHistory').toList();
         setState(() {
-          _items = (recent.isNotEmpty ? recent : all).take(5).toList();
+          _items = recent.isNotEmpty ? recent : all;
           _loading = false;
         });
       } else {
@@ -102,35 +103,20 @@ class _RecentVisitsCardState extends State<RecentVisitsCard> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AnchoredContainer(
-            closedColor: colors.surfaceContainer,
-            openColor: miuixPageBackground(context),
-            closedShape: const RoundedRectangleBorder(),
-            closedBuilder: (context, open) => InkWell(
-              onTap: open,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        '我的常去',
-                        style: TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    Text(
-                      '查看全部',
-                      style: TextStyle(fontSize: 13, color: colors.primary),
-                    ),
-                    Icon(Icons.keyboard_arrow_right,
-                        size: 18, color: colors.primary),
-                  ],
+          // 标题行只是标题（miuix24）：不再是「查看全部」入口——
+          // 全部条目已经在本卡内完整展开，无需再跳独立页。
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 12, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '我的常去',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
+              ],
             ),
-            openBuilder: (context, close) =>
-                const FFFListPage(type: FFFListType.RECENT),
           ),
           Divider(height: 1, color: colors.dividerLine),
           for (final data in items)

@@ -1,1 +1,2 @@
-export 'basic_glass.dart' show LiquidNavigationBar, GlassSurface;
+export 'basic_glass.dart'
+    show LiquidNavigationBar, GlassSurface, TopBarGlassScope;

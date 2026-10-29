@@ -4,9 +4,6 @@ import 'package:get/get.dart';
 import 'page_transitions.dart';
 import '../components/feed_reading_pane.dart';
 import '../components/adaptive_reading_pane.dart';
-import '../components/onboarding_gate.dart';
-import '../logic/onboarding/onboarding_state.dart';
-import '../pages/onboarding/onboarding_page.dart';
 
 import '../pages/app/app_page.dart';
 import '../pages/accounts/accounts_page.dart';
@@ -39,8 +36,9 @@ class AppPages {
   static bool canReplay(String name) {
     final path = Uri.tryParse(name)?.path;
     if (path == null ||
-        const {'/login', '/chat', '/webview', '/accounts', '/onboarding'}
-            .contains(path)) return false;
+        const {'/login', '/chat', '/webview', '/accounts'}.contains(path)) {
+      return false;
+    }
     final parts = path.split('/');
     return getPages.any((page) {
       final pattern = page.name.split('/');
@@ -80,21 +78,9 @@ class AppPages {
   static final List<GetPage> getPages = [
     _getPage(name: '/settings', page: () => const SettingsPage()),
     _getPage(name: '/accounts', page: () => const AccountsPage()),
-    _getPage(
-        name: '/onboarding',
-        page: () => OnboardingPage(state: OnboardingState.current!)),
-    _getPage(
-      name: '/',
-      page: () {
-        final state = OnboardingState.current;
-        if (state == null) return const MainPage();
-        return OnboardingGate(
-            state: state,
-            mainBuilder: (_) => const MainPage(),
-            onboardingBuilder: (_) =>
-                OnboardingPage(state: state, initial: true));
-      },
-    ),
+    // miuix24：使用引导已整体删除——首启（及每次启动）直达主页，
+    // 不再有首启 gate、'/onboarding' 路由与完成标记读取。
+    _getPage(name: '/', page: () => const MainPage()),
     _getPage(
       name: '/params',
       page: () => const ParamsPage(),

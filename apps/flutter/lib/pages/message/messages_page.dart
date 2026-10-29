@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Response;
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../components/app_anim.dart';
 import '../../components/cards/message_third_card.dart';
 import '../../components/expressive_list_section.dart';
 import '../../components/expressive_refresh_indicator.dart';
@@ -69,6 +70,11 @@ class _MessagesPageState extends State<MessagesPage>
     final announcements = AppAnnouncements.service;
     Widget list() => ExpressiveListSection(
           padding: EdgeInsets.zero,
+          // 通知行是自带 24dp 圆角的 MiuixCard：关掉连接底色垫层
+          // （灰色矩形从卡片圆角后探出就是图三的异常边角），行距
+          // 改走统一的卡片间距。
+          gap: 10,
+          connectedBackground: false,
           children: [
             for (var index = 0; index < _titleList.length; index++)
               Obx(() => messageThirdCard(
@@ -193,7 +199,35 @@ class _MessagesPageState extends State<MessagesPage>
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1200),
-              child: _segmentBody(context),
+              // 分段切换转场（miuix24）：与全局动画语言一致的
+              // fade + 轻微横移，不再硬切；时长/曲线走 AppAnim。
+              child: AnimatedSwitcher(
+                duration: AppAnim.standard,
+                reverseDuration: AppAnim.fast,
+                switchInCurve: AppAnim.enterCurve,
+                switchOutCurve: AppAnim.exitCurve,
+                layoutBuilder: (currentChild, previousChildren) => Stack(
+                  alignment: Alignment.topCenter,
+                  children: [
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                ),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.03, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
+                child: KeyedSubtree(
+                  key: ValueKey(_segment),
+                  child: _segmentBody(context),
+                ),
+              ),
             ),
           ),
         ),

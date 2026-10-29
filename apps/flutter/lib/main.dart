@@ -23,7 +23,6 @@ import 'components/announcement_monitor.dart';
 import 'logic/announcements/app_announcements.dart';
 import 'constants/constants.dart';
 import 'logic/network/request.dart';
-import 'logic/onboarding/onboarding_state.dart';
 import 'pages/webview/captcha_page.dart';
 import 'router/app_pages.dart';
 import 'router/page_transitions.dart';
@@ -69,8 +68,6 @@ void main() async {
   await GStorage.init();
   MediaLoadPolicy.current = MediaLoadPolicy(GStorage.settings)..start();
   await AppContentFilter.init();
-  final onboarding = OnboardingState.current = OnboardingState(
-      settings: GStorage.settings, filter: AppContentFilter.service!);
   await AppAnnouncements.initialize();
   HttpOverrides.global = CustomHttpOverrides();
 
@@ -89,13 +86,10 @@ void main() async {
 
   Request().captchaVerifier = verifyCaptcha;
   final links = Platform.isAndroid
-      ? (AndroidLinks(onOpen: Utils.onOpenLink, onboarding: onboarding)
-        ..listen())
+      ? (AndroidLinks(onOpen: Utils.onOpenLink)..listen())
       : null;
   runApp(AnnouncementMonitor(
-      service: AppAnnouncements.service!,
-      onboarding: onboarding,
-      child: const C001APKAPP()));
+      service: AppAnnouncements.service!, child: const C001APKAPP()));
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (links != null) unawaited(links.ready());
   });

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:c001apk_flutter/components/settings/glass_dropdown_picker.dart';
 import 'package:c001apk_flutter/components/settings/navigation_appearance_settings.dart';
 import 'package:c001apk_flutter/constants/liquid_glass_level.dart';
 import 'package:c001apk_flutter/pages/settings/settings_page.dart';
@@ -128,8 +129,10 @@ void main() {
     for (final disabledKey in ['floatingNavigation', 'liquidGlass']) {
       await tester.runAsync(() => GStorage.settings.put(disabledKey, false));
       await mount(tester);
-      final picker = tester.widget<DropdownButton>(
-          find.byWidgetPredicate((widget) => widget is DropdownButton));
+      // miuix24：档位选择器已由原生 DropdownButton 换成玻璃菜单
+      // GlassDropdownPicker；禁用口径不变——onChanged 为空即禁用。
+      final picker = tester.widget<GlassDropdownPicker<LiquidGlassLevel>>(
+          find.byType(GlassDropdownPicker<LiquidGlassLevel>));
       expect(picker.onChanged, isNull);
       expect(find.text('低档'), findsOneWidget);
       expect(GStorage.settings.get('liquidGlassLevel'), 'minimal');
@@ -217,7 +220,7 @@ void main() {
       (tester) async {
     final semantics = tester.ensureSemantics();
     await mount(tester);
-    final picker = find.byWidgetPredicate((widget) => widget is DropdownButton);
+    final picker = find.byType(GlassDropdownPicker<LiquidGlassLevel>);
     final row = find.widgetWithText(ListTile, '液态玻璃档位');
     expect(tester.getSemantics(picker).rect.height,
         lessThanOrEqualTo(tester.getSize(row).height));

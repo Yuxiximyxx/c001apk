@@ -69,7 +69,9 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _categories(bool wide) => KeyboardScrollRegion(
           child: ListView(
               key: const PageStorageKey('settings-categories'),
-              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              padding: EdgeInsets.only(
+                        top: 12,
+                        bottom: 8 + MediaQuery.paddingOf(context).bottom),
               children: [
             ExpressiveListSection(children: [
               for (final section in SettingsSection.values)
@@ -89,13 +91,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
             ]),
             ExpressiveListSection(children: [
-              ListTile(
-                leading: const Icon(Icons.explore_outlined),
-                title: const Text('使用引导'),
-                subtitle: const Text('重新选择发布偏好、外观与内容屏蔽'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed('/onboarding'),
-              ),
               ValueListenableBuilder(
                 valueListenable: GStorage.settings
                     .listenable(keys: [AccountStore.storageKey]),
@@ -120,11 +115,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   }),
             ]),
           ]));
+  // 设置域沉浸（miuix24）：全局 AnnotatedRegion 已把系统导航栏设为
+  // 透明，但设置页此前用 SafeArea(bottom: true) 在底部垫出一整条
+  // Scaffold 底色的不透明带，看上去像没沉浸。统一改为 bottom:false
+  // 让内容延伸到导航栏之下，底部留白改由各滚动列表的 padding
+  // （加上 MediaQuery 底部 inset）承担——设置页与它的各级子页
+  // （外观详情/协议参数/关于/内容过滤/设备标识/账号管理）同口径。
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('设置')),
         body: SafeArea(
             top: false,
+            bottom: false,
             child: LayoutBuilder(builder: (context, constraints) {
               final scale = (MediaQuery.textScalerOf(context).scale(16) / 16)
                   .clamp(1.0, 1.5);
@@ -453,7 +455,9 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
                 constraints: const BoxConstraints(maxWidth: 760),
                 child: ListView(
                     key: PageStorageKey(widget.section),
-                    padding: const EdgeInsets.only(top: 12, bottom: 8),
+                    padding: EdgeInsets.only(
+                        top: 12,
+                        bottom: 8 + MediaQuery.paddingOf(context).bottom),
                     children: [
                       if (widget.embedded)
                         ItemTitle(title: widget.section.title),
@@ -463,7 +467,7 @@ class _SettingsDetailPageState extends State<SettingsDetailPage> {
         ? body
         : Scaffold(
             appBar: AppBar(title: Text(widget.section.title)),
-            body: SafeArea(top: false, child: body));
+            body: SafeArea(top: false, bottom: false, child: body));
   }
 }
 

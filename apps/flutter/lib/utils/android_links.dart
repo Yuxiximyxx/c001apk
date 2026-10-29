@@ -3,16 +3,12 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import '../components/onboarding_gate.dart';
-import '../logic/onboarding/onboarding_state.dart';
-
 /// Android keeps ACTION_VIEW intents until the root navigator can consume them.
 /// External URLs must pass through our normal link parser, not GetX's router.
 class AndroidLinks {
-  AndroidLinks({required this.onOpen, this.onboarding});
+  AndroidLinks({required this.onOpen});
 
   final void Function(String) onOpen;
-  final OnboardingState? onboarding;
   static const _channel = MethodChannel('app.awavenue.c001apk/links');
   bool _ready = false;
   bool _reading = false;
@@ -42,18 +38,10 @@ class AndroidLinks {
     try {
       do {
         _readAgain = false;
-        if (onboarding != null) {
-          await waitForOnboardingNavigation(onboarding);
-        }
         if (_disposed) return;
         final links =
             await _channel.invokeListMethod<String>('takePendingLinks');
         for (final link in links ?? <String>[]) {
-          // The native batch has already been removed from its queue. Keep
-          // this iterator alive while paused so no remaining links are lost.
-          if (onboarding != null) {
-            await waitForOnboardingNavigation(onboarding);
-          }
           if (_disposed) return;
           onOpen(link);
           // Let each destination mount before another intent changes parameters.

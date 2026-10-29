@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../logic/announcements/announcement_service.dart';
-import '../logic/onboarding/onboarding_state.dart';
 import 'announcement_dialog.dart';
 import 'glass_snackbar.dart';
-import 'onboarding_gate.dart';
 import 'prompt_navigation.dart';
 import 'update_check_tile.dart';
 
@@ -18,13 +16,11 @@ class AnnouncementMonitor extends StatefulWidget {
       required this.service,
       required this.child,
       this.checkUpdates,
-      this.onboarding,
       this.clock,
       this.updatePromptShown});
   final AnnouncementService service;
   final Widget child;
   final Future<void> Function()? checkUpdates;
-  final OnboardingState? onboarding;
   final bool Function()? updatePromptShown;
   final DateTime Function()? clock;
   @override
@@ -36,21 +32,17 @@ class _AnnouncementMonitorState extends State<AnnouncementMonitor>
   bool _foreground = true, _prompting = false, _shown = false;
   DateTime? _lastBodyAttempt;
   String? _lastBodyKey;
-  late final OnboardingState? _onboarding;
   bool _startupFinished = false;
 
   @override
   void initState() {
     super.initState();
-    _onboarding = widget.onboarding ?? OnboardingState.current;
-    _onboarding?.addListener(_onboardingChanged);
     PromptNavigation.changes.addListener(_navigationChanged);
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_startup()));
   }
 
   Future<void> _startup() async {
-    await waitForOnboardingNavigation(_onboarding);
     if (!mounted) return;
     final index = widget.service.sync(SyncReason.coldStart);
     try {
@@ -59,8 +51,7 @@ class _AnnouncementMonitorState extends State<AnnouncementMonitor>
       } else {
         final context = Get.context;
         if (context != null && context.mounted) {
-          await AppUpdates.check(context,
-              automatic: true, onboarding: _onboarding);
+          await AppUpdates.check(context, automatic: true);
         }
       }
       await index;
@@ -72,27 +63,15 @@ class _AnnouncementMonitorState extends State<AnnouncementMonitor>
     if (mounted) await _maybePrompt();
   }
 
-  void _onboardingChanged() {
-    if (_onboarding?.active == false && _startupFinished) {
-      unawaited(_afterOnboarding());
-    }
-  }
-
   void _navigationChanged() {
-    if (_startupFinished && _onboarding?.active != true) {
-      unawaited(_afterOnboarding());
+    if (_startupFinished) {
+      unawaited(_maybePrompt());
     }
-  }
-
-  Future<void> _afterOnboarding() async {
-    await waitForOnboardingNavigation(_onboarding);
-    if (mounted) await _maybePrompt();
   }
 
   BuildContext? _safeContext() {
     if (!mounted ||
         !_foreground ||
-        _onboarding?.active == true ||
         _shown ||
         !widget.service.automaticEnabled ||
         (widget.updatePromptShown?.call() ?? AppUpdates.hasShownDialog) ||
@@ -129,9 +108,7 @@ class _AnnouncementMonitorState extends State<AnnouncementMonitor>
       // loads need backoff; returning home can use this cached body immediately.
       _lastBodyKey = null;
       _lastBodyAttempt = null;
-      // Keep the downloaded body and the unconsumed prompt through a reopened
-      // guide. The existing retry backoff applies only to actual load failures.
-      await waitForOnboardingNavigation(_onboarding);
+      // The existing retry backoff applies only to actual load failures.
       final context = _safeContext();
       final pending = widget.service.pendingImportant;
       if (context == null ||
@@ -158,7 +135,6 @@ class _AnnouncementMonitorState extends State<AnnouncementMonitor>
   }
 
   Future<void> _resume() async {
-    await waitForOnboardingNavigation(_onboarding);
     if (!mounted || !_startupFinished) return;
     await widget.service.sync(SyncReason.resume);
     if (mounted) await _maybePrompt();
@@ -167,7 +143,6 @@ class _AnnouncementMonitorState extends State<AnnouncementMonitor>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _onboarding?.removeListener(_onboardingChanged);
     PromptNavigation.changes.removeListener(_navigationChanged);
     super.dispose();
   }
